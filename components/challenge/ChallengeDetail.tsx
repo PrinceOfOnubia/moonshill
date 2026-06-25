@@ -67,6 +67,40 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
 
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted">{c.description}</p>
 
+          {/* mobile action card — keeps Join/Submit near the top on phones */}
+          <div className="mt-6 rounded-[20px] border border-gold/20 bg-gradient-to-br from-gold/10 to-transparent p-4 lg:hidden">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-gold-bright">Reward pool</p>
+                <p className="font-mono text-2xl font-bold leading-none">{fmtUsd(c.rewardPool)}</p>
+                <p className="mt-1 text-[12px] font-medium text-green">{fmtToken(c.rewardAmount)} {c.rewardToken} · {c.winners} winners</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] uppercase tracking-wider text-faint">Ends in</p>
+                <p className="font-mono text-lg font-bold text-gold-bright">{t.label}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              {!joined ? (
+                <Button className="flex-1" size="lg" onClick={() => setJoined(true)}>
+                  Join challenge
+                </Button>
+              ) : (
+                <Button className="flex-1" size="lg" variant="green" onClick={() => setSubmitOpen(true)}>
+                  Submit entry
+                </Button>
+              )}
+              <Button variant="glass" size="lg" onClick={share} aria-label="Share">
+                {shared ? <Check size={18} /> : <Share2 size={18} />}
+              </Button>
+            </div>
+            {joined && (
+              <p className="mt-2 flex items-center justify-center gap-1.5 text-[12px] font-medium text-green">
+                <CheckCircle2 size={13} /> You joined this challenge
+              </p>
+            )}
+          </div>
+
           {/* meta strip */}
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Meta icon={Users} label="Participants" value={compact(c.participants)} />
@@ -120,8 +154,8 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
           )}
         </div>
 
-        {/* sticky reward sidebar */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        {/* sticky reward sidebar — desktop only (mobile uses the top action card) */}
+        <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
           <div className="ring-grad overflow-hidden rounded-[24px] border border-border bg-bg-2">
             <div className="relative overflow-hidden bg-gradient-to-br from-gold/15 to-transparent p-6">
               <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold/20 blur-3xl" />
