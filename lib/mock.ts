@@ -1,0 +1,404 @@
+import type {
+  Challenge,
+  Creator,
+  LeaderRow,
+  ProjectProfile,
+  Submission,
+  UserProfile,
+} from "./types";
+
+const now = Date.now();
+const inDays = (d: number) => new Date(now + d * 86_400_000).toISOString();
+const agoH = (h: number) => new Date(now - h * 3_600_000).toISOString();
+
+const img = (id: string, w = 900) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
+const av = (seed: string) =>
+  `https://api.dicebear.com/9.x/glass/svg?seed=${seed}&backgroundType=gradientLinear`;
+
+/* ── creators ───────────────────────────────────────────── */
+export const creators: Record<string, Creator> = {
+  bnbchain: { id: "c1", type: "project", name: "BNB Chain", handle: "BNBCHAIN", avatar: av("bnbchain"), verified: true },
+  pancake: { id: "c2", type: "project", name: "PancakeSwap", handle: "PancakeSwap", avatar: av("pancake"), verified: true },
+  pixelpepe: { id: "c3", type: "project", name: "Pixel Pepe", handle: "pixelpepe", avatar: av("pixelpepe"), verified: true },
+  degenlab: { id: "c4", type: "project", name: "Degen Lab", handle: "degenlab", avatar: av("degenlab"), verified: true },
+  satoshigirl: { id: "u1", type: "user", name: "satoshi.girl", handle: "satoshigirl", avatar: av("satoshigirl"), verified: false },
+  memelord: { id: "u2", type: "user", name: "Memelord", handle: "memelord_eth", avatar: av("memelord"), verified: false },
+  zkpilled: { id: "u3", type: "user", name: "zk.pilled", handle: "zkpilled", avatar: av("zkpilled"), verified: false },
+};
+
+/* ── challenges ─────────────────────────────────────────── */
+export const challenges: Challenge[] = [
+  {
+    id: "ch1",
+    slug: "bnb-chain-meme-mania",
+    title: "BNB Chain Meme Mania",
+    cover: img("photo-1620207418302-439b387441b0"),
+    category: "Memes",
+    rewardPool: 25000,
+    rewardToken: "BNB",
+    rewardAmount: 42,
+    winners: 25,
+    creator: creators.bnbchain,
+    participants: 3842,
+    startsAt: agoH(72),
+    endsAt: inDays(4),
+    submissionType: "X Post",
+    description:
+      "Drop your dankest BNB Chain meme. The community decides what slaps. Top 25 split a 42 BNB pool. No reposts, OC only — make the timeline laugh.",
+    rules: ["Original content only", "Must tag @BNBCHAIN", "1 entry per account", "No NSFW"],
+    proof: ["Public X post link", "Post must be from your verified X account"],
+    requiredTags: ["@BNBCHAIN", "#MemeMania"],
+    official: true,
+    trending: 98,
+  },
+  {
+    id: "ch2",
+    slug: "why-defi-thread-contest",
+    title: "Why DeFi? — Best Explainer Thread",
+    cover: img("photo-1639762681485-074b7f938ba0"),
+    category: "Threads",
+    rewardPool: 12000,
+    rewardToken: "USDT",
+    rewardAmount: 12000,
+    winners: 10,
+    creator: creators.pancake,
+    participants: 1206,
+    startsAt: agoH(40),
+    endsAt: inDays(2),
+    submissionType: "X Thread",
+    description:
+      "Write the clearest, most viral thread explaining DeFi to a total beginner. Educate the next million. Quality + reach wins.",
+    rules: ["Minimum 5 tweets", "Tag @PancakeSwap", "Cite sources", "English"],
+    proof: ["Link to first tweet of thread"],
+    requiredTags: ["@PancakeSwap"],
+    official: true,
+    trending: 81,
+  },
+  {
+    id: "ch3",
+    slug: "pixel-pepe-pfp-jam",
+    title: "Pixel Pepe PFP Design Jam",
+    cover: img("photo-1634986666676-ec8fd927c23d"),
+    category: "Design",
+    rewardPool: 8000,
+    rewardToken: "MEME",
+    rewardAmount: 4_000_000,
+    winners: 15,
+    creator: creators.pixelpepe,
+    participants: 894,
+    startsAt: agoH(120),
+    endsAt: inDays(6),
+    submissionType: "Image Upload",
+    description:
+      "Design the next legendary Pixel Pepe PFP. Winning designs get minted into the official collection. Bring the lore.",
+    rules: ["512×512 px min", "Transparent PNG", "Must include Pepe motif"],
+    proof: ["Upload final artwork", "Optional X post for bonus reach"],
+    official: true,
+    trending: 74,
+  },
+  {
+    id: "ch4",
+    slug: "ai-trading-bot-demo",
+    title: "Show Your AI Trading Agent",
+    cover: img("photo-1677442136019-21780ecad995"),
+    category: "AI",
+    rewardPool: 15000,
+    rewardToken: "USDT",
+    rewardAmount: 15000,
+    winners: 8,
+    creator: creators.degenlab,
+    participants: 567,
+    startsAt: agoH(20),
+    endsAt: inDays(9),
+    submissionType: "Video Link",
+    description:
+      "Built an AI agent that trades, researches or memes on-chain? Show it in a 60s clip. Most impressive demos take the pool.",
+    rules: ["Max 90 seconds", "Must show live on-chain action", "No paper trading"],
+    proof: ["Video link (X / YouTube)", "Repo link optional"],
+    requiredTags: ["@degenlab", "#AIagents"],
+    official: true,
+    trending: 69,
+  },
+  {
+    id: "ch5",
+    slug: "60s-bnb-explainer",
+    title: "60-Second BNB Explainer Video",
+    cover: img("photo-1535016120720-40c646be5580"),
+    category: "Videos",
+    rewardPool: 6000,
+    rewardToken: "BNB",
+    rewardAmount: 10,
+    winners: 12,
+    creator: creators.bnbchain,
+    participants: 421,
+    startsAt: agoH(10),
+    endsAt: inDays(1),
+    submissionType: "Video Link",
+    description:
+      "Explain what makes BNB Chain fast in 60 seconds. Vertical format preferred. Make it pop.",
+    rules: ["Vertical 9:16", "Under 60s", "Tag @BNBCHAIN"],
+    proof: ["Public video link"],
+    requiredTags: ["@BNBCHAIN"],
+    official: true,
+    trending: 88,
+  },
+  {
+    id: "ch6",
+    slug: "onchain-research-bounty",
+    title: "On-Chain Research Bounty: MEV",
+    cover: img("photo-1551288049-bebda4e38f71"),
+    category: "Research",
+    rewardPool: 9000,
+    rewardToken: "USDT",
+    rewardAmount: 9000,
+    winners: 5,
+    creator: creators.degenlab,
+    participants: 188,
+    startsAt: agoH(200),
+    endsAt: inDays(11),
+    submissionType: "X Thread",
+    description:
+      "Publish original research on MEV activity on BNB Chain. Data, charts, and a clear narrative. Depth beats hype.",
+    rules: ["Original data analysis", "Open methodology", "Cite queries"],
+    proof: ["Thread link + dashboard link"],
+    official: true,
+    trending: 52,
+  },
+  {
+    id: "ch7",
+    slug: "quote-the-founder",
+    title: "Quote The Founder Challenge",
+    cover: img("photo-1611162617474-5b21e879e113"),
+    category: "Memes",
+    rewardPool: 3000,
+    rewardToken: "MEME",
+    rewardAmount: 1_500_000,
+    winners: 20,
+    creator: creators.memelord,
+    participants: 2310,
+    startsAt: agoH(6),
+    endsAt: inDays(3),
+    submissionType: "Quote Post",
+    description:
+      "Quote the pinned founder tweet with your hottest take. Funniest & most based quotes win. Community-run, pure vibes.",
+    rules: ["Quote the pinned post", "Keep it classy-ish"],
+    proof: ["Quote post link"],
+    official: false,
+    trending: 91,
+  },
+  {
+    id: "ch8",
+    slug: "gm-art-series",
+    title: "GM Art Series — Sunrise Edition",
+    cover: img("photo-1502082553048-f009c37129b9"),
+    category: "Design",
+    rewardPool: 4500,
+    rewardToken: "CAKE",
+    rewardAmount: 1800,
+    winners: 18,
+    creator: creators.satoshigirl,
+    participants: 765,
+    startsAt: agoH(48),
+    endsAt: inDays(5),
+    submissionType: "Image Upload",
+    description:
+      "Say GM to the timeline with original sunrise-themed art. Warm palettes encouraged. Spread good energy.",
+    rules: ["Original art", "Sunrise theme", "Any medium"],
+    proof: ["Upload artwork"],
+    official: false,
+    trending: 60,
+  },
+  {
+    id: "ch9",
+    slug: "alpha-threads-week",
+    title: "Alpha Threads of the Week",
+    cover: img("photo-1640340434855-6084b1f4901c"),
+    category: "Threads",
+    rewardPool: 7000,
+    rewardToken: "USDT",
+    rewardAmount: 7000,
+    winners: 7,
+    creator: creators.zkpilled,
+    participants: 980,
+    startsAt: agoH(30),
+    endsAt: inDays(2),
+    submissionType: "X Thread",
+    description:
+      "Share genuine alpha — a protocol, a trend, an edge. The threads that age best win. No financial advice, just signal.",
+    rules: ["Real alpha only", "No paid shills", "Disclose bags"],
+    proof: ["Thread link"],
+    official: false,
+    trending: 77,
+  },
+  {
+    id: "ch10",
+    slug: "multi-link-mega-mission",
+    title: "Mega Mission: Multi-Platform Push",
+    cover: img("photo-1518770660439-4636190af475"),
+    category: "AI",
+    rewardPool: 20000,
+    rewardToken: "BNB",
+    rewardAmount: 33,
+    winners: 30,
+    creator: creators.pancake,
+    participants: 1540,
+    startsAt: agoH(15),
+    endsAt: inDays(7),
+    submissionType: "Multiple Links",
+    description:
+      "Create content across X, video and design about the next PancakeSwap feature. Submit all your links in one entry. Biggest impact wins.",
+    rules: ["At least 2 platforms", "Tag @PancakeSwap", "Coordinated push"],
+    proof: ["Submit up to 5 links"],
+    requiredTags: ["@PancakeSwap", "#PancakeSwap"],
+    official: true,
+    trending: 84,
+  },
+  {
+    id: "ch11",
+    slug: "diamond-hands-memes",
+    title: "Diamond Hands Meme War",
+    cover: img("photo-1605792657660-596af9009e82"),
+    category: "Memes",
+    rewardPool: 5000,
+    rewardToken: "MEME",
+    rewardAmount: 2_500_000,
+    winners: 25,
+    creator: creators.memelord,
+    participants: 4120,
+    startsAt: agoH(2),
+    endsAt: inDays(3),
+    submissionType: "X Post",
+    description:
+      "HODL culture in meme form. Show the timeline what real diamond hands look like. Maximum cope encouraged.",
+    rules: ["OC memes", "No gore", "1 best entry counts"],
+    proof: ["X post link"],
+    official: false,
+    trending: 95,
+  },
+  {
+    id: "ch12",
+    slug: "explain-zk-thread",
+    title: "ELI5: Zero-Knowledge Proofs",
+    cover: img("photo-1526374965328-7f61d4dc18c5"),
+    category: "Research",
+    rewardPool: 6500,
+    rewardToken: "ETH",
+    rewardAmount: 2,
+    winners: 6,
+    creator: creators.zkpilled,
+    participants: 312,
+    startsAt: agoH(60),
+    endsAt: inDays(8),
+    submissionType: "X Thread",
+    description:
+      "Explain ZK proofs like the reader is five — but keep it accurate. Diagrams welcome. Clarity is king.",
+    rules: ["Accurate + simple", "Original explanation", "Visuals encouraged"],
+    proof: ["Thread link"],
+    official: false,
+    trending: 48,
+  },
+];
+
+export const getChallenge = (slug: string) =>
+  challenges.find((c) => c.slug === slug);
+
+/* ── submissions ────────────────────────────────────────── */
+export const submissions: Submission[] = [
+  { id: "s1", challengeId: "ch1", challengeTitle: "BNB Chain Meme Mania", cover: challenges[0].cover, user: creators.satoshigirl, link: "https://x.com/satoshigirl/status/1", type: "X Post", status: "Winner", submittedAt: agoH(50), reward: 1.6 },
+  { id: "s2", challengeId: "ch11", challengeTitle: "Diamond Hands Meme War", cover: challenges[10].cover, user: creators.memelord, link: "https://x.com/memelord_eth/status/2", type: "X Post", status: "Approved", submittedAt: agoH(4) },
+  { id: "s3", challengeId: "ch2", challengeTitle: "Why DeFi? — Best Explainer Thread", cover: challenges[1].cover, user: creators.zkpilled, link: "https://x.com/zkpilled/status/3", type: "X Thread", status: "Pending Review", submittedAt: agoH(1) },
+  { id: "s4", challengeId: "ch5", challengeTitle: "60-Second BNB Explainer Video", cover: challenges[4].cover, user: creators.satoshigirl, link: "https://x.com/satoshigirl/status/4", type: "Video Link", status: "Approved", submittedAt: agoH(8) },
+  { id: "s5", challengeId: "ch3", challengeTitle: "Pixel Pepe PFP Design Jam", cover: challenges[2].cover, user: creators.memelord, link: "upload://pepe.png", type: "Image Upload", status: "Rejected", submittedAt: agoH(20) },
+  { id: "s6", challengeId: "ch9", challengeTitle: "Alpha Threads of the Week", cover: challenges[8].cover, user: creators.zkpilled, link: "https://x.com/zkpilled/status/6", type: "X Thread", status: "Winner", submittedAt: agoH(72), reward: 1000 },
+];
+
+/* ── projects ───────────────────────────────────────────── */
+export const projects: ProjectProfile[] = [
+  {
+    id: "c1",
+    name: "BNB Chain",
+    handle: "BNBCHAIN",
+    avatar: av("bnbchain"),
+    banner: img("photo-1639322537228-f710d846310a", 1400),
+    verified: true,
+    description:
+      "The community-driven blockchain ecosystem powering the next generation of Web3. Building the on-chain creator economy.",
+    website: "bnbchain.org",
+    contract: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
+    totalSponsored: 312000,
+    activeChallenges: 3,
+    completedChallenges: 41,
+  },
+  {
+    id: "c2",
+    name: "PancakeSwap",
+    handle: "PancakeSwap",
+    avatar: av("pancake"),
+    banner: img("photo-1518544866330-4e716499f800", 1400),
+    verified: true,
+    description:
+      "The #1 DEX on BNB Chain. Trade, earn, and win with the syrup pool of campaigns and creator missions.",
+    website: "pancakeswap.finance",
+    contract: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+    totalSponsored: 184500,
+    activeChallenges: 2,
+    completedChallenges: 27,
+  },
+];
+
+export const getProject = (handle: string) =>
+  projects.find((p) => p.handle.toLowerCase() === handle.toLowerCase());
+
+/* ── user (the signed-in profile) ───────────────────────── */
+export const me: UserProfile = {
+  id: "u1",
+  name: "satoshi.girl",
+  handle: "satoshigirl",
+  avatar: av("satoshigirl"),
+  banner: img("photo-1614851099511-773084f6911d", 1400),
+  wallet: "0x7a25f1c9aB4e7d2F9c5B3e8a1D4f6C2b9E0a3D7c",
+  bio: "Meme alchemist • DeFi degen • turning timelines into treasure. GM ☀️",
+  xConnected: true,
+  joined: 38,
+  created: 4,
+  wins: 12,
+  earned: 18450,
+};
+
+/* ── leaderboard ────────────────────────────────────────── */
+const leaderName = ["satoshi.girl","Memelord","zk.pilled","gm.wagmi","frenly.ape","based.dev","alpha.leaks","pixel.witch","degenicus","onchain.sam","yield.farmer","moon.boi"];
+export const leaderboard = {
+  winners: leaderName.map((name, i): LeaderRow => ({
+    id: `w${i}`, rank: i + 1, name, handle: name.replace(/[.\s]/g, "_"),
+    avatar: av(`w${name}`), verified: i % 4 === 0,
+    value: Math.round(48500 / (i + 1.2)), wins: 28 - i * 2, delta: (i % 3) - 1,
+  })),
+  contributors: leaderName.slice().reverse().map((name, i): LeaderRow => ({
+    id: `c${i}`, rank: i + 1, name, handle: name.replace(/[.\s]/g, "_"),
+    avatar: av(`c${name}`), verified: i % 5 === 0,
+    value: 410 - i * 28, wins: 19 - i, delta: (i % 3) - 1,
+  })),
+  projects: ["BNB Chain","PancakeSwap","Degen Lab","Pixel Pepe","Venus","Trust Wallet","Thena","ApolloX"].map((name, i): LeaderRow => ({
+    id: `p${i}`, rank: i + 1, name, handle: name.replace(/[.\s]/g, ""),
+    avatar: av(`p${name}`), verified: true,
+    value: Math.round(312000 / (i + 1.1)), wins: 41 - i * 4, delta: (i % 3) - 1,
+  })),
+};
+
+/* ── live reward ticker items ───────────────────────────── */
+export const tickerItems = [
+  { who: "satoshi.girl", amount: "1.6 BNB", challenge: "Meme Mania" },
+  { who: "zk.pilled", amount: "1,000 USDT", challenge: "Alpha Threads" },
+  { who: "Memelord", amount: "2.5M MEME", challenge: "Diamond Hands" },
+  { who: "pixel.witch", amount: "0.8 BNB", challenge: "PFP Jam" },
+  { who: "based.dev", amount: "2 ETH", challenge: "ZK ELI5" },
+  { who: "gm.wagmi", amount: "1,800 CAKE", challenge: "GM Art" },
+];
+
+export const platformStats = {
+  totalRewards: 1_840_000,
+  activeChallenges: challenges.length,
+  creators: 24_300,
+  submissions: 186_400,
+};
