@@ -32,7 +32,7 @@ export function Footer() {
         ))}
       </div>
       <div className="border-t border-border">
-        <div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-2 px-4 py-5 text-[12px] text-faint sm:flex-row sm:px-6">
+        <div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-2 px-4 py-5 pb-28 text-[12px] text-faint sm:flex-row sm:px-6 md:pb-5">
           <span>© {new Date().getFullYear()} Memebook. Every card is a challenge to join.</span>
           <span className="flex gap-4">
             <Link href="/" className="hover:text-text">Terms</Link>
