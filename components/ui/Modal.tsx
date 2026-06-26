@@ -10,11 +10,14 @@ export function Modal({
   onClose,
   children,
   title,
+  footer,
 }: {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
+  /** Pinned action area that never scrolls — stays visible at the bottom. */
+  footer?: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -43,13 +46,13 @@ export function Modal({
         >
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
           <motion.div
-            className="glass-strong glow-soft relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-[26px] border border-border-strong sm:max-w-lg sm:rounded-[26px]"
+            className="glass-strong glow-soft relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[26px] border border-border-strong sm:max-w-lg sm:rounded-[26px]"
             initial={{ y: 40, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-bg-2/70 px-5 py-4 backdrop-blur">
+            <div className="flex shrink-0 items-center justify-between border-b border-border bg-bg-2/70 px-5 py-4 backdrop-blur">
               <h3 className="font-display text-lg font-semibold">{title}</h3>
               <button
                 onClick={onClose}
@@ -58,7 +61,21 @@ export function Modal({
                 <X size={18} />
               </button>
             </div>
-            <div className="p-5 pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-5">{children}</div>
+
+            <div
+              className={
+                "min-h-0 flex-1 overflow-y-auto p-5 " +
+                (footer ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]")
+              }
+            >
+              {children}
+            </div>
+
+            {footer && (
+              <div className="shrink-0 border-t border-border bg-bg-2/70 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
+                {footer}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

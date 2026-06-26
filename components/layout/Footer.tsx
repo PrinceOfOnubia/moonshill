@@ -4,7 +4,7 @@ import { Logo } from "./Logo";
 const cols = [
   { title: "Platform", links: [["Explore", "/explore"], ["Create", "/create"], ["Leaderboard", "/leaderboard"], ["Profile", "/profile"]] },
   { title: "Get started", links: [["Get verified", "/verify"], ["Project verification", "/verify"], ["Admin", "/admin"]] },
-  { title: "Resources", links: [["How it works", "/"], ["Featured", "/explore"], ["BNB Chain", "/project/BNBCHAIN"]] },
+  { title: "Resources", links: [["Docs", "/docs"], ["How it works", "/docs#how-it-works"], ["Privacy", "/privacy"], ["BNB Chain", "/project/BNBCHAIN"]] },
 ];
 
 export function Footer() {
@@ -35,9 +35,11 @@ export function Footer() {
         <div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-2 px-4 py-5 pb-28 text-[12px] text-faint sm:flex-row sm:px-6 md:pb-5">
           <span>© {new Date().getFullYear()} Memebook. Every card is a challenge to join.</span>
           <span className="flex gap-4">
-            <Link href="/" className="hover:text-text">Terms</Link>
-            <Link href="/" className="hover:text-text">Privacy</Link>
-            <Link href="/" className="hover:text-text">𝕏</Link>
+            <Link href="/docs" className="hover:text-text">Docs</Link>
+            <Link href="/token" className="hover:text-text">Token</Link>
+            <Link href="/privacy" className="hover:text-text">Privacy</Link>
+            <Link href="/terms" className="hover:text-text">Terms</Link>
+            <a href="https://x.com" target="_blank" rel="noreferrer" className="hover:text-text">𝕏</a>
           </span>
         </div>
       </div>

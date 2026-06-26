@@ -1,4 +1,5 @@
 import type {
+  AppNotification,
   Challenge,
   Creator,
   LeaderRow,
@@ -311,6 +312,80 @@ export const submissions: Submission[] = [
   { id: "s4", challengeId: "ch5", challengeTitle: "60-Second BNB Explainer Video", cover: challenges[4].cover, user: creators.satoshigirl, link: "https://x.com/satoshigirl/status/4", type: "Video Link", status: "Approved", submittedAt: agoH(8) },
   { id: "s5", challengeId: "ch3", challengeTitle: "Pixel Pepe PFP Design Jam", cover: challenges[2].cover, user: creators.memelord, link: "upload://pepe.png", type: "Image Upload", status: "Rejected", submittedAt: agoH(20) },
   { id: "s6", challengeId: "ch9", challengeTitle: "Alpha Threads of the Week", cover: challenges[8].cover, user: creators.zkpilled, link: "https://x.com/zkpilled/status/6", type: "X Thread", status: "Winner", submittedAt: agoH(72), reward: 1000 },
+];
+
+/* ── notifications ──────────────────────────────────────── */
+export const notifications: AppNotification[] = [
+  {
+    id: "n1",
+    kind: "win",
+    title: "You won a challenge! 🏆",
+    body: "Your entry placed in the Top 25 of BNB Chain Meme Mania. 1.6 BNB is on its way to your wallet.",
+    at: agoH(0.4),
+    unread: true,
+    href: "/challenge/bnb-chain-meme-mania",
+    actor: creators.bnbchain,
+  },
+  {
+    id: "n2",
+    kind: "reward",
+    title: "Reward sent",
+    body: "1,000 USDT from Alpha Threads of the Week was credited to 0x7a25…3D7c.",
+    at: agoH(2),
+    unread: true,
+    href: "/profile",
+    actor: creators.zkpilled,
+  },
+  {
+    id: "n3",
+    kind: "approved",
+    title: "Submission approved",
+    body: "Your video for 60-Second BNB Explainer passed review and is now live in the gallery.",
+    at: agoH(6),
+    unread: true,
+    href: "/challenge/60s-bnb-explainer",
+    actor: creators.bnbchain,
+  },
+  {
+    id: "n4",
+    kind: "ending",
+    title: "Ends in 24h ⏳",
+    body: "Why DeFi? — Best Explainer Thread closes tomorrow. Get your entry in before the timer runs out.",
+    at: agoH(10),
+    unread: false,
+    href: "/challenge/why-defi-thread-contest",
+    actor: creators.pancake,
+  },
+  {
+    id: "n5",
+    kind: "new",
+    title: "New challenge from PancakeSwap",
+    body: "Mega Mission: Multi-Platform Push is live with a 20,000 USDT pool across 30 winners.",
+    at: agoH(15),
+    unread: false,
+    href: "/challenge/multi-link-mega-mission",
+    actor: creators.pancake,
+  },
+  {
+    id: "n6",
+    kind: "review",
+    title: "Entry in review",
+    body: "Your Pixel Pepe PFP is being reviewed by the project. We'll let you know when it's decided.",
+    at: agoH(20),
+    unread: false,
+    href: "/challenge/pixel-pepe-pfp-jam",
+    actor: creators.pixelpepe,
+  },
+  {
+    id: "n7",
+    kind: "rejected",
+    title: "Submission not accepted",
+    body: "Your entry for GM Art Series didn't meet the original-art rule. You can submit a new one.",
+    at: agoH(28),
+    unread: false,
+    href: "/challenge/gm-art-series",
+    actor: creators.satoshigirl,
+  },
 ];
 
 /* ── projects ───────────────────────────────────────────── */

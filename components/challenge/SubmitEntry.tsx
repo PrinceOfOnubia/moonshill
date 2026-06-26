@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { Challenge, SubmissionStatus } from "@/lib/types";
 import { me } from "@/lib/mock";
-import { cn } from "@/lib/utils";
 
 const statusTone: Record<SubmissionStatus, "gold" | "green" | "blue" | "red"> = {
   "Pending Review": "gold",
@@ -44,8 +43,30 @@ export function SubmitEntry({
     onClose();
   }
 
+  const footer =
+    phase === "done" ? (
+      <Button className="w-full" onClick={reset}>
+        Got it
+      </Button>
+    ) : (
+      <Button className="w-full" onClick={submit} disabled={!valid || phase === "loading"}>
+        {phase === "loading" ? (
+          <>
+            <Loader2 size={18} className="animate-spin" /> Verifying…
+          </>
+        ) : (
+          "Submit entry"
+        )}
+      </Button>
+    );
+
   return (
-    <Modal open={open} onClose={reset} title={phase === "done" ? "Entry submitted" : "Submit your entry"}>
+    <Modal
+      open={open}
+      onClose={reset}
+      title={phase === "done" ? "Entry submitted" : "Submit your entry"}
+      footer={footer}
+    >
       {phase === "done" ? (
         <div className="py-4 text-center">
           <motion.div
@@ -63,9 +84,6 @@ export function SubmitEntry({
           <div className="mt-4 flex justify-center">
             <Badge tone={statusTone["Pending Review"]}>● Pending Review</Badge>
           </div>
-          <Button className="mt-6 w-full" onClick={reset}>
-            Got it
-          </Button>
         </div>
       ) : (
         <div className="space-y-5">
@@ -146,19 +164,6 @@ export function SubmitEntry({
             </div>
           )}
 
-          <Button
-            className={cn("w-full")}
-            onClick={submit}
-            disabled={!valid || phase === "loading"}
-          >
-            {phase === "loading" ? (
-              <>
-                <Loader2 size={18} className="animate-spin" /> Verifying…
-              </>
-            ) : (
-              "Submit entry"
-            )}
-          </Button>
         </div>
       )}
     </Modal>

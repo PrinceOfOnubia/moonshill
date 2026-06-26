@@ -30,7 +30,7 @@ export function CategoryRail() {
         <span className="hidden text-[12px] text-faint sm:block">Drag to explore →</span>
       </div>
 
-      <motion.div ref={ref} className="overflow-hidden" data-cursor="drag">
+      <motion.div ref={ref} className="overflow-hidden">
         <motion.div
           drag="x"
           dragConstraints={{ left: -((cats.length - 2.2) * 280), right: 0 }}
@@ -49,7 +49,7 @@ export function CategoryRail() {
                 className="ring-grad group relative block h-52 w-[260px] shrink-0 overflow-hidden rounded-[22px]"
               >
                 {cover && (
-                  <img src={cover} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover opacity-40 transition-all duration-500 group-hover:opacity-60 group-hover:scale-105" />
+                  <img src={cover} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover opacity-40 transition-opacity duration-300 group-hover:opacity-60" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-bg-2 via-bg-2/70 to-transparent" />
                 <div className="relative flex h-full flex-col justify-between p-5">

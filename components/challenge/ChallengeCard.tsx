@@ -21,8 +21,7 @@ export function ChallengeCard({ c, index = 0 }: { c: Challenge; index?: number }
     >
       <Link
         href={`/challenge/${c.slug}`}
-        data-cursor="join"
-        className="ring-grad group relative block overflow-hidden rounded-[22px] bg-surface transition-transform duration-300 will-change-transform hover:-translate-y-1"
+        className="group relative block overflow-hidden rounded-[22px] border border-border bg-surface transition-colors duration-200 hover:border-border-strong hover:bg-surface-2 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)]"
       >
         {/* cover */}
         <div className="relative aspect-[16/11] overflow-hidden">
@@ -30,7 +29,7 @@ export function ChallengeCard({ c, index = 0 }: { c: Challenge; index?: number }
             src={c.cover}
             alt={c.title}
             style={{ viewTransitionName: `cover-${c.slug}` }}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+            className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/30 to-transparent" />
 

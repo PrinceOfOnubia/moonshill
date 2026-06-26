@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ViewTransitions } from "next-view-transitions";
 import { IntroProvider } from "@/components/providers/IntroProvider";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { AppShell } from "@/components/layout/AppShell";
 
 const display = Space_Grotesk({
@@ -46,7 +47,9 @@ export default function RootLayout({
       <body className="min-h-dvh">
         <ViewTransitions>
           <IntroProvider>
-            <AppShell>{children}</AppShell>
+            <AuthProvider>
+              <AppShell>{children}</AppShell>
+            </AuthProvider>
           </IntroProvider>
         </ViewTransitions>
       </body>

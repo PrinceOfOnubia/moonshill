@@ -246,14 +246,6 @@ body::after {
   animation: var(--animate-shimmer);
 }
 
-/* custom cursor — hide native pointer when active (fine pointers only) */
-@media (pointer: fine) {
-  .has-custom-cursor,
-  .has-custom-cursor * {
-    cursor: none !important;
-  }
-}
-
 /* ── view transitions ── */
 ::view-transition-old(root),
 ::view-transition-new(root) {

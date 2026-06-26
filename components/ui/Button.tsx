@@ -1,7 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { forwardRef, useRef } from "react";
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "ghost" | "glass" | "outline" | "green";
@@ -10,6 +9,7 @@ type Size = "sm" | "md" | "lg";
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** Deprecated — kept for compatibility; no longer applies a magnetic effect. */
   magnetic?: boolean;
 }
 
@@ -30,44 +30,21 @@ const sizes: Record<Size, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { className, variant = "primary", size = "md", magnetic = false, children, ...rest },
-  _ref,
+  { className, variant = "primary", size = "md", magnetic: _magnetic, children, ...rest },
+  ref,
 ) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const x = useSpring(mx, { stiffness: 300, damping: 20 });
-  const y = useSpring(my, { stiffness: 300, damping: 20 });
-  const tx = useTransform(x, (v) => v * 0.35);
-  const ty = useTransform(y, (v) => v * 0.35);
-
-  function onMove(e: React.MouseEvent) {
-    if (!magnetic || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    mx.set(e.clientX - (r.left + r.width / 2));
-    my.set(e.clientY - (r.top + r.height / 2));
-  }
-  function onLeave() {
-    mx.set(0);
-    my.set(0);
-  }
-
   return (
-    <motion.button
+    <button
       ref={ref}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-      style={magnetic ? { x: tx, y: ty } : undefined}
-      whileTap={{ scale: 0.96 }}
       className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all duration-300 select-none cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap select-none cursor-pointer transition-colors duration-200 active:opacity-90 disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         className,
       )}
-      {...(rest as any)}
+      {...rest}
     >
       {children}
-    </motion.button>
+    </button>
   );
 });

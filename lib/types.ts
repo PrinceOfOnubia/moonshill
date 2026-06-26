@@ -93,6 +93,26 @@ export interface UserProfile {
   earned: number;
 }
 
+export type NotificationKind =
+  | "win"
+  | "approved"
+  | "rejected"
+  | "review"
+  | "new"
+  | "ending"
+  | "reward";
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  at: string; // ISO
+  unread: boolean;
+  href?: string;
+  actor?: Creator;
+}
+
 export interface LeaderRow {
   id: string;
   rank: number;
