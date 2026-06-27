@@ -21,7 +21,7 @@ export function ContractAddress({ className = "" }: { className?: string }) {
   return (
     <button
       onClick={copy}
-      className={`group flex items-center gap-3 rounded-2xl border border-border bg-surface/60 px-4 py-3 text-left transition-colors hover:border-border-strong hover:bg-surface-2 ${className}`}
+      className={`group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left backdrop-blur transition-colors hover:border-white/20 hover:bg-white/10 ${className}`}
     >
       <span className="min-w-0 flex-1">
         <span className="block text-[10px] font-semibold uppercase tracking-wider text-faint">

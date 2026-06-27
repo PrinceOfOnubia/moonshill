@@ -3,7 +3,7 @@ import { ArrowLeft, Coins, Flame, Lock, Users } from "lucide-react";
 import { ContractAddress } from "@/components/landing/ContractAddress";
 
 export const metadata = {
-  title: "Token — Memebook",
+  title: "Token — Moonshill",
   description: "$MEME token utility, allocation, and contract address.",
 };
 
@@ -34,13 +34,13 @@ export default function TokenPage() {
 
       <header className="mt-5 border-b border-border pb-8">
         <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-bright">
-          The Memebook token
+          The Moonshill token
         </p>
         <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           $MEME powers the arena
         </h1>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted">
-          $MEME is the utility token behind Memebook — used to fund challenges, reward
+          $MEME is the utility token behind Moonshill — used to fund challenges, reward
           creators, and align the community around the on-chain creator economy.
         </p>
         <ContractAddress className="mt-6 max-w-md" />

@@ -53,7 +53,7 @@ export function LandingFooter() {
 
       <div className="border-t border-border">
         <div className="mx-auto max-w-[1240px] px-4 py-5 text-[12px] text-faint sm:px-6">
-          © {new Date().getFullYear()} Memebook. All rights reserved.
+          © {new Date().getFullYear()} Moonshill. All rights reserved.
         </div>
       </div>
     </footer>

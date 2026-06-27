@@ -1,8 +1,8 @@
 import { LegalLayout, type DocSection } from "@/components/legal/LegalLayout";
 
 export const metadata = {
-  title: "Privacy Policy — Memebook",
-  description: "How Memebook collects, uses, and protects your data.",
+  title: "Privacy Policy — Moonshill",
+  description: "How Moonshill collects, uses, and protects your data.",
 };
 
 const sections: DocSection[] = [
@@ -10,7 +10,7 @@ const sections: DocSection[] = [
     id: "overview",
     heading: "Overview",
     body: [
-      "This Privacy Policy explains what information Memebook (\"we\", \"us\") collects when you use the platform, how we use it, and the choices you have. By using Memebook you agree to the practices described here.",
+      "This Privacy Policy explains what information Moonshill (\"we\", \"us\") collects when you use the platform, how we use it, and the choices you have. By using Moonshill you agree to the practices described here.",
       "We aim to collect as little as possible and to be clear about what we do with it.",
     ],
   },
@@ -39,7 +39,7 @@ const sections: DocSection[] = [
           "To operate challenges — display entries, run reviews, and rank winners.",
           "To pay rewards — send tokens to your verified wallet when a challenge settles.",
           "To verify authenticity — confirm that submissions come from the account that owns them.",
-          "To improve Memebook — understand what's working and fix what isn't.",
+          "To improve Moonshill — understand what's working and fix what isn't.",
           "To communicate — send essential notices about your entries, rewards, and account.",
         ],
       },
@@ -49,7 +49,7 @@ const sections: DocSection[] = [
     id: "on-chain",
     heading: "On-chain & public data",
     body: [
-      "Memebook is built on public blockchains. Transactions such as reward payouts are recorded on-chain and are permanent and publicly visible. Your wallet address and any associated activity may be viewable by anyone.",
+      "Moonshill is built on public blockchains. Transactions such as reward payouts are recorded on-chain and are permanent and publicly visible. Your wallet address and any associated activity may be viewable by anyone.",
       "Submissions you make public (for example an X post) are visible to other users and are surfaced in challenge galleries and leaderboards.",
     ],
   },
@@ -93,7 +93,7 @@ const sections: DocSection[] = [
     id: "children",
     heading: "Children",
     body: [
-      "Memebook is not directed to anyone under 18 (or the age of majority in your jurisdiction). We do not knowingly collect data from children.",
+      "Moonshill is not directed to anyone under 18 (or the age of majority in your jurisdiction). We do not knowingly collect data from children.",
     ],
   },
   {
@@ -101,7 +101,7 @@ const sections: DocSection[] = [
     heading: "Changes & contact",
     body: [
       "We may update this policy from time to time. Material changes will be reflected by the \"Last updated\" date, and significant updates may be announced in-app.",
-      "Questions about privacy? Email hello@memebook.xyz or reach us on 𝕏.",
+      "Questions about privacy? Email hello@moonshill.xyz or reach us on 𝕏.",
     ],
   },
 ];
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
     <LegalLayout
       eyebrow="Legal"
       title="Privacy Policy"
-      intro="What we collect, how we use it, and the control you have over your data on Memebook."
+      intro="What we collect, how we use it, and the control you have over your data on Moonshill."
       updated="June 26, 2026"
       sections={sections}
     />

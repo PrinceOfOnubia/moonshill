@@ -32,7 +32,7 @@ export function ConnectModal() {
   return (
     <Modal open={connectModalOpen} onClose={closeConnect} title="Connect your wallet">
       <p className="mb-5 text-[13.5px] leading-relaxed text-muted">
-        Connect a wallet to enter Memebook. New here? An account is created
+        Connect a wallet to enter Moonshill. New here? An account is created
         automatically — no email, no password.
       </p>
 

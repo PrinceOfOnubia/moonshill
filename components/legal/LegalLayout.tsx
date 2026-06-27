@@ -108,7 +108,7 @@ export function LegalLayout({
                 𝕏
               </a>{" "}
               or email{" "}
-              <span className="text-text">hello@memebook.xyz</span>.
+              <span className="text-text">hello@moonshill.xyz</span>.
             </p>
           </div>
         </article>

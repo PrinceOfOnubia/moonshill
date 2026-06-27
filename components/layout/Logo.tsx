@@ -11,11 +11,11 @@ export function Logo({
   iconOnly?: boolean;
 }) {
   return (
-    <Link href={href} className={cn("inline-flex items-center", className)} aria-label="Memebook">
+    <Link href={href} className={cn("inline-flex items-center", className)} aria-label="Moonshill">
       {iconOnly ? (
-        <img src="/logo-mark.png" alt="Memebook" className="h-9 w-9" />
+        <img src="/moonshill-wordmark.png" alt="Moonshill" className="h-9 w-9 object-cover object-left" />
       ) : (
-        <img src="/logo-full.png" alt="Memebook" className="h-7 w-auto sm:h-8" />
+        <img src="/moonshill-wordmark.png" alt="Moonshill" className="h-9 w-auto sm:h-11" />
       )}
     </Link>
   );

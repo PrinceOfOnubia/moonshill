@@ -1,8 +1,8 @@
 import { LegalLayout, type DocSection } from "@/components/legal/LegalLayout";
 
 export const metadata = {
-  title: "Terms of Service — Memebook",
-  description: "The terms that govern your use of Memebook.",
+  title: "Terms of Service — Moonshill",
+  description: "The terms that govern your use of Moonshill.",
 };
 
 const sections: DocSection[] = [
@@ -10,7 +10,7 @@ const sections: DocSection[] = [
     id: "acceptance",
     heading: "Acceptance of terms",
     body: [
-      "By accessing or using Memebook (the \"Platform\"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.",
+      "By accessing or using Moonshill (the \"Platform\"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.",
       "You must be at least 18 years old (or the age of majority in your jurisdiction) and legally able to enter into these terms.",
     ],
   },
@@ -42,7 +42,7 @@ const sections: DocSection[] = [
     id: "rewards",
     heading: "Rewards",
     body: [
-      "Reward pools are funded and distributed by challenge creators via smart contracts. Memebook does not guarantee any reward amount, eligibility, or payout timing, and is not responsible for a creator's failure to fund or distribute rewards.",
+      "Reward pools are funded and distributed by challenge creators via smart contracts. Moonshill does not guarantee any reward amount, eligibility, or payout timing, and is not responsible for a creator's failure to fund or distribute rewards.",
       "You are responsible for any taxes arising from rewards you receive.",
     ],
   },
@@ -65,21 +65,21 @@ const sections: DocSection[] = [
     id: "ip",
     heading: "Intellectual property",
     body: [
-      "You retain ownership of content you create. By submitting to a challenge, you grant Memebook and the challenge creator a non-exclusive license to display, promote, and distribute your entry in connection with the Platform and the challenge.",
+      "You retain ownership of content you create. By submitting to a challenge, you grant Moonshill and the challenge creator a non-exclusive license to display, promote, and distribute your entry in connection with the Platform and the challenge.",
     ],
   },
   {
     id: "risk",
     heading: "Crypto risk disclosure",
     body: [
-      "Blockchain transactions are irreversible and digital assets are volatile. You use the Platform at your own risk and accept the possibility of total loss. Nothing on Memebook is financial, legal, or tax advice.",
+      "Blockchain transactions are irreversible and digital assets are volatile. You use the Platform at your own risk and accept the possibility of total loss. Nothing on Moonshill is financial, legal, or tax advice.",
     ],
   },
   {
     id: "disclaimer",
     heading: "Disclaimers & liability",
     body: [
-      "The Platform is provided \"as is\" without warranties of any kind. To the maximum extent permitted by law, Memebook is not liable for any indirect, incidental, or consequential damages, or for losses arising from your use of the Platform, smart contracts, or third-party wallets.",
+      "The Platform is provided \"as is\" without warranties of any kind. To the maximum extent permitted by law, Moonshill is not liable for any indirect, incidental, or consequential damages, or for losses arising from your use of the Platform, smart contracts, or third-party wallets.",
     ],
   },
   {
@@ -87,7 +87,7 @@ const sections: DocSection[] = [
     heading: "Changes & contact",
     body: [
       "We may update these terms from time to time. Continued use after changes means you accept the updated terms.",
-      "Questions? Email hello@memebook.xyz or reach us on 𝕏.",
+      "Questions? Email hello@moonshill.xyz or reach us on 𝕏.",
     ],
   },
 ];
@@ -97,7 +97,7 @@ export default function TermsPage() {
     <LegalLayout
       eyebrow="Legal"
       title="Terms of Service"
-      intro="The rules that govern your use of Memebook, challenges, rewards, and on-chain interactions."
+      intro="The rules that govern your use of Moonshill, challenges, rewards, and on-chain interactions."
       updated="June 26, 2026"
       sections={sections}
     />

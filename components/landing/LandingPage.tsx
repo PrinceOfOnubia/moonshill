@@ -23,14 +23,14 @@ export function LandingPage() {
               Ready to <span className="text-gold-grad">compete?</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">
-              Open the Book to enter Memebook — discover live challenges and start
+              Launch App to enter Moonshill — discover live challenges and start
               earning on-chain rewards.
             </p>
             <button
               onClick={openConnect}
               className="group mt-7 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-gold-bright to-gold px-8 text-[15px] font-semibold text-black transition-shadow hover:shadow-[0_12px_44px_-8px_rgba(240,185,11,0.65)]"
             >
-              Open the Book
+              Launch App
               <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
