@@ -12,7 +12,7 @@ import { me } from "@/lib/mock";
 import { cn, shortAddr } from "@/lib/utils";
 
 const nav = [
-  { href: "/", label: "Home" },
+  { href: "/home", label: "Home" },
   { href: "/explore", label: "Explore" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
@@ -40,7 +40,7 @@ export function TopBar() {
 
         <nav className="ml-4 hidden items-center gap-1 md:flex">
           {nav.map((n) => {
-            const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
+            const active = pathname === n.href || pathname.startsWith(`${n.href}/`);
             return (
               <Link
                 key={n.href}
@@ -84,7 +84,7 @@ export function TopBar() {
           </Link>
           <button className="hidden h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:border-gold/50 sm:flex">
             <Wallet size={16} className="text-gold-bright" />
-            <span className="font-mono">2.41 BNB</span>
+            <span className="font-mono">{shortAddr(address ?? me.wallet)}</span>
           </button>
 
           <div ref={menuRef} className="relative">

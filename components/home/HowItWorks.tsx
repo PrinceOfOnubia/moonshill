@@ -25,7 +25,7 @@ export function HowItWorks() {
             Three steps to the <span className="text-gold-grad">pool</span>.
           </h2>
           <p className="mt-4 max-w-sm text-muted">
-            No new social network to learn. Memebook plugs straight into X — you keep your audience, we handle the rest.
+            No new social network to learn. Moonshill plugs straight into X — you keep your audience, we handle the rest.
           </p>
         </div>
 

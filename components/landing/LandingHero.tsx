@@ -38,11 +38,11 @@ export function LandingHero() {
             <br />
             Grow your community.
             <br />
-            <span className="text-gold-grad">Earn $BOOKS.</span>
+            <span className="text-gold-grad">Earn on Moonshill.</span>
           </h1>
 
           <p className="mt-6 max-w-md text-[16px] leading-relaxed text-muted">
-            Memebook is the home for crypto communities. Complete challenges, earn{" "}
+            Moonshill is the home for crypto communities. Complete challenges, earn{" "}
             <span className="font-medium text-gold-bright">rewards</span> and climb the leaderboard.
           </p>
 
@@ -53,13 +53,13 @@ export function LandingHero() {
               onClick={openConnect}
               className="flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-b from-gold-bright to-gold px-7 text-[15px] font-semibold text-black transition-shadow hover:shadow-[0_12px_44px_-8px_rgba(240,185,11,0.65)]"
             >
-              <BookOpen size={19} /> Open the Book
+              <BookOpen size={19} /> Connect wallet
             </button>
             <button
               onClick={openConnect}
               className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-surface px-7 text-[15px] font-semibold text-text transition-colors hover:border-gold/50 hover:text-gold-bright"
             >
-              <ChevronRight size={18} className="text-gold-bright" /> Explore Challenges
+              <ChevronRight size={18} className="text-gold-bright" /> Explore challenges
             </button>
           </div>
         </div>
@@ -72,7 +72,7 @@ export function LandingHero() {
           className="relative mx-auto w-full max-w-[520px]"
         >
           <div className="pointer-events-none absolute inset-0 -z-10 bg-gold/12 blur-[120px]" />
-          <img src="/hero-book.png" alt="Memebook" draggable={false} className="w-full select-none" />
+          <img src="/hero-book.png" alt="Moonshill" draggable={false} className="w-full select-none" />
         </motion.div>
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
@@ -16,6 +16,11 @@ export function ExploreClient() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<(typeof categories)[number]>("All");
   const [sort, setSort] = useState<Sort>("Trending");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const list = useMemo(() => {
     let l = challenges.filter((c) => {
@@ -55,6 +60,7 @@ export function ExploreClient() {
         <div className="flex h-12 items-center gap-3 rounded-2xl border border-border bg-surface px-4 focus-within:border-gold/50">
           <Search size={18} className="text-faint" />
           <input
+            ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search challenges, creators, projects…"

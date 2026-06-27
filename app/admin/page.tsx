@@ -1,6 +1,6 @@
 import { AdminClient } from "@/components/admin/AdminClient";
 
-export const metadata = { title: "Admin — Memebook" };
+export const metadata = { title: "Admin — Moonshill" };
 
 export default function AdminPage() {
   return <AdminClient />;

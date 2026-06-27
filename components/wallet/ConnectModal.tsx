@@ -15,26 +15,33 @@ const wallets = [
 ];
 
 export function ConnectModal() {
-  const { connectModalOpen, closeConnect, connect } = useAuth();
+  const { connectModalOpen, closeConnect, connect, connectError } = useAuth();
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
 
-  function handle(id: string) {
+  async function handle(id: string) {
     setPending(id);
-    // Simulate the wallet handshake, then enter the app.
-    setTimeout(() => {
-      connect(id);
+    try {
+      await connect(id);
       setPending(null);
-      router.push("/");
-    }, 750);
+      router.push("/home");
+    } catch {
+      setPending(null);
+    }
   }
 
   return (
     <Modal open={connectModalOpen} onClose={closeConnect} title="Connect your wallet">
       <p className="mb-5 text-[13.5px] leading-relaxed text-muted">
-        Connect a wallet to enter Memebook. New here? An account is created
-        automatically — no email, no password.
+        Connect a wallet to enter Moonshill. This app will request BNB Smart Chain Mainnet,
+        and if your wallet has not added it yet, we will ask to add it first.
       </p>
+
+      {connectError && (
+        <div className="mb-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] leading-relaxed text-rose-200">
+          {connectError}
+        </div>
+      )}
 
       <div className="space-y-2.5">
         {wallets.map((w) => (
@@ -62,7 +69,7 @@ export function ConnectModal() {
 
       <p className="mt-5 flex items-center justify-center gap-1.5 text-[12px] text-faint">
         <ShieldCheck size={14} className="text-green" />
-        Non-custodial · we never hold your funds
+        Non-custodial · BNB Smart Chain only
       </p>
     </Modal>
   );

@@ -7,7 +7,7 @@ import { Compass, Home, Plus, Trophy, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/home", label: "Home", icon: Home },
   { href: "/explore", label: "Explore", icon: Compass },
   { href: "/create", label: "Create", icon: Plus, primary: true },
   { href: "/leaderboard", label: "Ranks", icon: Trophy },
@@ -22,7 +22,7 @@ export function BottomNav() {
       <div className="mx-auto mb-3 max-w-md px-4">
         <div className="glass-strong glow-soft flex items-center justify-around rounded-[22px] px-2 py-2">
           {items.map(({ href, label, icon: Icon, primary }) => {
-            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            const active = pathname === href || pathname.startsWith(`${href}/`);
 
             if (primary) {
               return (

@@ -1,11 +1,11 @@
-# Memebook 🏆
+# Moonshill 🏆
 
 > Every card is a challenge to join.
 
-**Memebook** is a community-first crypto arena where projects and users create funded
+**Moonshill** is a community-first crypto arena where projects and users create funded
 missions, challenges and contests. Creators make content on **X**, submit the post link
-on Memebook, and compete for real rewards. Memebook is not a social network — X stays the
-distribution layer while Memebook handles discovery, submissions, verification and rewards.
+on Moonshill, and compete for real rewards. Moonshill is not a social network — X stays the
+distribution layer while Moonshill handles discovery, submissions, verification and rewards.
 
 This repo is the **V1 frontend** — an awwwards-style, dark-mode, mobile-first, image-first
 experience built on mock data.
