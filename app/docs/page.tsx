@@ -7,7 +7,7 @@ export const metadata = {
 
 const sections: DocSection[] = [
   {
-    id: "what-is-moonshill",
+    id: "what-is-memebook",
     heading: "What is Moonshill",
     body: [
       "Moonshill is a community-first crypto arena. Projects and creators post challenges with funded reward pools; anyone can join, submit their work, and compete for a share of the rewards.",

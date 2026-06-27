@@ -69,7 +69,7 @@ export function LandingHeader() {
             onClick={openConnect}
             className="ml-1 h-10 rounded-full bg-gradient-to-b from-gold-bright to-gold px-5 text-sm font-semibold text-black transition-shadow hover:shadow-[0_8px_30px_-6px_rgba(240,185,11,0.6)]"
           >
-            Get started
+            Launch App
           </button>
         </div>
 
@@ -163,7 +163,7 @@ export function LandingHeader() {
                   }}
                   className="h-12 w-full rounded-2xl bg-gradient-to-b from-gold-bright to-gold text-[15px] font-semibold text-black"
                 >
-                  Get started
+                  Launch App
                 </button>
               </div>
             </motion.div>
