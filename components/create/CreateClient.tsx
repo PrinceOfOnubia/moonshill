@@ -13,7 +13,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { createCampaign, getBnbMarketPrice, getTokenMetadata } from "@/lib/api";
 
 const categories: Category[] = ["Memes", "Threads", "Videos", "AI", "Design", "Research"];
-const tokens: RewardTokenOption[] = ["BNB", "USDT", "MEME", "CAKE", "ETH", "CUSTOM"];
+const tokens: RewardTokenOption[] = ["BNB", "USDT", "USDC", "MEME", "ETH"];
 const subTypes: SubmissionType[] = ["X Post", "Thread", "Quote", "Video"];
 const durationOptions = [
   { label: "1 Day (24 Hours)", value: "1" },
@@ -29,7 +29,7 @@ const covers = [
   "photo-1605792657660-596af9009e82", "photo-1526374965328-7f61d4dc18c5",
 ];
 const cover = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
-const fallbackTokenUsd: Record<PresetRewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, MEME: 0.002, CAKE: 2.5 };
+const fallbackTokenUsd: Record<PresetRewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, USDC: 1, MEME: 0.002, CAKE: 2.5 };
 
 const steps = ["Basics", "Reward & Schedule", "Rules & Submission"];
 

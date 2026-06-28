@@ -35,7 +35,6 @@ export function PublicUserProfileClient({ profile }: { profile: PublicUserProfil
             </h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-faint">@{profile.handle}</p>
-              <Badge tone="neutral">User account</Badge>
             </div>
           </div>
         </div>

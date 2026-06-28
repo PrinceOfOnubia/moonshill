@@ -108,9 +108,6 @@ export function UserProfileClient() {
             </h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-faint">@{profile.handle}</p>
-              <Badge tone={profile.accountType === "project" ? "blue" : "neutral"}>
-                {profile.accountType === "project" ? "Project account" : "User account"}
-              </Badge>
               {profile.accountType === "project" && profile.projectVerified && (
                 <Badge tone="gold">Verified project</Badge>
               )}

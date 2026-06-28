@@ -22,7 +22,7 @@ export function HowItWorks() {
         <div className="lg:sticky lg:top-28 lg:self-start">
           <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-gold-bright">How it works</p>
           <h2 className="mt-2 font-display text-4xl font-bold leading-[1.05] text-balance sm:text-5xl">
-            Three steps to the <span className="text-gold-grad">pool</span>.
+            Create. Submit. <span className="text-gold-grad">Earn.</span>
           </h2>
           <p className="mt-4 max-w-sm text-muted">
             No new social network to learn. Moonshill plugs straight into X — you keep your audience, we handle the rest.

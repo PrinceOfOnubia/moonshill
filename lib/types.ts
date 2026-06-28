@@ -17,7 +17,7 @@ export type SubmissionType =
   | "Image Upload"
   | "Multiple Links";
 
-export type PresetRewardToken = "BNB" | "USDT" | "MEME" | "CAKE" | "ETH";
+export type PresetRewardToken = "BNB" | "USDT" | "USDC" | "MEME" | "CAKE" | "ETH";
 export type RewardTokenOption = PresetRewardToken | "CUSTOM";
 export type RewardToken = string;
 export type AccountType = "user" | "project";

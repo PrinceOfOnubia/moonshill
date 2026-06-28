@@ -23,7 +23,7 @@ export function LandingHero() {
     { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
     { icon: Flag, value: 0, label: "Campaigns", tint: "text-violet-400" },
     { icon: Trophy, value: 0, label: "Winners", tint: "text-gold-bright" },
-    { icon: DollarSign, display: "$0", label: "Rewards Distributed", tint: "text-green" },
+    { icon: DollarSign, display: "$0", label: "Total Rewards", tint: "text-green" },
   ]);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function LandingHero() {
           { icon: Users, value: data.platformStats.creators, label: "Total Users", tint: "text-gold-bright" },
           { icon: Flag, value: data.platformStats.activeChallenges, label: "Campaigns", tint: "text-violet-400" },
           { icon: Trophy, value: data.leaderboard.winners.length, label: "Winners", tint: "text-gold-bright" },
-          { icon: DollarSign, display: `$${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(data.platformStats.totalRewards)}`, label: "Rewards Distributed", tint: "text-green" },
+          { icon: DollarSign, display: `$${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(data.platformStats.totalRewards)}`, label: "Total Rewards", tint: "text-green" },
         ]);
       })
       .catch(() => {
@@ -44,7 +44,7 @@ export function LandingHero() {
           { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
           { icon: Flag, value: 0, label: "Campaigns", tint: "text-violet-400" },
           { icon: Trophy, value: 0, label: "Winners", tint: "text-gold-bright" },
-          { icon: DollarSign, display: "$0", label: "Rewards Distributed", tint: "text-green" },
+          { icon: DollarSign, display: "$0", label: "Total Rewards", tint: "text-green" },
         ]);
       });
     return () => {

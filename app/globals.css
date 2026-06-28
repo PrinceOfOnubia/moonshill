@@ -43,7 +43,9 @@
   --r-xl: 34px;
 
   /* fonts */
-  --font-display: var(--font-display), "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter", "Segoe UI", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 @theme inline {
@@ -75,9 +77,9 @@
   --radius-lg: var(--r-lg);
   --radius-xl: var(--r-xl);
 
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display);
-  --font-mono: var(--font-mono), ui-monospace, "SF Mono", monospace;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 
   --animate-marquee: marquee 40s linear infinite;
   --animate-shimmer: shimmer 2.4s linear infinite;

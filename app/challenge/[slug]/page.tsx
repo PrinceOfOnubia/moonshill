@@ -1,34 +1,66 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { ChallengeDetail } from "@/components/challenge/ChallengeDetail";
+import { getCampaign } from "@/lib/api";
 import type { Challenge } from "@/lib/types";
 
-async function getApiChallenge(slug: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-  try {
-    const res = await fetch(`${base.replace(/\/$/, "")}/api/campaigns/${encodeURIComponent(slug)}`, {
-      next: { revalidate: 30 },
-    });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { campaign?: Challenge };
-    return body.campaign ?? null;
-  } catch {
-    return null;
+export default function ChallengePage() {
+  const params = useParams<{ slug: string }>();
+  const slug = typeof params?.slug === "string" ? params.slug : "";
+  const [campaign, setCampaign] = useState<Challenge | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) {
+      setCampaign(null);
+      setLoading(false);
+      setError("Campaign not found.");
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    getCampaign(slug)
+      .then(({ campaign: nextCampaign }) => {
+        if (cancelled) return;
+        setCampaign(nextCampaign);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setCampaign(null);
+        setError(err instanceof Error ? err.message : "Campaign not found.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface/40 p-10 text-center text-muted">
+        Loading campaign...
+      </div>
+    );
   }
-}
 
-export function generateStaticParams() {
-  return [];
-}
+  if (!campaign) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface/40 p-10 text-center">
+        <h1 className="font-display text-2xl font-bold text-text">Campaign not found</h1>
+        <p className="mt-3 text-muted">{error || "This campaign could not be loaded."}</p>
+      </div>
+    );
+  }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const c = await getApiChallenge(slug);
-  return { title: c ? `${c.title} — Moonshill` : "Campaign — Moonshill" };
-}
-
-export default async function ChallengePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const c = await getApiChallenge(slug);
-  if (!c) notFound();
-  return <ChallengeDetail c={c} />;
+  return <ChallengeDetail c={campaign} />;
 }

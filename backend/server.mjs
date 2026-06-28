@@ -1004,6 +1004,8 @@ async function handleCampaigns(req, res, url) {
         rewardAmount
         * (rewardToken === "USDT"
           ? 1
+          : rewardToken === "USDC"
+            ? 1
           : rewardToken === "BNB"
             ? bnbMarket.price
             : rewardToken === "ETH"

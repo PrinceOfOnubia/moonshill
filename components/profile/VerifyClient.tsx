@@ -1,19 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { BadgeCheck, Check, Globe, Loader2, ShieldCheck, Wallet, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { startXConnect } from "@/lib/api";
-
-const modes = ["Verify X account", "Verify a project"] as const;
+import { cn } from "@/lib/utils";
 
 export function VerifyClient() {
-  const [mode, setMode] = useState<(typeof modes)[number]>("Verify X account");
+  const { user } = useAuth();
+  const isProjectAccount = user?.accountType === "project";
+  const copy = useMemo(() => {
+    if (isProjectAccount) {
+      return {
+        title: "Get verified",
+        body: "Submit your project details for review. Verified projects receive the blue badge once approved.",
+      };
+    }
+    return {
+      title: "Get verified",
+      body: "Verification unlocks submissions. Connect your wallet and X account to complete your profile.",
+    };
+  }, [isProjectAccount]);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -21,33 +32,19 @@ export function VerifyClient() {
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-blue/12 text-blue">
           <ShieldCheck size={28} />
         </div>
-        <h1 className="mt-4 font-display text-3xl font-bold">Get verified</h1>
-        <p className="mx-auto mt-2 max-w-md text-muted">
-          Verification unlocks submissions and grants the blue badge to projects. Pick a flow below.
-        </p>
+        <h1 className="mt-4 font-display text-3xl font-bold">{copy.title}</h1>
+        <p className="mx-auto mt-2 max-w-md text-muted">{copy.body}</p>
       </div>
 
-      <div className="mx-auto mt-7 flex max-w-sm rounded-full border border-border bg-surface/60 p-1">
-        {modes.map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={cn(
-              "relative flex-1 rounded-full px-3 py-2 text-[13px] font-medium transition-colors",
-              mode === m ? "text-black" : "text-muted hover:text-text",
-            )}
-          >
-            {mode === m && <motion.span layoutId="verifytab" className="absolute inset-0 rounded-full bg-gradient-to-b from-gold-bright to-gold" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
-            <span className="relative">{m}</span>
-          </button>
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait">
-        <motion.div key={mode} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
-          {mode === "Verify X account" ? <XFlow /> : <ProjectFlow />}
-        </motion.div>
-      </AnimatePresence>
+      <motion.div
+        key={isProjectAccount ? "project" : "user"}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="mt-8"
+      >
+        {isProjectAccount ? <ProjectFlow /> : <XFlow />}
+      </motion.div>
     </div>
   );
 }
