@@ -53,11 +53,11 @@ export function LandingHero() {
             <h1 className="mt-6 font-display text-[44px] font-bold leading-[1.02] tracking-tight sm:text-[62px]">
               Your Web3
               <br />
-              <span className="text-gold-grad">Growth Engine</span>
+              <span className="text-gold-grad">Attention Engine</span>
             </h1>
 
             <p className="mt-5 text-[17px] font-medium text-muted">
-              Build Smarter. Scale Faster. Engage Better.
+              Grow. Engage. Earn.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">

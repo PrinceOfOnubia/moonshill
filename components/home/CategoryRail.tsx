@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "next-view-transitions";
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Category, Challenge } from "@/lib/types";
 import { getCampaigns } from "@/lib/api";
 import { fmtUsd } from "@/lib/utils";
@@ -18,7 +18,8 @@ const cats: { name: Category; emoji: string }[] = [
 ];
 
 export function CategoryRail() {
-  const ref = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [campaigns, setCampaigns] = useState<Challenge[]>([]);
 
   useEffect(() => {
@@ -35,6 +36,16 @@ export function CategoryRail() {
     };
   }, []);
 
+  function scrollCards(direction: "left" | "right") {
+    const rail = scrollRef.current;
+    if (!rail) return;
+
+    rail.scrollBy({
+      left: direction === "left" ? -280 : 280,
+      behavior: "smooth",
+    });
+  }
+
   return (
     <section className="mt-14">
       <div className="mb-5 flex items-end justify-between">
@@ -42,15 +53,36 @@ export function CategoryRail() {
           <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-gold-bright">Browse by lane</p>
           <h2 className="mt-1 font-display text-2xl font-bold">Pick your arena</h2>
         </div>
-        <span className="hidden text-[12px] text-faint sm:block">Drag to explore →</span>
+        <div className="flex items-center gap-3">
+          <span className="hidden text-[12px] text-faint sm:block">Drag to explore →</span>
+          <div className="hidden items-center gap-2 lg:flex">
+            <button
+              type="button"
+              onClick={() => scrollCards("left")}
+              aria-label="Scroll arenas left"
+              className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-gold/50 hover:text-gold-bright"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollCards("right")}
+              aria-label="Scroll arenas right"
+              className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-gold/50 hover:text-gold-bright"
+            >
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <motion.div ref={ref} className="overflow-hidden">
+      <motion.div ref={scrollRef} className="overflow-x-auto overflow-y-hidden scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <motion.div
+          ref={dragRef}
           drag="x"
           dragConstraints={{ left: -((cats.length - 2.2) * 280), right: 0 }}
           dragElastic={0.08}
-          className="flex cursor-grab gap-4 active:cursor-grabbing"
+          className="flex w-max cursor-grab gap-4 pb-1 active:cursor-grabbing"
         >
           {cats.map((cat, i) => {
             const categoryCampaigns = campaigns.filter((c) => c.category === cat.name);

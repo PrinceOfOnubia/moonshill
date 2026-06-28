@@ -20,7 +20,7 @@ export function LandingPage() {
           <div className="pointer-events-none absolute -bottom-20 left-1/3 h-64 w-64 rounded-full bg-green/10 blur-3xl" />
           <div className="relative mx-auto max-w-xl">
             <h2 className="font-display text-3xl font-bold leading-tight text-balance sm:text-4xl">
-              Ready to <span className="text-gold-grad">compete?</span>
+              Ready to <span className="text-gold-grad">earn</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">
               Launch App to enter Moonshill — discover live campaigns and start
