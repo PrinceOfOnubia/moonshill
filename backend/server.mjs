@@ -426,7 +426,10 @@ async function fetchBnbUsd() {
 
   for (const source of sources) {
     try {
-      const response = await fetch(source.url, { headers: { Accept: "application/json" } });
+      const response = await fetch(source.url, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(4_000),
+      });
       if (!response.ok) continue;
       const price = source.parse(await response.json());
       if (Number.isFinite(price) && price > 0) {
