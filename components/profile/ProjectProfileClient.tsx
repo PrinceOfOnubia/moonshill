@@ -35,9 +35,11 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
             <p className="text-sm text-faint">@{p.handle}</p>
           </div>
         </div>
-        <a href={`https://x.com/${p.xHandle || p.handle}`} target="_blank" rel="noreferrer">
-          <Button>Follow on 𝕏</Button>
-        </a>
+        {p.xHandle ? (
+          <a href={`https://x.com/${p.xHandle}`} target="_blank" rel="noreferrer">
+            <Button>Follow on 𝕏</Button>
+          </a>
+        ) : null}
       </div>
 
       <p className="mt-4 max-w-2xl text-[15px] text-muted">{p.description}</p>

@@ -98,12 +98,12 @@ function XFlow() {
         body="We check that submitted links come from this account before approval."
         done={linked}
         disabled={!connected}
-        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected || pending} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || user?.handle}</> : pending ? "Connecting…" : "Connect 𝕏"}</Button>}
+        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected || pending} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || "connected"}</> : pending ? "Connecting…" : "Connect 𝕏"}</Button>}
       />
       {linked && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 rounded-2xl border border-green/25 bg-green/10 p-4">
           <BadgeCheck className="text-green" />
-          <p className="text-sm text-text">You can now submit entries. Links must come from <span className="font-medium">@{user?.xHandle || user?.handle}</span>.</p>
+          <p className="text-sm text-text">You can now submit entries. Links must come from <span className="font-medium">@{user?.xHandle || "your connected X account"}</span>.</p>
         </motion.div>
       )}
       {error && (

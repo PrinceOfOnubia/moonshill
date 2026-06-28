@@ -13,6 +13,7 @@ import { SubmissionRow } from "./SubmissionRow";
 import { cn, shortAddr } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { startXConnect, updateMe } from "@/lib/api";
+import { XIcon } from "@/components/landing/social";
 
 const tabs = ["Submissions", "Joined", "Created"] as const;
 
@@ -35,8 +36,9 @@ export function UserProfileClient() {
   const joined = profile?.joinedCampaigns ?? [];
   const created = profile?.createdCampaigns ?? [];
   const submissions = profile?.submissions ?? [];
-  const sourceXHandle = profile?.xHandle || profile?.handle || "";
+  const sourceXHandle = profile?.xHandle || "";
   const xConnected = !!profile?.xConnected;
+  const xProfileUrl = sourceXHandle ? `https://x.com/${sourceXHandle}` : null;
 
   async function connectX() {
     setXPending(true);
@@ -92,6 +94,17 @@ export function UserProfileClient() {
             <h1 className="flex items-center gap-1.5 font-display text-2xl font-bold text-text drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] sm:text-3xl">
               <span className="truncate">{name}</span>
               {xConnected && <VerifiedBadge size={20} className="shrink-0" />}
+              {xProfileUrl && (
+                <a
+                  href={xProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open @${sourceXHandle} on X`}
+                  className="grid h-7 w-7 place-items-center rounded-full text-faint transition-colors hover:text-text"
+                >
+                  <XIcon size={14} />
+                </a>
+              )}
             </h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-faint">@{profile.handle}</p>
@@ -279,7 +292,18 @@ export function UserProfileClient() {
           </div>
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="text-[13px] text-muted">𝕏 account</span>
-            <span className="font-mono text-[13px] text-blue">@{sourceXHandle}</span>
+            {xConnected ? (
+              <span className="font-mono text-[13px] text-blue">Connected · @{sourceXHandle}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={connectX}
+                disabled={xPending}
+                className="text-[13px] font-medium text-blue transition-colors hover:text-text disabled:opacity-70"
+              >
+                {xPending ? "Connecting..." : "Connect X"}
+              </button>
+            )}
           </div>
           <div className="flex gap-2 pt-1">
             <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setAccountType(profile.accountType); setWebsite(profile.website || ""); setEditOpen(false); }}>

@@ -103,7 +103,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
               <span className="font-medium text-text">{c.creator.name}</span>
               {c.creator.type === "project" && c.creator.verified && <VerifiedBadge size={15} />}
             </span>
-            <span className="text-sm text-faint">@{c.creator.xHandle || c.creator.handle}</span>
+            <span className="text-sm text-faint">@{c.creator.handle}</span>
             <Badge tone={c.creator.type === "project" ? "blue" : "neutral"}>{c.creator.type === "project" ? "Project" : "User"}</Badge>
           </Link>
 

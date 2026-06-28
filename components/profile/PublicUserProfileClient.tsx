@@ -34,7 +34,7 @@ export function PublicUserProfileClient({ profile }: { profile: PublicUserProfil
               {profile.xConnected && <VerifiedBadge size={20} className="shrink-0" />}
             </h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
-              <p className="text-sm text-faint">@{profile.xHandle || profile.handle}</p>
+              <p className="text-sm text-faint">@{profile.handle}</p>
               <Badge tone="neutral">User account</Badge>
             </div>
           </div>
@@ -46,7 +46,7 @@ export function PublicUserProfileClient({ profile }: { profile: PublicUserProfil
       </div>
 
       <p className="mt-4 max-w-xl text-[15px] text-muted">{profile.bio}</p>
-      {profile.xConnected && <Badge tone="blue" className="mt-3">𝕏 connected · @{profile.xHandle || profile.handle}</Badge>}
+      {profile.xConnected && profile.xHandle && <Badge tone="blue" className="mt-3">𝕏 connected · @{profile.xHandle}</Badge>}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Wins" value={<AnimatedNumber value={profile.wins} />} icon={<Trophy size={16} className="text-gold-bright" />} />

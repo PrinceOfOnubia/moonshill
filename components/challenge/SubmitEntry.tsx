@@ -133,7 +133,7 @@ export function SubmitEntry({
           <div className="flex items-center gap-3 rounded-2xl border border-blue/20 bg-blue/8 p-3.5">
             <ShieldCheck size={20} className="shrink-0 text-blue" />
             <p className="text-[13px] text-muted">
-              Submitting as <span className="font-medium text-text">@{submitter?.xHandle || submitter?.handle || "your connected X account"}</span>. Links must come
+              Submitting as <span className="font-medium text-text">@{submitter?.xHandle || "your connected X account"}</span>. Links must come
               from your connected X account to be approved.
             </p>
           </div>
