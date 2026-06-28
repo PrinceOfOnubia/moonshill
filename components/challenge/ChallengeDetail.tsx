@@ -104,7 +104,6 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
               {c.creator.type === "project" && c.creator.verified && <VerifiedBadge size={15} />}
             </span>
             <span className="text-sm text-faint">@{c.creator.handle}</span>
-            <Badge tone={c.creator.type === "project" ? "blue" : "neutral"}>{c.creator.type === "project" ? "Project" : "User"}</Badge>
           </Link>
 
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted">{c.description}</p>

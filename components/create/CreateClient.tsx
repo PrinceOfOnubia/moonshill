@@ -446,7 +446,7 @@ export function CreateClient() {
               <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/30 to-transparent" />
               <div className="absolute inset-x-3 top-3 flex justify-between">
                 <Badge tone="neutral" className="bg-black/45 backdrop-blur border-white/10 text-white">{category}</Badge>
-                {creator?.accountType === "project" && <Badge tone="blue" className="bg-black/45 backdrop-blur">{creator.projectVerified ? "Verified project" : "Project"}</Badge>}
+                {creator?.accountType === "project" && creator.projectVerified && <Badge tone="gold" className="bg-black/45 backdrop-blur">Verified</Badge>}
               </div>
               <div className="absolute bottom-3 left-3">
                 <span className="text-[11px] uppercase tracking-wider text-white/60">Reward pool</span>

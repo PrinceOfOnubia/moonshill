@@ -128,9 +128,6 @@ function AccountQueue({ accounts }: { accounts: UserProfile[] }) {
               <p className="flex flex-wrap items-center gap-1.5 font-semibold">
                 {account.name}
                 {account.accountType === "project" && account.projectVerified && <VerifiedBadge size={14} />}
-                <Badge tone={account.accountType === "project" ? "blue" : "neutral"}>
-                  {account.accountType === "project" ? "Project" : "User"}
-                </Badge>
                 {account.accountType === "project" && account.projectVerified && <Badge tone="gold">Verified</Badge>}
               </p>
               <p className="truncate text-[13px] text-faint">
@@ -217,9 +214,6 @@ function FeaturedManager({ campaigns }: { campaigns: Challenge[] }) {
               <p className="truncate text-sm font-medium">{c.title}</p>
               <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-faint">
                 <span>{c.category}</span>
-                <Badge tone={c.creator.type === "project" ? "blue" : "neutral"}>
-                  {c.creator.type === "project" ? "Project creator" : "User creator"}
-                </Badge>
                 {c.creator.type === "project" && c.creator.verified && <Badge tone="gold">Verified</Badge>}
               </div>
             </div>
