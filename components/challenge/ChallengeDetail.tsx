@@ -161,7 +161,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                 </li>
               ))}
             </ul>
-            {c.requiredTags && (
+            {!!c.requiredTags?.length && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {c.requiredTags.map((tag) => (
                   <span key={tag} className="rounded-lg bg-surface-2 px-2.5 py-1 font-mono text-[13px] text-gold-bright">

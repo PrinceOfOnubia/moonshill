@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge, VerifiedBadge } from "@/components/ui/Badge";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { cn, timeAgo } from "@/lib/utils";
-import { getAdminSummary } from "@/lib/api";
+import { getAdminSummary, updateSubmissionStatus } from "@/lib/api";
 import type { Challenge, ProjectProfile, Submission } from "@/lib/types";
 
 const sections = ["Projects", "Submissions", "Featured"] as const;
@@ -132,6 +132,16 @@ function ProjectQueue({ projects }: { projects: ProjectProfile[] }) {
 
 function SubmissionQueue({ pending }: { pending: Submission[] }) {
   const [state, setState] = useState<Record<string, Verdict | "winner">>({});
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  async function setSubmissionVerdict(submission: Submission, status: "Approved" | "Rejected" | "Winner") {
+    setPendingAction(submission.id);
+    try {
+      await updateSubmissionStatus(submission.id, status);
+      setState({ ...state, [submission.id]: status === "Winner" ? "winner" : status.toLowerCase() as Verdict });
+    } finally {
+      setPendingAction(null);
+    }
+  }
   if (!pending.length) {
     return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No pending submissions yet.</div>;
   }
@@ -151,9 +161,9 @@ function SubmissionQueue({ pending }: { pending: Submission[] }) {
             </div>
             {v === "pending" ? (
               <div className="flex gap-2">
-                <button onClick={() => setState({ ...state, [s.id]: "approved" })} className="grid h-9 w-9 place-items-center rounded-full border border-green/30 bg-green/10 text-green hover:bg-green/20"><Check size={16} /></button>
-                <button onClick={() => setState({ ...state, [s.id]: "rejected" })} className="grid h-9 w-9 place-items-center rounded-full border border-red/30 bg-red/10 text-red hover:bg-red/20"><X size={16} /></button>
-                <button onClick={() => setState({ ...state, [s.id]: "winner" })} className="flex h-9 items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 text-[12px] font-medium text-gold-bright hover:bg-gold/20"><Crown size={14} /> Winner</button>
+                <button disabled={pendingAction === s.id} onClick={() => setSubmissionVerdict(s, "Approved")} className="grid h-9 w-9 place-items-center rounded-full border border-green/30 bg-green/10 text-green hover:bg-green/20 disabled:opacity-60"><Check size={16} /></button>
+                <button disabled={pendingAction === s.id} onClick={() => setSubmissionVerdict(s, "Rejected")} className="grid h-9 w-9 place-items-center rounded-full border border-red/30 bg-red/10 text-red hover:bg-red/20 disabled:opacity-60"><X size={16} /></button>
+                <button disabled={pendingAction === s.id} onClick={() => setSubmissionVerdict(s, "Winner")} className="flex h-9 items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 text-[12px] font-medium text-gold-bright hover:bg-gold/20 disabled:opacity-60"><Crown size={14} /> Winner</button>
               </div>
             ) : (
               <Badge tone={v === "approved" ? "blue" : v === "winner" ? "green" : "red"}>

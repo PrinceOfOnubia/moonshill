@@ -83,7 +83,7 @@ export function FeedTabs() {
             list.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
           ) : (
             <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted sm:col-span-2 lg:col-span-3">
-              No live campaigns yet.
+              No campaigns found.
             </div>
           )}
         </motion.div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link } from "next-view-transitions";
-import { Clock, Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Trophy } from "lucide-react";
 import type { Challenge } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -14,6 +14,8 @@ export function FeaturedBanners() {
   const [active, setActive] = useState(0);
   const [featured, setFeatured] = useState<Challenge[]>([]);
   const trackRef = useRef<HTMLDivElement>(null);
+  const desktopTrackRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ down: boolean; x: number; scrollLeft: number }>({ down: false, x: 0, scrollLeft: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -35,21 +37,75 @@ export function FeaturedBanners() {
     setActive(Math.round(el.scrollLeft / el.clientWidth));
   }
 
+  function scrollDesktop(direction: -1 | 1) {
+    const el = desktopTrackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.max(360, el.clientWidth * 0.72), behavior: "smooth" });
+  }
+
+  function startDesktopDrag(e: React.MouseEvent<HTMLDivElement>) {
+    const el = desktopTrackRef.current;
+    if (!el) return;
+    dragRef.current = { down: true, x: e.pageX, scrollLeft: el.scrollLeft };
+  }
+
+  function moveDesktopDrag(e: React.MouseEvent<HTMLDivElement>) {
+    const el = desktopTrackRef.current;
+    if (!el || !dragRef.current.down) return;
+    e.preventDefault();
+    el.scrollLeft = dragRef.current.scrollLeft - (e.pageX - dragRef.current.x);
+  }
+
+  function stopDesktopDrag() {
+    dragRef.current.down = false;
+  }
+
   return (
     <section>
       <div className="mb-4 flex items-end justify-between">
         <h2 className="font-display text-xl font-bold sm:text-2xl">Featured campaigns</h2>
-        <Link href="/explore" className="text-[13px] font-medium text-muted transition-colors hover:text-text">
-          View all
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-1 md:flex">
+            <button
+              type="button"
+              aria-label="Previous featured campaign"
+              onClick={() => scrollDesktop(-1)}
+              className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted transition-colors hover:border-border-strong hover:text-text"
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <button
+              type="button"
+              aria-label="Next featured campaign"
+              onClick={() => scrollDesktop(1)}
+              className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted transition-colors hover:border-border-strong hover:text-text"
+            >
+              <ChevronRight size={17} />
+            </button>
+          </div>
+          <Link href="/explore" className="text-[13px] font-medium text-muted transition-colors hover:text-text">
+            View all
+          </Link>
+        </div>
       </div>
 
-      {/* Desktop: two large banners side by side */}
-      <div className="hidden gap-5 md:grid md:grid-cols-2">
+      {/* Desktop carousel */}
+      <div
+        ref={desktopTrackRef}
+        onMouseDown={startDesktopDrag}
+        onMouseMove={moveDesktopDrag}
+        onMouseUp={stopDesktopDrag}
+        onMouseLeave={stopDesktopDrag}
+        className="no-scrollbar hidden cursor-grab snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth active:cursor-grabbing md:flex"
+      >
         {featured.length ? (
-          featured.map((c) => <FeaturedBanner key={c.id} c={c} />)
+          featured.map((c) => (
+            <div key={c.id} className="w-[calc(50%_-_10px)] min-w-[calc(50%_-_10px)] snap-start">
+              <FeaturedBanner c={c} />
+            </div>
+          ))
         ) : (
-          <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted md:col-span-2">
+          <div className="w-full rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
             No featured campaigns yet.
           </div>
         )}

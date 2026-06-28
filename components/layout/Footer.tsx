@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Logo } from "./Logo";
 
 const cols = [
-  { title: "Platform", links: [["Explore", "/explore"], ["Create", "/create"], ["Leaderboard", "/leaderboard"], ["Profile", "/profile"]] },
-  { title: "Get started", links: [["Get verified", "/verify"], ["Project verification", "/verify"], ["Admin", "/admin"]] },
-  { title: "Resources", links: [["Docs", "/docs"], ["How it works", "/docs#how-it-works"], ["Privacy", "/privacy"], ["BNB Chain", "/project/BNBCHAIN"]] },
+  { title: "Platform", links: [["Explore", "/explore"], ["Create", "/create"], ["Leaderboard", "/leaderboard"]] },
+  { title: "Get started", links: [["Docs", "/docs"], ["How it Works", "/docs#how-it-works"], ["BNB Chain", "/project/BNBCHAIN"]] },
+  { title: "Resources", links: [["Token", "/token"], ["Privacy", "/privacy"], ["Terms", "/terms"]] },
 ];
 
 export function Footer() {
@@ -16,7 +16,7 @@ export function Footer() {
           <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-faint">
             The community-first crypto arena. Create on X, submit your link, compete for funded rewards.
           </p>
-          <p className="mt-4 text-[12px] text-faint">Dark mode · Mobile-first · Powered by BNB Chain</p>
+          <p className="mt-4 text-[12px] text-faint">Powered by BNB Chain</p>
         </div>
         {cols.map((c) => (
           <div key={c.title}>
@@ -33,7 +33,7 @@ export function Footer() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-2 px-4 py-5 pb-28 text-[12px] text-faint sm:flex-row sm:px-6 md:pb-5">
-          <span>© {new Date().getFullYear()} Moonshill. Every card is a campaign to join.</span>
+          <span>© {new Date().getFullYear()} Moonshill. Grow. Engage. Earn.</span>
           <span className="flex gap-4">
             <Link href="/docs" className="hover:text-text">Docs</Link>
             <Link href="/token" className="hover:text-text">Token</Link>

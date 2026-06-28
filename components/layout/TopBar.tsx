@@ -2,12 +2,15 @@
 
 import { Link } from "next-view-transitions";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { LogOut, Plus, Search, User, Wallet } from "lucide-react";
+import { formatEther } from "ethers";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BadgeCheck, LogOut, Plus, Search, User, Wallet } from "lucide-react";
 import { Logo } from "./Logo";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { getCampaigns } from "@/lib/api";
+import type { Challenge } from "@/lib/types";
 import { cn, shortAddr } from "@/lib/utils";
 
 const nav = [
@@ -21,11 +24,27 @@ export function TopBar() {
   const router = useRouter();
   const { address, disconnect, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [campaigns, setCampaigns] = useState<Challenge[]>([]);
+  const [balance, setBalance] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLFormElement>(null);
   const accountName = user?.name || (address ? shortAddr(address) : "Moonshill user");
   const accountWallet = address || user?.wallet || "";
   const accountAvatar = user?.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(accountWallet || "moonshill")}&backgroundType=gradientLinear`;
   const accountVerified = !!user?.xConnected;
+  const matches = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+    return campaigns
+      .filter((campaign) =>
+        campaign.title.toLowerCase().includes(needle) ||
+        campaign.creator.name.toLowerCase().includes(needle) ||
+        campaign.category.toLowerCase().includes(needle),
+      )
+      .slice(0, 5);
+  }, [campaigns, query]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -35,6 +54,63 @@ export function TopBar() {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [menuOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCampaigns({ limit: 50 })
+      .then(({ campaigns: next }) => {
+        if (!cancelled) setCampaigns(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCampaigns([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBalance() {
+      if (!address || !window.ethereum) {
+        setBalance(null);
+        return;
+      }
+      try {
+        const raw = (await window.ethereum.request({
+          method: "eth_getBalance",
+          params: [address, "latest"],
+        })) as string;
+        if (cancelled) return;
+        const amount = Number(formatEther(raw));
+        setBalance(`${amount.toLocaleString("en-US", { maximumFractionDigits: 4 })} BNB`);
+      } catch {
+        if (!cancelled) setBalance(null);
+      }
+    }
+    void loadBalance();
+    return () => {
+      cancelled = true;
+    };
+  }, [address]);
+
+  function submitSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const target = matches[0];
+    if (!target) return;
+    setSearchOpen(false);
+    setQuery("");
+    router.push(`/challenge/${target.slug}`);
+  }
 
   return (
     <header className="sticky top-0 z-50 glass-strong border-b border-border">
@@ -60,14 +136,53 @@ export function TopBar() {
           })}
         </nav>
 
-        <button
-          onClick={() => router.push("/explore")}
-          className="ml-auto hidden h-10 w-64 items-center gap-2.5 rounded-full border border-border bg-surface/70 px-4 text-sm text-faint transition-colors hover:border-border-strong lg:flex"
+        <form
+          ref={searchRef}
+          onSubmit={submitSearch}
+          className="relative ml-auto hidden lg:block"
         >
+          <div className="flex h-10 w-64 items-center gap-2.5 rounded-full border border-border bg-surface/70 px-4 text-sm text-faint transition-colors focus-within:border-gold/50 hover:border-border-strong">
           <Search size={16} />
-          <span>Search campaigns…</span>
-          <kbd className="ml-auto rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">/</kbd>
-        </button>
+            <input
+              value={query}
+              onFocus={() => setSearchOpen(true)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSearchOpen(true);
+              }}
+              placeholder="Search campaigns..."
+              className="h-full flex-1 bg-transparent text-sm text-text outline-none placeholder:text-faint"
+            />
+            <kbd className="ml-auto rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">/</kbd>
+          </div>
+          {searchOpen && query.trim() && (
+            <div className="absolute right-0 top-12 z-[95] w-[360px] overflow-hidden rounded-2xl border border-border-strong glass-strong">
+              {matches.length ? (
+                <div className="p-1.5">
+                  {matches.map((campaign) => (
+                    <Link
+                      key={campaign.id}
+                      href={`/challenge/${campaign.slug}`}
+                      onClick={() => {
+                        setSearchOpen(false);
+                        setQuery("");
+                      }}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface-2"
+                    >
+                      <img src={campaign.cover} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-text">{campaign.title}</span>
+                        <span className="block truncate text-[12px] text-faint">{campaign.category} · {campaign.creator.name}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="px-4 py-5 text-center text-sm text-muted">No campaigns found.</p>
+              )}
+            </div>
+          )}
+        </form>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-2">
           <button
@@ -87,7 +202,7 @@ export function TopBar() {
           </Link>
           <button className="hidden h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:border-gold/50 sm:flex">
             <Wallet size={16} className="text-gold-bright" />
-            <span className="font-mono">2.41 BNB</span>
+            <span className="font-mono">{balance || "0 BNB"}</span>
           </button>
 
           <div ref={menuRef} className="relative">
@@ -115,6 +230,13 @@ export function TopBar() {
                     className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
                   >
                     <User size={16} /> Profile
+                  </Link>
+                  <Link
+                    href="/verify"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                  >
+                    <BadgeCheck size={16} /> Get Verified
                   </Link>
                   <button
                     onClick={() => {

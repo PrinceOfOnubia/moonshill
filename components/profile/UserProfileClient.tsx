@@ -23,6 +23,7 @@ export function UserProfileClient() {
   const [editOpen, setEditOpen] = useState(false);
   const [xPending, setXPending] = useState(false);
   const [xError, setXError] = useState<string | null>(null);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
@@ -117,6 +118,9 @@ export function UserProfileClient() {
       {xError && (
         <p className="mt-2 text-sm text-red">{xError}</p>
       )}
+      {profileMessage && (
+        <p className="mt-2 text-sm text-green">{profileMessage}</p>
+      )}
 
       {/* stats */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -147,17 +151,29 @@ export function UserProfileClient() {
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-6">
           {tab === "Submissions" && (
             <div className="grid gap-2.5">
-              {submissions.map((s) => <SubmissionRow key={s.id} s={s} />)}
+              {submissions.length ? (
+                submissions.map((s) => <SubmissionRow key={s.id} s={s} />)
+              ) : (
+                <EmptyState>You haven&apos;t submitted any entries yet.</EmptyState>
+              )}
             </div>
           )}
           {tab === "Joined" && (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {joined.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)}
+              {joined.length ? (
+                joined.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+              ) : (
+                <EmptyState>You haven&apos;t joined any campaigns yet.</EmptyState>
+              )}
             </div>
           )}
           {tab === "Created" && (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {created.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)}
+              {created.length ? (
+                created.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+              ) : (
+                <EmptyState>No campaigns found.</EmptyState>
+              )}
             </div>
           )}
         </motion.div>
@@ -224,6 +240,8 @@ export function UserProfileClient() {
                 setAvatar(updated.user.avatar);
                 setEditOpen(false);
                 await refreshUser();
+                setProfileMessage("Profile updated successfully.");
+                setTimeout(() => setProfileMessage(null), 2200);
               }}
             >
               Save changes
@@ -231,6 +249,14 @@ export function UserProfileClient() {
           </div>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted sm:col-span-2 lg:col-span-3">
+      {children}
     </div>
   );
 }

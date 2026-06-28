@@ -40,6 +40,7 @@ export function LandingHero() {
           transition={{ duration: 0.9, ease: [0.21, 0.47, 0.32, 0.98] }}
           className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-right"
         />
+        <div className="pointer-events-none absolute inset-0 bg-black/45 md:hidden" />
         {/* smooth fade from the artwork into the black page below */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-b from-transparent via-black/70 to-black" />
         {/* content — constrained to the page grid */}

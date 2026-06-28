@@ -7,7 +7,6 @@ import { RewardTicker } from "./RewardTicker";
 import { Footer } from "./Footer";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { LandingHeader } from "@/components/landing/LandingHeader";
-import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -30,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="relative z-10 mx-auto min-h-[60vh] w-full max-w-[1240px] px-4 pb-12 pt-2 sm:px-6">
           {isPublic ? <div className="pt-4">{children}</div> : <LandingPage />}
         </main>
-        <LandingFooter />
+        <Footer />
       </>
     );
   }

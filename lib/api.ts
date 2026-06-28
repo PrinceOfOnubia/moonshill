@@ -97,6 +97,10 @@ export async function getPublicData() {
   }>("/api/public");
 }
 
+export async function getBnbMarketPrice() {
+  return apiFetch<{ symbol: "BNB"; currency: "USD"; price: number; source: string; updatedAt: string }>("/api/market/bnb");
+}
+
 export async function getLeaderboard() {
   return apiFetch<{ winners: LeaderRow[]; contributors: LeaderRow[]; projects: LeaderRow[] }>("/api/leaderboard");
 }
@@ -134,4 +138,11 @@ export async function getAdminSummary() {
     projects: ProjectProfile[];
     featuredCampaigns: Challenge[];
   }>("/api/admin/summary");
+}
+
+export async function updateSubmissionStatus(submissionId: string, status: "Pending Review" | "Approved" | "Rejected" | "Winner") {
+  return apiFetch<{ submission: Submission }>(`/api/admin/submissions/${encodeURIComponent(submissionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }

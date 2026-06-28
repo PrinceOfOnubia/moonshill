@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Clock, ImageIcon, PartyPopper, Upload, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -9,18 +9,26 @@ import { Avatar } from "@/components/ui/Avatar";
 import type { Category, RewardToken, SubmissionType } from "@/lib/types";
 import { cn, fmtUsd } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { createCampaign } from "@/lib/api";
+import { createCampaign, getBnbMarketPrice } from "@/lib/api";
 
 const categories: Category[] = ["Memes", "Threads", "Videos", "AI", "Design", "Research"];
 const tokens: RewardToken[] = ["BNB", "USDT", "MEME", "CAKE", "ETH"];
-const subTypes: SubmissionType[] = ["X Post", "X Thread", "Quote Post", "Video Link", "Image Upload", "Multiple Links"];
+const subTypes: SubmissionType[] = ["X Post", "Thread", "Quote", "Video"];
+const durationOptions = [
+  { label: "1 Day (24 Hours)", value: "1" },
+  { label: "3 Days", value: "3" },
+  { label: "7 Days", value: "7" },
+  { label: "30 Days", value: "30" },
+  { label: "Custom", value: "custom" },
+] as const;
+const requiredMoonshillRule = "Must follow @moonshillfun on X";
 const covers = [
   "photo-1620207418302-439b387441b0", "photo-1634986666676-ec8fd927c23d",
   "photo-1639762681485-074b7f938ba0", "photo-1535016120720-40c646be5580",
   "photo-1605792657660-596af9009e82", "photo-1526374965328-7f61d4dc18c5",
 ];
 const cover = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
-const tokenUsd: Record<RewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, MEME: 0.002, CAKE: 2.5 };
+const fallbackTokenUsd: Record<RewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, MEME: 0.002, CAKE: 2.5 };
 
 const steps = ["Basics", "Reward & Schedule", "Rules & Submission"];
 
@@ -37,14 +45,32 @@ export function CreateClient() {
   const [desc, setDesc] = useState("");
   const [category, setCategory] = useState<Category>("Memes");
   const [token, setToken] = useState<RewardToken>("BNB");
-  const [amount, setAmount] = useState(10);
-  const [winners, setWinners] = useState(10);
-  const [days, setDays] = useState(7);
-  const [subType, setSubType] = useState<SubmissionType>("X Post");
+  const [amount, setAmount] = useState(1);
+  const [winners, setWinners] = useState(1);
+  const [duration, setDuration] = useState<(typeof durationOptions)[number]["value"]>("1");
+  const [customDays, setCustomDays] = useState(1);
+  const [submissionTypes, setSubmissionTypes] = useState<SubmissionType[]>(["X Post"]);
   const [rules, setRules] = useState("Original content only\nMust tag the project\n1 entry per account");
-  const [tags, setTags] = useState("@yourproject");
+  const [tags, setTags] = useState("");
+  const [bnbPrice, setBnbPrice] = useState(fallbackTokenUsd.BNB);
 
   const coverSrc = customCover ?? cover(coverId);
+  const days = duration === "custom" ? Math.max(1, customDays) : Number(duration);
+  const tokenUsd = useMemo<Record<RewardToken, number>>(() => ({ ...fallbackTokenUsd, BNB: bnbPrice }), [bnbPrice]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getBnbMarketPrice()
+      .then((market) => {
+        if (!cancelled && Number.isFinite(market.price) && market.price > 0) setBnbPrice(market.price);
+      })
+      .catch(() => {
+        if (!cancelled) setBnbPrice(fallbackTokenUsd.BNB);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function onUploadCover(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -68,6 +94,8 @@ export function CreateClient() {
     setPublishing(true);
     setError(null);
     try {
+      const selectedTypes = submissionTypes.length ? submissionTypes : ["X Post"];
+      const proof = selectedTypes.map((type) => `Submit ${type.toLowerCase()} link`);
       await createCampaign({
         title,
         description: desc,
@@ -77,14 +105,15 @@ export function CreateClient() {
         rewardAmount: amount,
         winners,
         days,
-        submissionType: subType,
-        rules,
-        proof: subType === "Image Upload" ? ["Upload final artwork"] : [`Submit ${subType.toLowerCase()} link`],
+        submissionType: selectedTypes.join(", "),
+        submissionTypes: selectedTypes,
+        rules: [requiredMoonshillRule, ...rules.split("\n").map((rule) => rule.trim()).filter(Boolean)],
+        proof,
         requiredTags: tags.split(/\s+/).filter(Boolean),
       });
       setPublished(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not launch campaign.");
+      setError(err instanceof Error ? err.message : "Could not create campaign.");
     } finally {
       setPublishing(false);
     }
@@ -101,7 +130,7 @@ export function CreateClient() {
         >
           <PartyPopper size={38} />
         </motion.div>
-        <h1 className="mt-6 font-display text-3xl font-bold">Campaign launched!</h1>
+        <h1 className="mt-6 font-display text-3xl font-bold">Campaign created successfully.</h1>
         <p className="mx-auto mt-3 max-w-sm text-muted">
           <span className="text-text">{title || "Your campaign"}</span> is live with a{" "}
           <span className="font-mono text-green">{fmtUsd(pool)}</span> pool. The timeline awaits.
@@ -241,11 +270,16 @@ export function CreateClient() {
                   </div>
                   <Field label="Duration">
                     <Chips
-                      options={[3, 7, 14, 30]}
-                      value={days}
-                      onChange={setDays}
-                      render={(d) => `${d} days`}
+                      options={durationOptions.map((option) => option.value)}
+                      value={duration}
+                      onChange={setDuration}
+                      render={(value) => durationOptions.find((option) => option.value === value)?.label || "Custom"}
                     />
+                    {duration === "custom" && (
+                      <div className="mt-3 max-w-xs">
+                        <NumberInput value={customDays} onChange={setCustomDays} suffix="days" />
+                      </div>
+                    )}
                   </Field>
                 </>
               )}
@@ -257,17 +291,35 @@ export function CreateClient() {
                       {subTypes.map((s) => (
                         <button
                           key={s}
-                          onClick={() => setSubType(s)}
+                          onClick={() => {
+                            setSubmissionTypes((prev) =>
+                              prev.includes(s)
+                                ? prev.filter((type) => type !== s)
+                                : [...prev, s],
+                            );
+                          }}
                           className={cn(
                             "rounded-xl border px-3 py-3 text-left text-[13px] font-medium transition-colors",
-                            subType === s ? "border-gold/40 bg-gold/12 text-gold-bright" : "border-border bg-surface text-muted hover:text-text",
+                            submissionTypes.includes(s) ? "border-gold/40 bg-gold/12 text-gold-bright" : "border-border bg-surface text-muted hover:text-text",
                           )}
                         >
-                          {s}
+                          <span className="flex items-center gap-2">
+                            <span className={cn(
+                              "grid h-4 w-4 place-items-center rounded border",
+                              submissionTypes.includes(s) ? "border-gold bg-gold text-black" : "border-border-strong",
+                            )}>
+                              {submissionTypes.includes(s) && <Check size={11} />}
+                            </span>
+                            {s}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </Field>
+                  <div className="rounded-xl border border-gold/20 bg-gold/8 p-3.5">
+                    <p className="text-[12px] font-medium uppercase tracking-wider text-gold-bright">Required rule</p>
+                    <p className="mt-1 text-sm text-muted">{requiredMoonshillRule}</p>
+                  </div>
                   <Field label="Rules (one per line)">
                     <textarea
                       value={rules}
@@ -295,7 +347,7 @@ export function CreateClient() {
               </Button>
             ) : (
               <Button magnetic onClick={publish} disabled={publishing}>
-                {publishing ? "Launching…" : "Launch campaign 🚀"}
+                {publishing ? "Creating..." : "Launch campaign 🚀"}
               </Button>
             )}
           </div>

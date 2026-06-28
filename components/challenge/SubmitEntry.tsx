@@ -35,15 +35,24 @@ export function SubmitEntry({
   const [phase, setPhase] = useState<"form" | "loading" | "done">("form");
   const submitter = user;
 
-  const valid = !!submitter && (isUpload ? !!upload : links.some((l) => l.trim().length > 4));
+  const cleanLinks = links.map((l) => l.trim()).filter(Boolean);
+  const valid = !!submitter && (isUpload ? !!upload : cleanLinks.some(isLikelyUrl));
 
   async function submit() {
+    if (!submitter) {
+      setError("Connect your wallet before submitting.");
+      return;
+    }
+    if (!isUpload && !cleanLinks.some(isLikelyUrl)) {
+      setError("Enter a valid submission link.");
+      return;
+    }
     setPhase("loading");
     setError(null);
     try {
       await submitCampaign(challenge.id, {
-        link: isUpload ? upload : links.find((l) => l.trim().length > 4),
-        links: links.filter((l) => l.trim().length > 4),
+        link: isUpload ? upload : cleanLinks.find(isLikelyUrl),
+        links: cleanLinks.filter(isLikelyUrl),
         type: challenge.submissionType,
       });
       setPhase("done");
@@ -70,7 +79,7 @@ export function SubmitEntry({
       <Button className="w-full" onClick={submit} disabled={!valid || phase === "loading"}>
         {phase === "loading" ? (
           <>
-            <Loader2 size={18} className="animate-spin" /> Verifying…
+            <Loader2 size={18} className="animate-spin" /> Submitting...
           </>
         ) : (
           "Submit entry"
@@ -97,10 +106,10 @@ export function SubmitEntry({
           </motion.div>
           <h4 className="mt-4 font-display text-xl font-semibold">You&apos;re in the arena</h4>
           <p className="mx-auto mt-2 max-w-xs text-sm text-muted">
-            Your entry for <span className="text-text">{challenge.title}</span> is now under review.
+            Entry submitted successfully for <span className="text-text">{challenge.title}</span>.
           </p>
           <div className="mt-4 flex justify-center">
-            <Badge tone={statusTone["Pending Review"]}>● Pending Review</Badge>
+            <Badge tone={statusTone["Pending Review"]}>● Submitted</Badge>
           </div>
         </div>
       ) : (
@@ -186,7 +195,7 @@ export function SubmitEntry({
             </div>
           )}
 
-          {challenge.requiredTags && (
+          {!!challenge.requiredTags?.length && (
             <div className="rounded-xl bg-surface p-3.5">
               <p className="text-[12px] text-faint">Your post must include</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -205,4 +214,13 @@ export function SubmitEntry({
       )}
     </Modal>
   );
+}
+
+function isLikelyUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
 }

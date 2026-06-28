@@ -8,6 +8,9 @@ export type Category =
 
 export type SubmissionType =
   | "X Post"
+  | "Thread"
+  | "Quote"
+  | "Video"
   | "X Thread"
   | "Quote Post"
   | "Video Link"

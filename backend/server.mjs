@@ -17,6 +17,9 @@ const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_ME_URL = "https://api.x.com/2/users/me?user.fields=profile_image_url,verified,username";
 const X_HANDLE = process.env.X_HANDLE || "moonshillfun";
+const REQUIRED_X_RULE = `Must follow @${X_HANDLE} on X`;
+const BNB_PRICE_TTL_MS = 60_000;
+let bnbPriceCache = { price: 600, source: "fallback", updatedAt: 0 };
 const isProd = process.env.NODE_ENV === "production";
 const shouldSeedDemoData = process.env.SEED_DEMO_DATA === "true" || (!isProd && process.env.SEED_DEMO_DATA !== "false");
 const allowedCorsOrigins = new Set(
@@ -405,6 +408,39 @@ function userRow(row) {
   };
 }
 
+async function fetchBnbUsd() {
+  if (Date.now() - bnbPriceCache.updatedAt < BNB_PRICE_TTL_MS) return bnbPriceCache;
+
+  const sources = [
+    {
+      name: "binance",
+      url: "https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT",
+      parse: (body) => Number(body.price),
+    },
+    {
+      name: "coingecko",
+      url: "https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd",
+      parse: (body) => Number(body?.binancecoin?.usd),
+    },
+  ];
+
+  for (const source of sources) {
+    try {
+      const response = await fetch(source.url, { headers: { Accept: "application/json" } });
+      if (!response.ok) continue;
+      const price = source.parse(await response.json());
+      if (Number.isFinite(price) && price > 0) {
+        bnbPriceCache = { price, source: source.name, updatedAt: Date.now() };
+        return bnbPriceCache;
+      }
+    } catch {
+      /* try next source */
+    }
+  }
+
+  return bnbPriceCache;
+}
+
 async function getUserById(id) {
   const result = await query("select * from users where id = $1", [id]);
   return result.rows[0] ? userRow(result.rows[0]) : null;
@@ -724,11 +760,13 @@ async function handleCampaigns(req, res, url) {
     const category = String(body.category || "Memes");
     const cover = String(body.cover || seed.challenges[0]?.cover || "");
     const rewardToken = String(body.rewardToken || "BNB");
-    const rewardAmount = Number(body.rewardAmount || 0);
-    const winners = Number(body.winners || 1);
-    const days = Number(body.days || 7);
+    const rewardAmount = Number(body.rewardAmount || 1);
+    const winners = Math.max(1, Number(body.winners || 1));
+    const days = Math.max(1, Number(body.days || 1));
     const submissionType = String(body.submissionType || "X Post");
-    const rules = Array.isArray(body.rules) ? body.rules : String(body.rules || "").split("\n").map((x) => x.trim()).filter(Boolean);
+    const rawRules = Array.isArray(body.rules) ? body.rules : String(body.rules || "").split("\n").map((x) => x.trim()).filter(Boolean);
+    const editableRules = rawRules.map((x) => String(x).trim()).filter((x) => x && x !== REQUIRED_X_RULE);
+    const rules = [REQUIRED_X_RULE, ...editableRules];
     const proof = Array.isArray(body.proof) ? body.proof : String(body.proof || "").split("\n").map((x) => x.trim()).filter(Boolean);
     const requiredTags = Array.isArray(body.requiredTags)
       ? body.requiredTags
@@ -746,7 +784,8 @@ async function handleCampaigns(req, res, url) {
       avatar: user.avatar,
       verified: user.xConnected,
     };
-    const rewardPool = Math.round(rewardAmount * (rewardToken === "USDT" ? 1 : rewardToken === "BNB" ? 600 : rewardToken === "ETH" ? 3200 : rewardToken === "CAKE" ? 2.5 : 0.002));
+    const bnbMarket = await fetchBnbUsd();
+    const rewardPool = Math.round(rewardAmount * (rewardToken === "USDT" ? 1 : rewardToken === "BNB" ? bnbMarket.price : rewardToken === "ETH" ? 3200 : rewardToken === "CAKE" ? 2.5 : 0.002));
     const inserted = await query(
       `
       insert into campaigns
@@ -894,6 +933,45 @@ async function handleAdminSummary(req, res) {
   });
 }
 
+async function handleAdminSubmissionStatus(req, res, submissionId) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  if (!user.isAdmin) {
+    return json(res, 403, { error: "Admin access required." });
+  }
+  const body = await readBody(req);
+  const status = String(body.status || "").trim();
+  const allowed = new Set(["Pending Review", "Approved", "Rejected", "Winner"]);
+  if (!allowed.has(status)) {
+    return json(res, 400, { error: "Valid submission status is required." });
+  }
+  const updated = await query(
+    `
+    update submissions
+    set status = $2
+    where id = $1
+    returning *
+    `,
+    [submissionId, status],
+  );
+  if (!updated.rows[0]) return json(res, 404, { error: "Submission not found." });
+  const s = updated.rows[0];
+  return json(res, 200, {
+    submission: {
+      id: s.id,
+      challengeId: s.campaign_id,
+      challengeTitle: s.challenge_title,
+      cover: s.cover,
+      user: s.user,
+      link: s.link,
+      type: s.type,
+      status: s.status,
+      submittedAt: s.submitted_at,
+      reward: s.reward == null ? undefined : Number(s.reward),
+    },
+  });
+}
+
 async function handlePublic(req, res) {
   const [campaignsCount, submissionsCount, usersCount, totalRewards, featuredRows, leaders] = await Promise.all([
     query("select count(*)::int as count from campaigns"),
@@ -917,6 +995,17 @@ async function handlePublic(req, res) {
     tickerItems: [],
     leaderboard,
     featuredCampaigns: featuredRows.rows.map(campaignRow),
+  });
+}
+
+async function handleBnbMarket(req, res) {
+  const market = await fetchBnbUsd();
+  return json(res, 200, {
+    symbol: "BNB",
+    currency: "USD",
+    price: market.price,
+    source: market.source,
+    updatedAt: new Date(market.updatedAt || Date.now()).toISOString(),
   });
 }
 
@@ -1009,6 +1098,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (url.pathname === "/health") return json(res, 200, { ok: true, appName: APP_NAME, time: nowIso() });
     if (url.pathname === "/api/public" && req.method === "GET") return handlePublic(req, res);
+    if (url.pathname === "/api/market/bnb" && req.method === "GET") return handleBnbMarket(req, res);
     if (url.pathname === "/api/leaderboard" && req.method === "GET") return handleLeaderboard(req, res);
     if (url.pathname === "/api/notifications" && req.method === "GET") return handleNotifications(req, res);
     if (/^\/api\/projects\/[^/]+$/.test(url.pathname) && req.method === "GET") {
@@ -1032,6 +1122,9 @@ const server = http.createServer(async (req, res) => {
       return handleSubmitCampaign(req, res, decodeURIComponent(url.pathname.split("/")[3]));
     }
     if (url.pathname === "/api/admin/summary" && req.method === "GET") return handleAdminSummary(req, res);
+    if (/^\/api\/admin\/submissions\/[^/]+$/.test(url.pathname) && req.method === "PATCH") {
+      return handleAdminSubmissionStatus(req, res, decodeURIComponent(url.pathname.split("/").pop()));
+    }
 
     if (url.pathname === "/") return text(res, 200, `${APP_NAME} backend is running.`);
     return json(res, 404, { error: "Not found." });

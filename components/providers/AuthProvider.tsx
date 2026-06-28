@@ -16,9 +16,9 @@ const STORAGE_KEY = "mb_wallet";
 const STORAGE_CHAIN_KEY = "mb_wallet_chain";
 
 interface AuthState {
-  /** Whether a wallet is connected (user is in the authenticated app). */
+  /** Whether a wallet session is authenticated (user is in the app). */
   connected: boolean;
-  /** Connected wallet address (mock). */
+  /** Connected wallet address. */
   address: string | null;
   chainId: string | null;
   user: MeResponse | null;
@@ -62,6 +62,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       setUser(null);
+      setAddress(null);
+      setChainId(null);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_CHAIN_KEY);
+      } catch {
+        /* ignore */
+      }
     }
   }, []);
 
@@ -83,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const next = Array.isArray(accounts) ? (accounts[0] as string | undefined) : undefined;
         if (next) {
           setAddress(next);
+          setUser((current) => current && current.wallet.toLowerCase() === next.toLowerCase() ? current : null);
           try {
             localStorage.setItem(STORAGE_KEY, next);
           } catch {
@@ -182,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthCtx.Provider
       value={{
-        connected: !!address && (!chainId || chainId === BSC_CHAIN_ID),
+        connected: !!user && !!address && (!chainId || chainId === BSC_CHAIN_ID),
         address,
         chainId,
         user,

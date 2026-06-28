@@ -146,7 +146,7 @@ export function NotificationsMenu() {
                 {items.length === 0 ? (
                   <div className="grid place-items-center gap-2 px-6 py-16 text-center">
                     <Bell size={28} className="text-faint" />
-                    <p className="text-sm text-muted">You&apos;re all caught up.</p>
+                    <p className="text-sm text-muted">No notifications yet.</p>
                   </div>
                 ) : (
                   <ul className="divide-y divide-border">
