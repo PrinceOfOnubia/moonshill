@@ -55,7 +55,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
 
   async function join() {
     if (!connected) {
-      openConnect();
+      openConnect(`/challenge/${c.slug}`);
       return;
     }
     if (isCreator) return;
@@ -97,14 +97,18 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
             {c.title}
           </h1>
 
-          <Link href={creatorHref} className="mt-4 inline-flex items-center gap-2.5">
+          <div className="mt-4 inline-flex items-center gap-2.5">
             <Avatar src={c.creator.avatar} alt={c.creator.name} size={36} verified={c.creator.verified} />
-            <span className="flex items-center gap-1 text-sm">
-              <span className="font-medium text-text">{c.creator.name}</span>
+            <span className="flex items-center gap-2 text-sm">
+              <Link href={creatorHref} className="font-medium text-text transition-colors hover:text-gold-bright">
+                {c.creator.name}
+              </Link>
               {c.creator.type === "project" && c.creator.verified && <VerifiedBadge size={15} />}
             </span>
-            <span className="text-sm text-faint">@{c.creator.handle}</span>
-          </Link>
+            <Link href={creatorHref} className="text-sm text-faint transition-colors hover:text-text">
+              @{c.creator.handle}
+            </Link>
+          </div>
 
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted">{c.description}</p>
 

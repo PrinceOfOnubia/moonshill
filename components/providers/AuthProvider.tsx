@@ -14,6 +14,7 @@ import { BSC_CHAIN_ID, connectInjectedWallet, formatWalletError } from "@/lib/wa
 
 const STORAGE_KEY = "mb_wallet";
 const STORAGE_CHAIN_KEY = "mb_wallet_chain";
+const STORAGE_POST_CONNECT_KEY = "mb_post_connect";
 
 interface AuthState {
   /** Whether a wallet session is authenticated (user is in the app). */
@@ -25,7 +26,7 @@ interface AuthState {
   /** True until localStorage has been read, to avoid landing/app flash. */
   ready: boolean;
   connectModalOpen: boolean;
-  openConnect: () => void;
+  openConnect: (nextPath?: string) => void;
   closeConnect: () => void;
   /** Simulate a successful wallet connection. */
   connect: (walletId: string) => Promise<void>;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [, setPostConnectPath] = useState("/home");
 
   const refreshUser = useCallback(async () => {
     try {
@@ -146,7 +148,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => cleanup?.();
   }, [refreshUser]);
 
-  const openConnect = useCallback(() => setConnectModalOpen(true), []);
+  const openConnectWithPath = useCallback((nextPath = "/home") => {
+    setPostConnectPath(nextPath);
+    try {
+      localStorage.setItem(STORAGE_POST_CONNECT_KEY, nextPath);
+    } catch {
+      /* ignore */
+    }
+    setConnectModalOpen(true);
+  }, []);
   const closeConnect = useCallback(() => {
     setConnectModalOpen(false);
     setConnectError(null);
@@ -183,6 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void logout();
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_CHAIN_KEY);
+      localStorage.removeItem(STORAGE_POST_CONNECT_KEY);
     } catch {
       /* ignore */
     }
@@ -197,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         ready,
         connectModalOpen,
-        openConnect,
+        openConnect: openConnectWithPath,
         closeConnect,
         connect,
         disconnect,

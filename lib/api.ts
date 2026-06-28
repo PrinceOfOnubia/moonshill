@@ -90,7 +90,7 @@ export async function getCampaign(slug: string) {
 export async function getPublicData() {
   return apiFetch<{
     appName: string;
-    platformStats: { activeChallenges: number; totalRewards: number; creators: number; submissions: number };
+    platformStats: { activeChallenges: number; totalRewards: number; creators: number; submissions: number; winners: number };
     tickerItems: string[];
     leaderboard: { winners: LeaderRow[]; contributors: LeaderRow[]; projects: LeaderRow[] };
     featuredCampaigns: Challenge[];

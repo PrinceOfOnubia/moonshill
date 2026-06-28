@@ -47,6 +47,12 @@ if (!isProd) {
 
 const seedPath = new URL("./seed-data.json", import.meta.url);
 const seed = JSON.parse(await fs.readFile(seedPath, "utf8"));
+const seedUserIds = new Set([
+  ...((seed.users || []).map((user) => user.id)),
+  seed.me?.id,
+].filter(Boolean));
+const seedCampaignIds = new Set((seed.challenges || []).map((campaign) => campaign.id).filter(Boolean));
+const seedSubmissionIds = new Set((seed.submissions || []).map((submission) => submission.id).filter(Boolean));
 
 const pool = DATABASE_URL
   ? new Pool({
@@ -496,6 +502,18 @@ function projectProfileFromUser(user, campaigns = []) {
     activeChallenges,
     completedChallenges: 0,
   };
+}
+
+function filterSeedUsers(rows) {
+  return rows.filter((row) => !seedUserIds.has(row.id));
+}
+
+function filterSeedCampaigns(rows) {
+  return rows.filter((row) => !seedCampaignIds.has(row.id));
+}
+
+function filterSeedSubmissions(rows) {
+  return rows.filter((row) => !seedSubmissionIds.has(row.id));
 }
 
 async function fetchBnbUsd() {
@@ -1212,24 +1230,33 @@ async function handleAdminSubmissionStatus(req, res, submissionId) {
 }
 
 async function handlePublic(req, res) {
-  const [campaignsCount, submissionsCount, usersCount, totalRewards, featuredRows, leaders] = await Promise.all([
-    query("select count(*)::int as count from campaigns"),
-    query("select count(*)::int as count from submissions"),
-    query("select count(*)::int as count from users"),
-    query("select coalesce(sum(reward_pool), 0)::numeric as total from campaigns"),
+  const [featuredRows, leaders, allCampaigns, contributionRows, allSubmissions] = await Promise.all([
     query("select * from campaigns order by trending desc, created_at desc limit 3"),
-    query("select * from users order by earned desc, wins desc, updated_at desc limit 12"),
+    query("select * from users order by updated_at desc limit 100"),
+    query("select * from campaigns order by created_at desc"),
+    query("select user_id, count(*)::int as submissions from submissions group by user_id"),
+    query("select id, user_id, status from submissions order by created_at desc"),
   ]);
-  const leaderboard = buildLeaderboard(leaders.rows);
+  const liveUsers = filterSeedUsers(leaders.rows);
+  const liveCampaigns = filterSeedCampaigns(allCampaigns.rows);
+  const liveSubmissions = filterSeedSubmissions(allSubmissions.rows);
+  const liveContributionRows = contributionRows.rows.filter((row) => !seedUserIds.has(row.user_id));
+  const winnerIds = new Set(
+    liveSubmissions
+      .filter((submission) => submission.status === "Winner")
+      .map((submission) => submission.user_id),
+  );
+  const leaderboard = buildLeaderboard(liveUsers, liveCampaigns, liveContributionRows);
   json(res, 200, {
     appName: APP_NAME,
     xHandle: X_HANDLE,
     xUrl: `https://x.com/${X_HANDLE}`,
     platformStats: {
-      activeChallenges: campaignsCount.rows[0].count,
-      totalRewards: Number(totalRewards.rows[0].total),
-      creators: usersCount.rows[0].count,
-      submissions: submissionsCount.rows[0].count,
+      activeChallenges: liveCampaigns.length,
+      totalRewards: liveCampaigns.reduce((sum, campaign) => sum + Number(campaign.reward_pool || 0), 0),
+      creators: liveUsers.length,
+      submissions: liveSubmissions.length,
+      winners: winnerIds.size,
     },
     tickerItems: [],
     leaderboard,
@@ -1248,32 +1275,97 @@ async function handleBnbMarket(req, res) {
   });
 }
 
-function buildLeaderboard(rows) {
-  const mapped = rows.map((row, index) => {
-    const user = userRow(row);
-    return {
+function buildLeaderboard(userRows, campaignRows = [], contributionRows = []) {
+  const users = userRows.map(userRow);
+  const projectTotals = new Map();
+  for (const campaign of campaignRows) {
+    const creatorId = campaign?.creator?.id;
+    if (!creatorId) continue;
+    const current = projectTotals.get(creatorId) || { totalSponsored: 0, campaigns: 0 };
+    current.totalSponsored += Number(campaign.reward_pool || 0);
+    current.campaigns += 1;
+    projectTotals.set(creatorId, current);
+  }
+
+  const submissionsByUser = new Map(
+    contributionRows.map((row) => [row.user_id, Number(row.submissions || 0)]),
+  );
+
+  const winners = users
+    .filter((user) => user.accountType === "user" && (user.earned > 0 || user.wins > 0))
+    .sort((a, b) => b.earned - a.earned || b.wins - a.wins || b.joined - a.joined || a.name.localeCompare(b.name))
+    .map((user, index) => ({
       id: user.id,
       rank: index + 1,
       name: user.name,
-      handle: user.xHandle || user.handle,
+      handle: user.handle,
       avatar: user.avatar,
-      verified: user.accountType === "project" ? !!user.projectVerified : !!user.xConnected,
+      verified: !!user.xConnected,
       accountType: user.accountType,
       value: user.earned,
       wins: user.wins,
       delta: 0,
-    };
-  });
-  return {
-    winners: mapped,
-    contributors: mapped.map((row) => ({ ...row, value: row.wins * 100 + row.value })),
-    projects: mapped,
-  };
+    }));
+
+  const contributors = users
+    .filter((user) => user.accountType === "user")
+    .map((user) => {
+      const submissions = submissionsByUser.get(user.id) || 0;
+      const contributionScore = submissions * 25 + user.joined * 10 + user.wins * 100;
+      return {
+        id: user.id,
+        name: user.name,
+        handle: user.handle,
+        avatar: user.avatar,
+        verified: !!user.xConnected,
+        accountType: user.accountType,
+        value: contributionScore,
+        wins: submissions,
+        delta: 0,
+      };
+    })
+    .filter((user) => user.value > 0)
+    .sort((a, b) => b.value - a.value || b.wins - a.wins || a.name.localeCompare(b.name))
+    .map((user, index) => ({ ...user, rank: index + 1 }));
+
+  const projects = users
+    .filter((user) => user.accountType === "project")
+    .map((user) => {
+      const stats = projectTotals.get(user.id) || { totalSponsored: 0, campaigns: 0 };
+      return {
+        id: user.id,
+        name: user.name,
+        handle: user.handle,
+        avatar: user.avatar,
+        verified: !!user.projectVerified,
+        accountType: user.accountType,
+        value: stats.totalSponsored,
+        wins: stats.campaigns,
+        delta: 0,
+      };
+    })
+    .filter((project) => project.value > 0 || project.wins > 0)
+    .sort((a, b) => b.value - a.value || b.wins - a.wins || a.name.localeCompare(b.name))
+    .map((project, index) => ({ ...project, rank: index + 1 }));
+
+  return { winners, contributors, projects };
 }
 
 async function handleLeaderboard(req, res) {
-  const leaders = await query("select * from users order by earned desc, wins desc, updated_at desc limit 25");
-  json(res, 200, buildLeaderboard(leaders.rows));
+  const [leaders, campaigns, contributionRows] = await Promise.all([
+    query("select * from users order by updated_at desc limit 250"),
+    query("select * from campaigns order by created_at desc"),
+    query("select user_id, count(*)::int as submissions from submissions group by user_id"),
+  ]);
+  json(
+    res,
+    200,
+    buildLeaderboard(
+      filterSeedUsers(leaders.rows),
+      filterSeedCampaigns(campaigns.rows),
+      contributionRows.rows.filter((row) => !seedUserIds.has(row.user_id)),
+    ),
+  );
 }
 
 async function handleNotifications(req, res) {

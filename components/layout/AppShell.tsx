@@ -11,7 +11,7 @@ import { LandingPage } from "@/components/landing/LandingPage";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 // Marketing routes that stay reachable while logged out (no app chrome).
-const PUBLIC_ROUTES = ["/docs", "/privacy", "/terms", "/token"];
+const PUBLIC_ROUTES = ["/docs", "/privacy", "/terms", "/token", "/build", "/explore", "/challenge", "/project", "/u", "/leaderboard"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { connected, ready } = useAuth();

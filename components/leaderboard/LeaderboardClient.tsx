@@ -23,6 +23,11 @@ const metricLabel: Record<Tab, string> = {
   "Top Contributors": "Contribution score",
   "Top Projects": "Total sponsored",
 };
+const secondaryLabel: Record<Tab, string> = {
+  "Top Winners": "Wins",
+  "Top Contributors": "Entries",
+  "Top Projects": "Campaigns",
+};
 
 function rowsFor(tab: Tab, rows: { winners: LeaderRow[]; contributors: LeaderRow[]; projects: LeaderRow[] }): LeaderRow[] {
   if (tab === "Top Contributors") return rows.contributors;
@@ -129,7 +134,7 @@ export function LeaderboardClient() {
             <div className="flex items-center gap-4 border-b border-border px-5 py-3 text-[12px] font-medium uppercase tracking-wider text-faint">
               <span className="w-8">#</span>
               <span className="flex-1">Name</span>
-              <span className="hidden w-20 text-right sm:block">Wins</span>
+              <span className="hidden w-20 text-right sm:block">{secondaryLabel[tab]}</span>
               <span className="w-28 text-right">{metricLabel[tab]}</span>
             </div>
             {rest.length ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { DollarSign, Flag, Send, Trophy, Users } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
@@ -34,7 +35,7 @@ export function LandingHero() {
         setStats([
           { icon: Users, value: data.platformStats.creators, label: "Total Users", tint: "text-gold-bright" },
           { icon: Flag, value: data.platformStats.activeChallenges, label: "Campaigns", tint: "text-violet-400" },
-          { icon: Trophy, value: data.leaderboard.winners.length, label: "Winners", tint: "text-gold-bright" },
+          { icon: Trophy, value: data.platformStats.winners, label: "Winners", tint: "text-gold-bright" },
           { icon: DollarSign, display: `$${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(data.platformStats.totalRewards)}`, label: "Total Rewards", tint: "text-green" },
         ]);
       })
@@ -89,17 +90,17 @@ export function LandingHero() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={openConnect}
+                onClick={() => openConnect("/home")}
                 className="flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-b from-gold-bright to-gold px-7 text-[15px] font-semibold text-black transition-shadow hover:shadow-[0_12px_44px_-8px_rgba(240,185,11,0.65)]"
               >
                 Launch App <Send size={18} />
               </button>
-              <button
-                onClick={openConnect}
+              <Link
+                href="/build"
                 className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-black/40 px-7 text-[15px] font-semibold text-text backdrop-blur transition-colors hover:border-gold/50 hover:text-gold-bright"
               >
                 Build with Moonshill
-              </button>
+              </Link>
             </div>
 
             <ContractAddress className="mt-7 w-full max-w-sm" />

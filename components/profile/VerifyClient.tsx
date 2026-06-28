@@ -87,7 +87,7 @@ function XFlow() {
         title="Connect your wallet"
         body="Your wallet is your identity on Moonshill."
         done={connected}
-        action={<Button variant={connected ? "glass" : "primary"} onClick={openConnect}>{connected ? <><Check size={16} /> {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connected"}</> : <><Wallet size={16} /> Connect</>}</Button>}
+        action={<Button variant={connected ? "glass" : "primary"} onClick={() => openConnect("/verify")}>{connected ? <><Check size={16} /> {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connected"}</> : <><Wallet size={16} /> Connect</>}</Button>}
       />
       <StepCard
         n={2}

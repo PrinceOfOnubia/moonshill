@@ -114,7 +114,7 @@ export function CreateClient() {
 
   async function publish() {
     if (!connected) {
-      openConnect();
+      openConnect("/create");
       return;
     }
     setPublishing(true);

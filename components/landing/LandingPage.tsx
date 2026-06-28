@@ -27,7 +27,7 @@ export function LandingPage() {
               earning on-chain rewards.
             </p>
             <button
-              onClick={openConnect}
+              onClick={() => openConnect("/home")}
               className="group mt-7 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-gold-bright to-gold px-8 text-[15px] font-semibold text-black transition-shadow hover:shadow-[0_12px_44px_-8px_rgba(240,185,11,0.65)]"
             >
               Launch App

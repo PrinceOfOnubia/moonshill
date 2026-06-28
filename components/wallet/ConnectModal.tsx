@@ -13,6 +13,7 @@ const wallets = [
   { id: "binance", name: "Binance Web3 Wallet", tag: "BNB Chain", emoji: "🟡" },
   { id: "trust", name: "Trust Wallet", tag: "", emoji: "🛡️" },
 ];
+const STORAGE_POST_CONNECT_KEY = "mb_post_connect";
 
 export function ConnectModal() {
   const { connectModalOpen, closeConnect, connect, connectError } = useAuth();
@@ -23,7 +24,14 @@ export function ConnectModal() {
     setPending(id);
     try {
       await connect(id);
-      router.push("/");
+      let nextPath = "/home";
+      try {
+        nextPath = localStorage.getItem(STORAGE_POST_CONNECT_KEY) || "/home";
+        localStorage.removeItem(STORAGE_POST_CONNECT_KEY);
+      } catch {
+        /* ignore */
+      }
+      router.push(nextPath);
     } catch {
       /* AuthProvider surfaces the error inside the modal. */
     } finally {

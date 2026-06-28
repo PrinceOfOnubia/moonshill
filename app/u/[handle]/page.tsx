@@ -1,29 +1,56 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { PublicUserProfileClient } from "@/components/profile/PublicUserProfileClient";
+import { getPublicUser } from "@/lib/api";
 import type { PublicUserProfile } from "@/lib/types";
 
-async function getUser(handle: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-  try {
-    const res = await fetch(`${base.replace(/\/$/, "")}/api/users/${encodeURIComponent(handle)}`, {
-      next: { revalidate: 30 },
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as { user: PublicUserProfile };
-  } catch {
-    return null;
+export default function PublicUserPage() {
+  const params = useParams<{ handle: string }>();
+  const handle = typeof params?.handle === "string" ? params.handle : "";
+  const [profile, setProfile] = useState<PublicUserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!handle) {
+      setLoading(false);
+      setError("User not found.");
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getPublicUser(handle)
+      .then(({ user }) => {
+        if (!cancelled) setProfile(user);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setProfile(null);
+        setError(err instanceof Error ? err.message : "User not found.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [handle]);
+
+  if (loading) {
+    return <div className="rounded-2xl border border-border bg-surface/40 p-10 text-center text-muted">Loading profile...</div>;
   }
-}
 
-export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
-  const { handle } = await params;
-  const data = await getUser(handle);
-  return { title: data?.user ? `${data.user.name} — Moonshill` : "User — Moonshill" };
-}
+  if (!profile) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface/40 p-10 text-center">
+        <h1 className="font-display text-2xl font-bold text-text">User not found</h1>
+        <p className="mt-3 text-muted">{error || "This user profile could not be loaded."}</p>
+      </div>
+    );
+  }
 
-export default async function PublicUserPage({ params }: { params: Promise<{ handle: string }> }) {
-  const { handle } = await params;
-  const data = await getUser(handle);
-  if (!data) notFound();
-  return <PublicUserProfileClient profile={data.user} />;
+  return <PublicUserProfileClient profile={profile} />;
 }
