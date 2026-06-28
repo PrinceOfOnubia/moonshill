@@ -29,7 +29,6 @@ export function UserProfileClient() {
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
   const [handle, setHandle] = useState("");
-  const [accountType, setAccountType] = useState<"user" | "project">("user");
   const [website, setWebsite] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const profile = user;
@@ -65,7 +64,6 @@ export function UserProfileClient() {
     setBio(profile.bio);
     setAvatar(profile.avatar);
     setHandle(profile.handle);
-    setAccountType(profile.accountType);
     setWebsite(profile.website || "");
   }, [profile]);
 
@@ -239,27 +237,9 @@ export function UserProfileClient() {
             <label className="mb-1.5 block text-[13px] font-medium text-muted">Handle</label>
             <input
               value={handle}
-              onChange={(e) => setHandle(e.target.value)}
+              onChange={(e) => setHandle(e.target.value.replace(/^@+/, ""))}
               className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
             />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-muted">Account type</label>
-            <div className="flex gap-2">
-              {(["user", "project"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setAccountType(value)}
-                  className={cn(
-                    "rounded-full border px-4 py-2 text-[13px] font-medium transition-colors",
-                    accountType === value ? "border-gold/40 bg-gold/12 text-gold-bright" : "border-border bg-surface text-muted hover:text-text",
-                  )}
-                >
-                  {value === "project" ? "Project" : "User"}
-                </button>
-              ))}
-            </div>
           </div>
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-muted">Bio</label>
@@ -270,7 +250,7 @@ export function UserProfileClient() {
               className="w-full resize-none rounded-xl border border-border bg-surface p-3.5 text-sm outline-none focus:border-gold/50"
             />
           </div>
-          {accountType === "project" && (
+          {profile.accountType === "project" && (
             <div>
               <label className="mb-1.5 block text-[13px] font-medium text-muted">Website</label>
               <input
@@ -303,19 +283,18 @@ export function UserProfileClient() {
             )}
           </div>
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setAccountType(profile.accountType); setWebsite(profile.website || ""); setEditOpen(false); }}>
+            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setWebsite(profile.website || ""); setEditOpen(false); }}>
               Cancel
             </Button>
             <Button
               className="flex-1"
               onClick={async () => {
                 try {
-                  const updated = await updateMe({ name, bio, avatar, handle, accountType, website });
+                  const updated = await updateMe({ name, bio, avatar, handle: handle.replace(/^@+/, ""), website });
                   setName(updated.user.name);
                   setBio(updated.user.bio);
                   setAvatar(updated.user.avatar);
                   setHandle(updated.user.handle);
-                  setAccountType(updated.user.accountType);
                   setWebsite(updated.user.website || "");
                   setEditOpen(false);
                   await refreshUser();
