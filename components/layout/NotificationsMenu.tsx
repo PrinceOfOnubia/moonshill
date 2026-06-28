@@ -15,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { notifications as seed } from "@/lib/mock";
+import { getNotifications } from "@/lib/api";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
 
@@ -31,10 +31,24 @@ const kindMeta: Record<NotificationKind, { icon: typeof Bell; tint: string }> = 
 
 export function NotificationsMenu() {
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<AppNotification[]>(seed);
+  const [items, setItems] = useState<AppNotification[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const unread = items.filter((n) => n.unread).length;
+
+  useEffect(() => {
+    let cancelled = false;
+    getNotifications()
+      .then(({ notifications }) => {
+        if (!cancelled) setItems(notifications);
+      })
+      .catch(() => {
+        if (!cancelled) setItems([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;

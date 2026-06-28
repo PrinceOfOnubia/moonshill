@@ -13,7 +13,7 @@ export function CtaBand() {
           <div>
             <h2 className="font-display text-3xl font-bold leading-tight text-balance sm:text-4xl">
               Got a community?{" "}
-              <span className="text-gold-grad">Fund a challenge.</span>
+              <span className="text-gold-grad">Fund a campaign.</span>
             </h2>
             <p className="mt-3 max-w-lg text-[15px] text-muted">
               Launch a contest in minutes, set the reward pool, and let the timeline
@@ -22,7 +22,7 @@ export function CtaBand() {
           </div>
           <Link href="/create" className="shrink-0">
             <Button size="lg" magnetic>
-              Launch a challenge <ArrowUpRight size={18} />
+              Launch a campaign <ArrowUpRight size={18} />
             </Button>
           </Link>
         </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/Logo";
-import { DiscordIcon, SOCIALS, TelegramIcon, XIcon } from "./social";
+import { SOCIALS, TelegramIcon, XIcon } from "./social";
 
 const quickLinks = [
   ["Docs", "/docs"],
@@ -43,9 +43,6 @@ export function LandingFooter() {
             </Social>
             <Social href={SOCIALS.telegram} label="Telegram">
               <TelegramIcon size={18} />
-            </Social>
-            <Social href={SOCIALS.discord} label="Discord">
-              <DiscordIcon size={18} />
             </Social>
           </div>
         </div>

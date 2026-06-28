@@ -23,14 +23,14 @@ const sections: DocSection[] = [
     ],
   },
   {
-    id: "challenges",
-    heading: "Challenges & submissions",
+    id: "campaigns",
+    heading: "Campaigns & submissions",
     body: [
-      "Challenges are created by projects and creators. When you submit an entry, you confirm that:",
+      "Campaigns are created by projects and creators. When you submit an entry, you confirm that:",
       {
         list: [
           "The content is yours or you have the rights to submit it.",
-          "It complies with the challenge's rules, required tags, and proof requirements.",
+          "It complies with the campaign's rules, required tags, and proof requirements.",
           "It does not infringe third-party rights or violate any law.",
           "It is not misleading, fraudulent, or artificially boosted.",
         ],
@@ -42,7 +42,7 @@ const sections: DocSection[] = [
     id: "rewards",
     heading: "Rewards",
     body: [
-      "Reward pools are funded and distributed by challenge creators via smart contracts. Moonshill does not guarantee any reward amount, eligibility, or payout timing, and is not responsible for a creator's failure to fund or distribute rewards.",
+      "Reward pools are funded and distributed by campaign creators via smart contracts. Moonshill does not guarantee any reward amount, eligibility, or payout timing, and is not responsible for a creator's failure to fund or distribute rewards.",
       "You are responsible for any taxes arising from rewards you receive.",
     ],
   },
@@ -53,7 +53,7 @@ const sections: DocSection[] = [
       "You agree not to:",
       {
         list: [
-          "Use bots, sybil accounts, or manipulation to game challenges or leaderboards.",
+          "Use bots, sybil accounts, or manipulation to game campaigns or leaderboards.",
           "Post unlawful, hateful, infringing, or NSFW content where prohibited.",
           "Attempt to exploit, attack, or disrupt the Platform or its smart contracts.",
           "Impersonate others or misrepresent your affiliation.",
@@ -65,7 +65,7 @@ const sections: DocSection[] = [
     id: "ip",
     heading: "Intellectual property",
     body: [
-      "You retain ownership of content you create. By submitting to a challenge, you grant Moonshill and the challenge creator a non-exclusive license to display, promote, and distribute your entry in connection with the Platform and the challenge.",
+      "You retain ownership of content you create. By submitting to a campaign, you grant Moonshill and the campaign creator a non-exclusive license to display, promote, and distribute your entry in connection with the Platform and the campaign.",
     ],
   },
   {
@@ -97,7 +97,7 @@ export default function TermsPage() {
     <LegalLayout
       eyebrow="Legal"
       title="Terms of Service"
-      intro="The rules that govern your use of Moonshill, challenges, rewards, and on-chain interactions."
+      intro="The rules that govern your use of Moonshill, campaigns, rewards, and on-chain interactions."
       updated="June 26, 2026"
       sections={sections}
     />

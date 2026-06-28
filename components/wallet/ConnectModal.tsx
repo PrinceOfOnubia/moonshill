@@ -15,18 +15,20 @@ const wallets = [
 ];
 
 export function ConnectModal() {
-  const { connectModalOpen, closeConnect, connect } = useAuth();
+  const { connectModalOpen, closeConnect, connect, connectError } = useAuth();
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
 
-  function handle(id: string) {
+  async function handle(id: string) {
     setPending(id);
-    // Simulate the wallet handshake, then enter the app.
-    setTimeout(() => {
-      connect(id);
-      setPending(null);
+    try {
+      await connect(id);
       router.push("/");
-    }, 750);
+    } catch {
+      /* AuthProvider surfaces the error inside the modal. */
+    } finally {
+      setPending(null);
+    }
   }
 
   return (
@@ -59,6 +61,12 @@ export function ConnectModal() {
           </button>
         ))}
       </div>
+
+      {connectError && (
+        <p className="mt-4 rounded-xl border border-red/25 bg-red/10 px-3 py-2 text-[12px] text-red">
+          {connectError}
+        </p>
+      )}
 
       <p className="mt-5 flex items-center justify-center gap-1.5 text-[12px] text-faint">
         <ShieldCheck size={14} className="text-green" />

@@ -8,10 +8,11 @@ import {
   useState,
 } from "react";
 import { ConnectModal } from "@/components/wallet/ConnectModal";
+import { getMe, logout, walletChallenge, walletVerify } from "@/lib/api";
+import type { MeResponse } from "@/lib/api";
 import { BSC_CHAIN_ID, connectInjectedWallet, formatWalletError } from "@/lib/wallet";
 
 const STORAGE_KEY = "mb_wallet";
-const STORAGE_LABEL_KEY = "mb_wallet_label";
 const STORAGE_CHAIN_KEY = "mb_wallet_chain";
 
 interface AuthState {
@@ -19,8 +20,8 @@ interface AuthState {
   connected: boolean;
   /** Connected wallet address (mock). */
   address: string | null;
-  walletLabel: string | null;
   chainId: string | null;
+  user: MeResponse | null;
   /** True until localStorage has been read, to avoid landing/app flash. */
   ready: boolean;
   connectModalOpen: boolean;
@@ -30,6 +31,7 @@ interface AuthState {
   connect: (walletId: string) => Promise<void>;
   disconnect: () => void;
   connectError: string | null;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -42,20 +44,32 @@ export const useAuth = () => {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
-  const [walletLabel, setWalletLabel] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
+  const [user, setUser] = useState<MeResponse | null>(null);
   const [ready, setReady] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const next = await getMe();
+      setUser(next);
+      setAddress(next.wallet);
+      try {
+        localStorage.setItem(STORAGE_KEY, next.wallet);
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      setUser(null);
+    }
+  }, []);
+
   useEffect(() => {
     let cleanup: (() => void) | undefined;
-
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setAddress(saved);
-      const savedLabel = localStorage.getItem(STORAGE_LABEL_KEY);
-      if (savedLabel) setWalletLabel(savedLabel);
       const savedChain = localStorage.getItem(STORAGE_CHAIN_KEY);
       if (savedChain) setChainId(savedChain);
     } catch {
@@ -77,11 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         setAddress(null);
-        setWalletLabel(null);
         setChainId(null);
+        setUser(null);
         try {
           localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem(STORAGE_LABEL_KEY);
           localStorage.removeItem(STORAGE_CHAIN_KEY);
         } catch {
           /* ignore */
@@ -101,32 +114,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       ethereum.on("accountsChanged", handleAccountsChanged);
       ethereum.on("chainChanged", handleChainChanged);
-      void (async () => {
-        try {
-          const accounts = (await ethereum.request({ method: "eth_accounts" })) as string[];
-          const currentChain = (await ethereum.request({ method: "eth_chainId" })) as string;
-          if (accounts?.[0]) {
-            setAddress(accounts[0]);
-            setChainId(currentChain);
-          }
-        } catch {
-          /* ignore */
-        }
-        setReady(true);
-      })();
-
       cleanup = () => {
         ethereum.removeListener?.("accountsChanged", handleAccountsChanged);
         ethereum.removeListener?.("chainChanged", handleChainChanged);
       };
-    } else {
-      setReady(true);
     }
 
-    return () => {
-      cleanup?.();
-    };
-  }, []);
+    void (async () => {
+      try {
+        if (ethereum) {
+          const accounts = (await ethereum.request({ method: "eth_accounts" })) as string[];
+          const currentChain = (await ethereum.request({ method: "eth_chainId" })) as string;
+          if (accounts?.[0]) setAddress(accounts[0]);
+          if (currentChain) setChainId(currentChain);
+        }
+        await refreshUser();
+      } finally {
+        setReady(true);
+      }
+    })();
+
+    return () => cleanup?.();
+  }, [refreshUser]);
 
   const openConnect = useCallback(() => setConnectModalOpen(true), []);
   const closeConnect = useCallback(() => {
@@ -137,14 +146,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const connect = useCallback(async (walletId: string) => {
     setConnectError(null);
     try {
-      const { address: nextAddress, walletLabel: nextLabel } = await connectInjectedWallet(
-        walletId as Parameters<typeof connectInjectedWallet>[0],
-      );
+      const { address: nextAddress, provider } = await connectInjectedWallet(walletId as Parameters<typeof connectInjectedWallet>[0]);
+      const challenge = await walletChallenge(nextAddress);
+      const signature = (await provider.request({
+        method: "personal_sign",
+        params: [challenge.message, nextAddress],
+      })) as string;
+      const verified = await walletVerify(nextAddress, signature);
       setAddress(nextAddress);
-      setWalletLabel(nextLabel);
       setChainId(BSC_CHAIN_ID);
+      setUser(verified.user);
       localStorage.setItem(STORAGE_KEY, nextAddress);
-      localStorage.setItem(STORAGE_LABEL_KEY, nextLabel);
       localStorage.setItem(STORAGE_CHAIN_KEY, BSC_CHAIN_ID);
       setConnectModalOpen(false);
     } catch (error) {
@@ -155,27 +167,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const disconnect = useCallback(() => {
     setAddress(null);
-    setWalletLabel(null);
     setChainId(null);
+    setUser(null);
     setConnectError(null);
     try {
+      void logout();
       localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(STORAGE_LABEL_KEY);
       localStorage.removeItem(STORAGE_CHAIN_KEY);
     } catch {
       /* ignore */
     }
   }, []);
 
-  const connected = !!address && chainId === BSC_CHAIN_ID;
-
   return (
     <AuthCtx.Provider
       value={{
-        connected,
+        connected: !!address && (!chainId || chainId === BSC_CHAIN_ID),
         address,
-        walletLabel,
         chainId,
+        user,
         ready,
         connectModalOpen,
         openConnect,
@@ -183,6 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         connect,
         disconnect,
         connectError,
+        refreshUser,
       }}
     >
       {children}

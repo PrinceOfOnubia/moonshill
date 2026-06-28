@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "next-view-transitions";
 import { motion } from "framer-motion";
 import {
@@ -13,21 +13,51 @@ import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { SubmitEntry } from "./SubmitEntry";
 import { ChallengeCard } from "./ChallengeCard";
-import { challenges } from "@/lib/mock";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
 import { compact, fmtToken, fmtUsd } from "@/lib/utils";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { getCampaigns, joinCampaign } from "@/lib/api";
 
 export function ChallengeDetail({ c }: { c: Challenge }) {
+  const { connected, openConnect } = useAuth();
   const [joined, setJoined] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [shared, setShared] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [related, setRelated] = useState<Challenge[]>([]);
   const t = useTimeLeft(c.endsAt);
 
-  const related = challenges.filter((x) => x.category === c.category && x.id !== c.id).slice(0, 3);
+  useEffect(() => {
+    let cancelled = false;
+    getCampaigns({ category: c.category, limit: 4 })
+      .then(({ campaigns }) => {
+        if (!cancelled) setRelated(campaigns.filter((x) => x.id !== c.id).slice(0, 3));
+      })
+      .catch(() => {
+        if (!cancelled) setRelated([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [c.category, c.id]);
 
   function share() {
     setShared(true);
     setTimeout(() => setShared(false), 1800);
+  }
+
+  async function join() {
+    if (!connected) {
+      openConnect();
+      return;
+    }
+    setJoining(true);
+    try {
+      await joinCampaign(c.id);
+      setJoined(true);
+    } finally {
+      setJoining(false);
+    }
   }
 
   return (
@@ -82,8 +112,8 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
             </div>
             <div className="mt-4 flex gap-2">
               {!joined ? (
-                <Button className="flex-1" size="lg" onClick={() => setJoined(true)}>
-                  Join challenge
+                <Button className="flex-1" size="lg" onClick={join} disabled={joining}>
+                  {joining ? "Joining…" : "Join campaign"}
                 </Button>
               ) : (
                 <Button className="flex-1" size="lg" variant="green" onClick={() => setSubmitOpen(true)}>
@@ -96,7 +126,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
             </div>
             {joined && (
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[12px] font-medium text-green">
-                <CheckCircle2 size={13} /> You joined this challenge
+                <CheckCircle2 size={13} /> You joined this campaign
               </p>
             )}
           </div>
@@ -144,7 +174,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
 
           {related.length > 0 && (
             <div className="mt-12">
-              <h3 className="mb-4 font-display text-xl font-bold">More {c.category} challenges</h3>
+              <h3 className="mb-4 font-display text-xl font-bold">More {c.category} campaigns</h3>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {related.map((r, i) => (
                   <ChallengeCard key={r.id} c={r} index={i} />
@@ -180,13 +210,13 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
 
             <div className="space-y-2.5 p-5">
               {!joined ? (
-                <Button className="w-full" size="lg" magnetic onClick={() => setJoined(true)}>
-                  Join challenge
+                <Button className="w-full" size="lg" magnetic onClick={join} disabled={joining}>
+                  {joining ? "Joining…" : "Join campaign"}
                 </Button>
               ) : (
                 <>
                   <div className="flex items-center justify-center gap-2 rounded-2xl border border-green/25 bg-green/10 py-2.5 text-sm font-medium text-green">
-                    <CheckCircle2 size={16} /> You joined this challenge
+                    <CheckCircle2 size={16} /> You joined this campaign
                   </div>
                   <Button className="w-full" size="lg" variant="green" onClick={() => setSubmitOpen(true)}>
                     Submit entry

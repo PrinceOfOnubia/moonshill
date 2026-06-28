@@ -100,7 +100,7 @@ export function LegalLayout({
             <p className="text-[13px] text-faint">
               Questions? Reach the team on{" "}
               <a
-                href="https://x.com"
+                href="https://x.com/moonshillfun"
                 target="_blank"
                 rel="noreferrer"
                 className="text-gold-bright hover:underline"

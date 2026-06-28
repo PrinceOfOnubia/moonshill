@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "next-view-transitions";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
-import { challenges } from "@/lib/mock";
-import type { Category } from "@/lib/types";
-import { compact, fmtUsd } from "@/lib/utils";
+import type { Category, Challenge } from "@/lib/types";
+import { getCampaigns } from "@/lib/api";
+import { fmtUsd } from "@/lib/utils";
 
 const cats: { name: Category; emoji: string }[] = [
   { name: "Memes", emoji: "🐸" },
@@ -19,6 +19,21 @@ const cats: { name: Category; emoji: string }[] = [
 
 export function CategoryRail() {
   const ref = useRef<HTMLDivElement>(null);
+  const [campaigns, setCampaigns] = useState<Challenge[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCampaigns()
+      .then(({ campaigns: next }) => {
+        if (!cancelled) setCampaigns(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCampaigns([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section className="mt-14">
@@ -38,9 +53,10 @@ export function CategoryRail() {
           className="flex cursor-grab gap-4 active:cursor-grabbing"
         >
           {cats.map((cat, i) => {
-            const pool = challenges.filter((c) => c.category === cat.name).reduce((s, c) => s + c.rewardPool, 0);
-            const count = challenges.filter((c) => c.category === cat.name).length;
-            const cover = challenges.find((c) => c.category === cat.name)?.cover;
+            const categoryCampaigns = campaigns.filter((c) => c.category === cat.name);
+            const pool = categoryCampaigns.reduce((s, c) => s + c.rewardPool, 0);
+            const count = categoryCampaigns.length;
+            const cover = categoryCampaigns[0]?.cover;
             return (
               <Link
                 key={cat.name}

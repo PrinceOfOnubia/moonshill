@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDown, ArrowUp, Crown, Minus, Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
-import { leaderboard } from "@/lib/mock";
+import { getLeaderboard } from "@/lib/api";
 import type { LeaderRow } from "@/lib/types";
 import { cn, compact } from "@/lib/utils";
 
@@ -24,18 +24,33 @@ const metricLabel: Record<Tab, string> = {
   "Top Projects": "Total sponsored",
 };
 
-function rowsFor(tab: Tab): LeaderRow[] {
-  if (tab === "Top Contributors") return leaderboard.contributors;
-  if (tab === "Top Projects") return leaderboard.projects;
-  return leaderboard.winners;
+function rowsFor(tab: Tab, rows: { winners: LeaderRow[]; contributors: LeaderRow[]; projects: LeaderRow[] }): LeaderRow[] {
+  if (tab === "Top Contributors") return rows.contributors;
+  if (tab === "Top Projects") return rows.projects;
+  return rows.winners;
 }
 
 export function LeaderboardClient() {
   const [tab, setTab] = useState<Tab>("Top Winners");
   const [view, setView] = useState<(typeof views)[number]>("All Time");
-  const rows = rowsFor(tab);
+  const [leaderboard, setLeaderboard] = useState({ winners: [] as LeaderRow[], contributors: [] as LeaderRow[], projects: [] as LeaderRow[] });
+  const rows = rowsFor(tab, leaderboard);
   const podium = rows.slice(0, 3);
   const rest = rows.slice(3);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLeaderboard()
+      .then((next) => {
+        if (!cancelled) setLeaderboard(next);
+      })
+      .catch(() => {
+        if (!cancelled) setLeaderboard({ winners: [], contributors: [], projects: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div>
@@ -85,7 +100,7 @@ export function LeaderboardClient() {
         <motion.div key={tab + view} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
           {/* podium */}
           <div className="mb-6 grid grid-cols-3 gap-3 sm:gap-4">
-            {[podium[1], podium[0], podium[2]].map((r, idx) => {
+            {[podium[1], podium[0], podium[2]].filter(Boolean).map((r, idx) => {
               const place = idx === 1 ? 1 : idx === 0 ? 2 : 3;
               const tall = place === 1;
               return (
@@ -117,29 +132,33 @@ export function LeaderboardClient() {
               <span className="hidden w-20 text-right sm:block">Wins</span>
               <span className="w-28 text-right">{metricLabel[tab]}</span>
             </div>
-            {rest.map((r, i) => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-4 border-b border-border/60 px-5 py-3.5 transition-colors last:border-0 hover:bg-surface/60"
-              >
-                <span className="w-8 font-mono text-sm text-faint">{r.rank}</span>
-                <div className="flex flex-1 items-center gap-3">
-                  <Avatar src={r.avatar} alt={r.name} size={36} verified={r.verified} />
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-1 truncate text-sm font-medium">
-                      {r.name} {r.verified && <VerifiedBadge size={13} />}
-                    </p>
-                    <p className="truncate text-[12px] text-faint">@{r.handle}</p>
+            {rest.length ? (
+              rest.map((r, i) => (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="flex items-center gap-4 border-b border-border/60 px-5 py-3.5 transition-colors last:border-0 hover:bg-surface/60"
+                >
+                  <span className="w-8 font-mono text-sm text-faint">{r.rank}</span>
+                  <div className="flex flex-1 items-center gap-3">
+                    <Avatar src={r.avatar} alt={r.name} size={36} verified={r.verified} />
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1 truncate text-sm font-medium">
+                        {r.name} {r.verified && <VerifiedBadge size={13} />}
+                      </p>
+                      <p className="truncate text-[12px] text-faint">@{r.handle}</p>
+                    </div>
+                    <Delta d={r.delta} />
                   </div>
-                  <Delta d={r.delta} />
-                </div>
-                <span className="hidden w-20 text-right font-mono text-sm text-muted sm:block">{r.wins}</span>
-                <span className="w-28 text-right font-mono text-sm font-semibold text-green">{unit[tab](r.value)}</span>
-              </motion.div>
-            ))}
+                  <span className="hidden w-20 text-right font-mono text-sm text-muted sm:block">{r.wins}</span>
+                  <span className="w-28 text-right font-mono text-sm font-semibold text-green">{unit[tab](r.value)}</span>
+                </motion.div>
+              ))
+            ) : (
+              <div className="px-5 py-10 text-center text-muted">No leaderboard data yet.</div>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>

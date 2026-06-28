@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import type { Category, RewardToken, SubmissionType } from "@/lib/types";
-import { me } from "@/lib/mock";
 import { cn, fmtUsd } from "@/lib/utils";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { createCampaign } from "@/lib/api";
 
 const categories: Category[] = ["Memes", "Threads", "Videos", "AI", "Design", "Research"];
 const tokens: RewardToken[] = ["BNB", "USDT", "MEME", "CAKE", "ETH"];
@@ -24,8 +25,11 @@ const tokenUsd: Record<RewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, ME
 const steps = ["Basics", "Reward & Schedule", "Rules & Submission"];
 
 export function CreateClient() {
+  const { connected, openConnect, user } = useAuth();
   const [step, setStep] = useState(0);
   const [published, setPublished] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [coverId, setCoverId] = useState(covers[0]);
   const [customCover, setCustomCover] = useState<string | null>(null);
@@ -52,8 +56,39 @@ export function CreateClient() {
   }
 
   const pool = Math.round(amount * tokenUsd[token]);
+  const creator = user;
   const canNext =
     step === 0 ? title.trim().length > 2 : step === 1 ? amount > 0 && winners > 0 : true;
+
+  async function publish() {
+    if (!connected) {
+      openConnect();
+      return;
+    }
+    setPublishing(true);
+    setError(null);
+    try {
+      await createCampaign({
+        title,
+        description: desc,
+        category,
+        cover: coverSrc,
+        rewardToken: token,
+        rewardAmount: amount,
+        winners,
+        days,
+        submissionType: subType,
+        rules,
+        proof: subType === "Image Upload" ? ["Upload final artwork"] : [`Submit ${subType.toLowerCase()} link`],
+        requiredTags: tags.split(/\s+/).filter(Boolean),
+      });
+      setPublished(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not launch campaign.");
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   if (published) {
     return (
@@ -66,9 +101,9 @@ export function CreateClient() {
         >
           <PartyPopper size={38} />
         </motion.div>
-        <h1 className="mt-6 font-display text-3xl font-bold">Challenge launched!</h1>
+        <h1 className="mt-6 font-display text-3xl font-bold">Campaign launched!</h1>
         <p className="mx-auto mt-3 max-w-sm text-muted">
-          <span className="text-text">{title || "Your challenge"}</span> is live with a{" "}
+          <span className="text-text">{title || "Your campaign"}</span> is live with a{" "}
           <span className="font-mono text-green">{fmtUsd(pool)}</span> pool. The timeline awaits.
         </p>
         <div className="mt-8 flex justify-center gap-3">
@@ -81,7 +116,7 @@ export function CreateClient() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Create a challenge</h1>
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Create a campaign</h1>
         <p className="mt-2 text-muted">Fund a mission and let creators compete for the pool.</p>
       </div>
 
@@ -259,11 +294,12 @@ export function CreateClient() {
                 Continue <ChevronRight size={16} />
               </Button>
             ) : (
-              <Button magnetic onClick={() => setPublished(true)}>
-                Launch challenge 🚀
+              <Button magnetic onClick={publish} disabled={publishing}>
+                {publishing ? "Launching…" : "Launch campaign 🚀"}
               </Button>
             )}
           </div>
+          {error && <p className="mt-3 rounded-xl border border-red/25 bg-red/10 px-3 py-2 text-[13px] text-red">{error}</p>}
         </div>
 
         {/* live preview */}
@@ -277,7 +313,7 @@ export function CreateClient() {
               <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/30 to-transparent" />
               <div className="absolute inset-x-3 top-3 flex justify-between">
                 <Badge tone="neutral" className="bg-black/45 backdrop-blur border-white/10 text-white">{category}</Badge>
-                {me.xConnected && <Badge tone="blue" className="bg-black/45 backdrop-blur">Official</Badge>}
+                {creator?.xConnected && <Badge tone="blue" className="bg-black/45 backdrop-blur">Official</Badge>}
               </div>
               <div className="absolute bottom-3 left-3">
                 <span className="text-[11px] uppercase tracking-wider text-white/60">Reward pool</span>
@@ -287,11 +323,16 @@ export function CreateClient() {
             </div>
             <div className="space-y-3 p-4">
               <h3 className="font-display text-[17px] font-semibold leading-snug">
-                {title || "Your challenge title"}
+                {title || "Your campaign title"}
               </h3>
               <div className="flex items-center gap-2">
-                <Avatar src={me.avatar} alt={me.name} size={22} verified />
-                <span className="text-[13px] text-muted">{me.name}</span>
+                <Avatar
+                  src={creator?.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(user?.wallet || "moonshill")}&backgroundType=gradientLinear`}
+                  alt={creator?.name || "Connected wallet"}
+                  size={22}
+                  verified={!!creator?.xConnected}
+                />
+                <span className="text-[13px] text-muted">{creator?.name || "Connected wallet"}</span>
               </div>
               <div className="flex items-center justify-between border-t border-border pt-3 text-[12px] text-muted">
                 <span className="flex items-center gap-1.5"><Users size={13} /> 0</span>

@@ -6,12 +6,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { DiscordIcon, SOCIALS, TelegramIcon, XIcon } from "./social";
+import { SOCIALS, TelegramIcon, XIcon } from "./social";
 
-// "Challenges" and "Leaderboard" live inside the app — they prompt connect.
+// "Campaigns" and "Leaderboard" live inside the app — they prompt connect.
 const navItems = [
   { label: "Home", href: "/" as const },
-  { label: "Challenges", gated: true as const },
+  { label: "Campaigns", gated: true as const },
   { label: "Leaderboard", gated: true as const },
   { label: "Docs", href: "/docs" as const },
 ];
@@ -151,9 +151,6 @@ export function LandingHeader() {
                   </SocialButton>
                   <SocialButton href={SOCIALS.telegram} label="Telegram">
                     <TelegramIcon size={18} />
-                  </SocialButton>
-                  <SocialButton href={SOCIALS.discord} label="Discord">
-                    <DiscordIcon size={18} />
                   </SocialButton>
                 </div>
                 <button

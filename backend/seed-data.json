@@ -1,0 +1,1167 @@
+{
+  "creators": {
+    "bnbchain": {
+      "id": "c1",
+      "type": "project",
+      "name": "BNB Chain",
+      "handle": "BNBCHAIN",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=bnbchain&backgroundType=gradientLinear",
+      "verified": true
+    },
+    "pancake": {
+      "id": "c2",
+      "type": "project",
+      "name": "PancakeSwap",
+      "handle": "PancakeSwap",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pancake&backgroundType=gradientLinear",
+      "verified": true
+    },
+    "pixelpepe": {
+      "id": "c3",
+      "type": "project",
+      "name": "Pixel Pepe",
+      "handle": "pixelpepe",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pixelpepe&backgroundType=gradientLinear",
+      "verified": true
+    },
+    "degenlab": {
+      "id": "c4",
+      "type": "project",
+      "name": "Degen Lab",
+      "handle": "degenlab",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=degenlab&backgroundType=gradientLinear",
+      "verified": true
+    },
+    "satoshigirl": {
+      "id": "u1",
+      "type": "user",
+      "name": "satoshi.girl",
+      "handle": "satoshigirl",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=satoshigirl&backgroundType=gradientLinear",
+      "verified": false
+    },
+    "memelord": {
+      "id": "u2",
+      "type": "user",
+      "name": "Memelord",
+      "handle": "memelord_eth",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=memelord&backgroundType=gradientLinear",
+      "verified": false
+    },
+    "zkpilled": {
+      "id": "u3",
+      "type": "user",
+      "name": "zk.pilled",
+      "handle": "zkpilled",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=zkpilled&backgroundType=gradientLinear",
+      "verified": false
+    }
+  },
+  "challenges": [
+    {
+      "id": "ch1",
+      "slug": "bnb-chain-meme-mania",
+      "title": "BNB Chain Meme Mania",
+      "cover": "https://images.unsplash.com/photo-1620207418302-439b387441b0?auto=format&fit=crop&w=900&q=80",
+      "category": "Memes",
+      "rewardPool": 25000,
+      "rewardToken": "BNB",
+      "rewardAmount": 42,
+      "winners": 25,
+      "creator": {
+        "id": "c1",
+        "type": "project",
+        "name": "BNB Chain",
+        "handle": "BNBCHAIN",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=bnbchain&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 3842,
+      "startsAt": "2026-06-24T12:04:09.987Z",
+      "endsAt": "2026-07-01T12:04:09.987Z",
+      "submissionType": "X Post",
+      "description": "Drop your dankest BNB Chain meme. The community decides what slaps. Top 25 split a 42 BNB pool. No reposts, OC only — make the timeline laugh.",
+      "rules": [
+        "Original content only",
+        "Must tag @BNBCHAIN",
+        "1 entry per account",
+        "No NSFW"
+      ],
+      "proof": [
+        "Public X post link",
+        "Post must be from your verified X account"
+      ],
+      "requiredTags": [
+        "@BNBCHAIN",
+        "#MemeMania"
+      ],
+      "official": true,
+      "trending": 98
+    },
+    {
+      "id": "ch2",
+      "slug": "why-defi-thread-contest",
+      "title": "Why DeFi? — Best Explainer Thread",
+      "cover": "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=900&q=80",
+      "category": "Threads",
+      "rewardPool": 12000,
+      "rewardToken": "USDT",
+      "rewardAmount": 12000,
+      "winners": 10,
+      "creator": {
+        "id": "c2",
+        "type": "project",
+        "name": "PancakeSwap",
+        "handle": "PancakeSwap",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pancake&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 1206,
+      "startsAt": "2026-06-25T20:04:09.987Z",
+      "endsAt": "2026-06-29T12:04:09.987Z",
+      "submissionType": "X Thread",
+      "description": "Write the clearest, most viral thread explaining DeFi to a total beginner. Educate the next million. Quality + reach wins.",
+      "rules": [
+        "Minimum 5 tweets",
+        "Tag @PancakeSwap",
+        "Cite sources",
+        "English"
+      ],
+      "proof": [
+        "Link to first tweet of thread"
+      ],
+      "requiredTags": [
+        "@PancakeSwap"
+      ],
+      "official": true,
+      "trending": 81
+    },
+    {
+      "id": "ch3",
+      "slug": "pixel-pepe-pfp-jam",
+      "title": "Pixel Pepe PFP Design Jam",
+      "cover": "https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?auto=format&fit=crop&w=900&q=80",
+      "category": "Design",
+      "rewardPool": 8000,
+      "rewardToken": "MEME",
+      "rewardAmount": 4000000,
+      "winners": 15,
+      "creator": {
+        "id": "c3",
+        "type": "project",
+        "name": "Pixel Pepe",
+        "handle": "pixelpepe",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pixelpepe&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 894,
+      "startsAt": "2026-06-22T12:04:09.987Z",
+      "endsAt": "2026-07-03T12:04:09.987Z",
+      "submissionType": "Image Upload",
+      "description": "Design the next legendary Pixel Pepe PFP. Winning designs get minted into the official collection. Bring the lore.",
+      "rules": [
+        "512×512 px min",
+        "Transparent PNG",
+        "Must include Pepe motif"
+      ],
+      "proof": [
+        "Upload final artwork",
+        "Optional X post for bonus reach"
+      ],
+      "official": true,
+      "trending": 74
+    },
+    {
+      "id": "ch4",
+      "slug": "ai-trading-bot-demo",
+      "title": "Show Your AI Trading Agent",
+      "cover": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=900&q=80",
+      "category": "AI",
+      "rewardPool": 15000,
+      "rewardToken": "USDT",
+      "rewardAmount": 15000,
+      "winners": 8,
+      "creator": {
+        "id": "c4",
+        "type": "project",
+        "name": "Degen Lab",
+        "handle": "degenlab",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=degenlab&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 567,
+      "startsAt": "2026-06-26T16:04:09.987Z",
+      "endsAt": "2026-07-06T12:04:09.987Z",
+      "submissionType": "Video Link",
+      "description": "Built an AI agent that trades, researches or memes on-chain? Show it in a 60s clip. Most impressive demos take the pool.",
+      "rules": [
+        "Max 90 seconds",
+        "Must show live on-chain action",
+        "No paper trading"
+      ],
+      "proof": [
+        "Video link (X / YouTube)",
+        "Repo link optional"
+      ],
+      "requiredTags": [
+        "@degenlab",
+        "#AIagents"
+      ],
+      "official": true,
+      "trending": 69
+    },
+    {
+      "id": "ch5",
+      "slug": "60s-bnb-explainer",
+      "title": "60-Second BNB Explainer Video",
+      "cover": "https://images.unsplash.com/photo-1535016120720-40c646be5580?auto=format&fit=crop&w=900&q=80",
+      "category": "Videos",
+      "rewardPool": 6000,
+      "rewardToken": "BNB",
+      "rewardAmount": 10,
+      "winners": 12,
+      "creator": {
+        "id": "c1",
+        "type": "project",
+        "name": "BNB Chain",
+        "handle": "BNBCHAIN",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=bnbchain&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 421,
+      "startsAt": "2026-06-27T02:04:09.987Z",
+      "endsAt": "2026-06-28T12:04:09.987Z",
+      "submissionType": "Video Link",
+      "description": "Explain what makes BNB Chain fast in 60 seconds. Vertical format preferred. Make it pop.",
+      "rules": [
+        "Vertical 9:16",
+        "Under 60s",
+        "Tag @BNBCHAIN"
+      ],
+      "proof": [
+        "Public video link"
+      ],
+      "requiredTags": [
+        "@BNBCHAIN"
+      ],
+      "official": true,
+      "trending": 88
+    },
+    {
+      "id": "ch6",
+      "slug": "onchain-research-bounty",
+      "title": "On-Chain Research Bounty: MEV",
+      "cover": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80",
+      "category": "Research",
+      "rewardPool": 9000,
+      "rewardToken": "USDT",
+      "rewardAmount": 9000,
+      "winners": 5,
+      "creator": {
+        "id": "c4",
+        "type": "project",
+        "name": "Degen Lab",
+        "handle": "degenlab",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=degenlab&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 188,
+      "startsAt": "2026-06-19T04:04:09.987Z",
+      "endsAt": "2026-07-08T12:04:09.987Z",
+      "submissionType": "X Thread",
+      "description": "Publish original research on MEV activity on BNB Chain. Data, charts, and a clear narrative. Depth beats hype.",
+      "rules": [
+        "Original data analysis",
+        "Open methodology",
+        "Cite queries"
+      ],
+      "proof": [
+        "Thread link + dashboard link"
+      ],
+      "official": true,
+      "trending": 52
+    },
+    {
+      "id": "ch7",
+      "slug": "quote-the-founder",
+      "title": "Quote The Founder Challenge",
+      "cover": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=900&q=80",
+      "category": "Memes",
+      "rewardPool": 3000,
+      "rewardToken": "MEME",
+      "rewardAmount": 1500000,
+      "winners": 20,
+      "creator": {
+        "id": "u2",
+        "type": "user",
+        "name": "Memelord",
+        "handle": "memelord_eth",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=memelord&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "participants": 2310,
+      "startsAt": "2026-06-27T06:04:09.987Z",
+      "endsAt": "2026-06-30T12:04:09.987Z",
+      "submissionType": "Quote Post",
+      "description": "Quote the pinned founder tweet with your hottest take. Funniest & most based quotes win. Community-run, pure vibes.",
+      "rules": [
+        "Quote the pinned post",
+        "Keep it classy-ish"
+      ],
+      "proof": [
+        "Quote post link"
+      ],
+      "official": false,
+      "trending": 91
+    },
+    {
+      "id": "ch8",
+      "slug": "gm-art-series",
+      "title": "GM Art Series — Sunrise Edition",
+      "cover": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=900&q=80",
+      "category": "Design",
+      "rewardPool": 4500,
+      "rewardToken": "CAKE",
+      "rewardAmount": 1800,
+      "winners": 18,
+      "creator": {
+        "id": "u1",
+        "type": "user",
+        "name": "satoshi.girl",
+        "handle": "satoshigirl",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=satoshigirl&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "participants": 765,
+      "startsAt": "2026-06-25T12:04:09.987Z",
+      "endsAt": "2026-07-02T12:04:09.987Z",
+      "submissionType": "Image Upload",
+      "description": "Say GM to the timeline with original sunrise-themed art. Warm palettes encouraged. Spread good energy.",
+      "rules": [
+        "Original art",
+        "Sunrise theme",
+        "Any medium"
+      ],
+      "proof": [
+        "Upload artwork"
+      ],
+      "official": false,
+      "trending": 60
+    },
+    {
+      "id": "ch9",
+      "slug": "alpha-threads-week",
+      "title": "Alpha Threads of the Week",
+      "cover": "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?auto=format&fit=crop&w=900&q=80",
+      "category": "Threads",
+      "rewardPool": 7000,
+      "rewardToken": "USDT",
+      "rewardAmount": 7000,
+      "winners": 7,
+      "creator": {
+        "id": "u3",
+        "type": "user",
+        "name": "zk.pilled",
+        "handle": "zkpilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=zkpilled&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "participants": 980,
+      "startsAt": "2026-06-26T06:04:09.987Z",
+      "endsAt": "2026-06-29T12:04:09.987Z",
+      "submissionType": "X Thread",
+      "description": "Share genuine alpha — a protocol, a trend, an edge. The threads that age best win. No financial advice, just signal.",
+      "rules": [
+        "Real alpha only",
+        "No paid shills",
+        "Disclose bags"
+      ],
+      "proof": [
+        "Thread link"
+      ],
+      "official": false,
+      "trending": 77
+    },
+    {
+      "id": "ch10",
+      "slug": "multi-link-mega-mission",
+      "title": "Mega Mission: Multi-Platform Push",
+      "cover": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
+      "category": "AI",
+      "rewardPool": 20000,
+      "rewardToken": "BNB",
+      "rewardAmount": 33,
+      "winners": 30,
+      "creator": {
+        "id": "c2",
+        "type": "project",
+        "name": "PancakeSwap",
+        "handle": "PancakeSwap",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pancake&backgroundType=gradientLinear",
+        "verified": true
+      },
+      "participants": 1540,
+      "startsAt": "2026-06-26T21:04:09.987Z",
+      "endsAt": "2026-07-04T12:04:09.987Z",
+      "submissionType": "Multiple Links",
+      "description": "Create content across X, video and design about the next PancakeSwap feature. Submit all your links in one entry. Biggest impact wins.",
+      "rules": [
+        "At least 2 platforms",
+        "Tag @PancakeSwap",
+        "Coordinated push"
+      ],
+      "proof": [
+        "Submit up to 5 links"
+      ],
+      "requiredTags": [
+        "@PancakeSwap",
+        "#PancakeSwap"
+      ],
+      "official": true,
+      "trending": 84
+    },
+    {
+      "id": "ch11",
+      "slug": "diamond-hands-memes",
+      "title": "Diamond Hands Meme War",
+      "cover": "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=900&q=80",
+      "category": "Memes",
+      "rewardPool": 5000,
+      "rewardToken": "MEME",
+      "rewardAmount": 2500000,
+      "winners": 25,
+      "creator": {
+        "id": "u2",
+        "type": "user",
+        "name": "Memelord",
+        "handle": "memelord_eth",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=memelord&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "participants": 4120,
+      "startsAt": "2026-06-27T10:04:09.987Z",
+      "endsAt": "2026-06-30T12:04:09.987Z",
+      "submissionType": "X Post",
+      "description": "HODL culture in meme form. Show the timeline what real diamond hands look like. Maximum cope encouraged.",
+      "rules": [
+        "OC memes",
+        "No gore",
+        "1 best entry counts"
+      ],
+      "proof": [
+        "X post link"
+      ],
+      "official": false,
+      "trending": 95
+    },
+    {
+      "id": "ch12",
+      "slug": "explain-zk-thread",
+      "title": "ELI5: Zero-Knowledge Proofs",
+      "cover": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80",
+      "category": "Research",
+      "rewardPool": 6500,
+      "rewardToken": "ETH",
+      "rewardAmount": 2,
+      "winners": 6,
+      "creator": {
+        "id": "u3",
+        "type": "user",
+        "name": "zk.pilled",
+        "handle": "zkpilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=zkpilled&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "participants": 312,
+      "startsAt": "2026-06-25T00:04:09.987Z",
+      "endsAt": "2026-07-05T12:04:09.987Z",
+      "submissionType": "X Thread",
+      "description": "Explain ZK proofs like the reader is five — but keep it accurate. Diagrams welcome. Clarity is king.",
+      "rules": [
+        "Accurate + simple",
+        "Original explanation",
+        "Visuals encouraged"
+      ],
+      "proof": [
+        "Thread link"
+      ],
+      "official": false,
+      "trending": 48
+    }
+  ],
+  "submissions": [
+    {
+      "id": "s1",
+      "challengeId": "ch1",
+      "challengeTitle": "BNB Chain Meme Mania",
+      "cover": "https://images.unsplash.com/photo-1620207418302-439b387441b0?auto=format&fit=crop&w=900&q=80",
+      "user": {
+        "id": "u1",
+        "type": "user",
+        "name": "satoshi.girl",
+        "handle": "satoshigirl",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=satoshigirl&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "link": "https://x.com/satoshigirl/status/1",
+      "type": "X Post",
+      "status": "Winner",
+      "submittedAt": "2026-06-25T10:04:09.987Z",
+      "reward": 1.6
+    },
+    {
+      "id": "s2",
+      "challengeId": "ch11",
+      "challengeTitle": "Diamond Hands Meme War",
+      "cover": "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=900&q=80",
+      "user": {
+        "id": "u2",
+        "type": "user",
+        "name": "Memelord",
+        "handle": "memelord_eth",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=memelord&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "link": "https://x.com/memelord_eth/status/2",
+      "type": "X Post",
+      "status": "Approved",
+      "submittedAt": "2026-06-27T08:04:09.987Z"
+    },
+    {
+      "id": "s3",
+      "challengeId": "ch2",
+      "challengeTitle": "Why DeFi? — Best Explainer Thread",
+      "cover": "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=900&q=80",
+      "user": {
+        "id": "u3",
+        "type": "user",
+        "name": "zk.pilled",
+        "handle": "zkpilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=zkpilled&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "link": "https://x.com/zkpilled/status/3",
+      "type": "X Thread",
+      "status": "Pending Review",
+      "submittedAt": "2026-06-27T11:04:09.987Z"
+    },
+    {
+      "id": "s4",
+      "challengeId": "ch5",
+      "challengeTitle": "60-Second BNB Explainer Video",
+      "cover": "https://images.unsplash.com/photo-1535016120720-40c646be5580?auto=format&fit=crop&w=900&q=80",
+      "user": {
+        "id": "u1",
+        "type": "user",
+        "name": "satoshi.girl",
+        "handle": "satoshigirl",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=satoshigirl&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "link": "https://x.com/satoshigirl/status/4",
+      "type": "Video Link",
+      "status": "Approved",
+      "submittedAt": "2026-06-27T04:04:09.987Z"
+    },
+    {
+      "id": "s5",
+      "challengeId": "ch3",
+      "challengeTitle": "Pixel Pepe PFP Design Jam",
+      "cover": "https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?auto=format&fit=crop&w=900&q=80",
+      "user": {
+        "id": "u2",
+        "type": "user",
+        "name": "Memelord",
+        "handle": "memelord_eth",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=memelord&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "link": "upload://pepe.png",
+      "type": "Image Upload",
+      "status": "Rejected",
+      "submittedAt": "2026-06-26T16:04:09.987Z"
+    },
+    {
+      "id": "s6",
+      "challengeId": "ch9",
+      "challengeTitle": "Alpha Threads of the Week",
+      "cover": "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?auto=format&fit=crop&w=900&q=80",
+      "user": {
+        "id": "u3",
+        "type": "user",
+        "name": "zk.pilled",
+        "handle": "zkpilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=zkpilled&backgroundType=gradientLinear",
+        "verified": false
+      },
+      "link": "https://x.com/zkpilled/status/6",
+      "type": "X Thread",
+      "status": "Winner",
+      "submittedAt": "2026-06-24T12:04:09.987Z",
+      "reward": 1000
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n1",
+      "kind": "win",
+      "title": "You won a challenge! 🏆",
+      "body": "Your entry placed in the Top 25 of BNB Chain Meme Mania. 1.6 BNB is on its way to your wallet.",
+      "at": "2026-06-27T11:40:09.987Z",
+      "unread": true,
+      "href": "/challenge/bnb-chain-meme-mania",
+      "actor": {
+        "id": "c1",
+        "type": "project",
+        "name": "BNB Chain",
+        "handle": "BNBCHAIN",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=bnbchain&backgroundType=gradientLinear",
+        "verified": true
+      }
+    },
+    {
+      "id": "n2",
+      "kind": "reward",
+      "title": "Reward sent",
+      "body": "1,000 USDT from Alpha Threads of the Week was credited to 0x7a25…3D7c.",
+      "at": "2026-06-27T10:04:09.987Z",
+      "unread": true,
+      "href": "/profile",
+      "actor": {
+        "id": "u3",
+        "type": "user",
+        "name": "zk.pilled",
+        "handle": "zkpilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=zkpilled&backgroundType=gradientLinear",
+        "verified": false
+      }
+    },
+    {
+      "id": "n3",
+      "kind": "approved",
+      "title": "Submission approved",
+      "body": "Your video for 60-Second BNB Explainer passed review and is now live in the gallery.",
+      "at": "2026-06-27T06:04:09.987Z",
+      "unread": true,
+      "href": "/challenge/60s-bnb-explainer",
+      "actor": {
+        "id": "c1",
+        "type": "project",
+        "name": "BNB Chain",
+        "handle": "BNBCHAIN",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=bnbchain&backgroundType=gradientLinear",
+        "verified": true
+      }
+    },
+    {
+      "id": "n4",
+      "kind": "ending",
+      "title": "Ends in 24h ⏳",
+      "body": "Why DeFi? — Best Explainer Thread closes tomorrow. Get your entry in before the timer runs out.",
+      "at": "2026-06-27T02:04:09.987Z",
+      "unread": false,
+      "href": "/challenge/why-defi-thread-contest",
+      "actor": {
+        "id": "c2",
+        "type": "project",
+        "name": "PancakeSwap",
+        "handle": "PancakeSwap",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pancake&backgroundType=gradientLinear",
+        "verified": true
+      }
+    },
+    {
+      "id": "n5",
+      "kind": "new",
+      "title": "New challenge from PancakeSwap",
+      "body": "Mega Mission: Multi-Platform Push is live with a 20,000 USDT pool across 30 winners.",
+      "at": "2026-06-26T21:04:09.987Z",
+      "unread": false,
+      "href": "/challenge/multi-link-mega-mission",
+      "actor": {
+        "id": "c2",
+        "type": "project",
+        "name": "PancakeSwap",
+        "handle": "PancakeSwap",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pancake&backgroundType=gradientLinear",
+        "verified": true
+      }
+    },
+    {
+      "id": "n6",
+      "kind": "review",
+      "title": "Entry in review",
+      "body": "Your Pixel Pepe PFP is being reviewed by the project. We'll let you know when it's decided.",
+      "at": "2026-06-26T16:04:09.987Z",
+      "unread": false,
+      "href": "/challenge/pixel-pepe-pfp-jam",
+      "actor": {
+        "id": "c3",
+        "type": "project",
+        "name": "Pixel Pepe",
+        "handle": "pixelpepe",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pixelpepe&backgroundType=gradientLinear",
+        "verified": true
+      }
+    },
+    {
+      "id": "n7",
+      "kind": "rejected",
+      "title": "Submission not accepted",
+      "body": "Your entry for GM Art Series didn't meet the original-art rule. You can submit a new one.",
+      "at": "2026-06-26T08:04:09.987Z",
+      "unread": false,
+      "href": "/challenge/gm-art-series",
+      "actor": {
+        "id": "u1",
+        "type": "user",
+        "name": "satoshi.girl",
+        "handle": "satoshigirl",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=satoshigirl&backgroundType=gradientLinear",
+        "verified": false
+      }
+    }
+  ],
+  "projects": [
+    {
+      "id": "c1",
+      "name": "BNB Chain",
+      "handle": "BNBCHAIN",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=bnbchain&backgroundType=gradientLinear",
+      "banner": "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
+      "verified": true,
+      "description": "The community-driven blockchain ecosystem powering the next generation of Web3. Building the on-chain creator economy.",
+      "website": "bnbchain.org",
+      "contract": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
+      "totalSponsored": 312000,
+      "activeChallenges": 3,
+      "completedChallenges": 41
+    },
+    {
+      "id": "c2",
+      "name": "PancakeSwap",
+      "handle": "PancakeSwap",
+      "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pancake&backgroundType=gradientLinear",
+      "banner": "https://images.unsplash.com/photo-1518544866330-4e716499f800?auto=format&fit=crop&w=1400&q=80",
+      "verified": true,
+      "description": "The #1 DEX on BNB Chain. Trade, earn, and win with the syrup pool of campaigns and creator missions.",
+      "website": "pancakeswap.finance",
+      "contract": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+      "totalSponsored": 184500,
+      "activeChallenges": 2,
+      "completedChallenges": 27
+    }
+  ],
+  "me": {
+    "id": "u1",
+    "name": "satoshi.girl",
+    "handle": "satoshigirl",
+    "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=satoshigirl&backgroundType=gradientLinear",
+    "banner": "https://images.unsplash.com/photo-1614851099511-773084f6911d?auto=format&fit=crop&w=1400&q=80",
+    "wallet": "0x7a25f1c9aB4e7d2F9c5B3e8a1D4f6C2b9E0a3D7c",
+    "bio": "Meme alchemist • DeFi degen • turning timelines into treasure. GM ☀️",
+    "xConnected": true,
+    "joined": 38,
+    "created": 4,
+    "wins": 12,
+    "earned": 18450
+  },
+  "leaderboard": {
+    "winners": [
+      {
+        "id": "w0",
+        "rank": 1,
+        "name": "satoshi.girl",
+        "handle": "satoshi_girl",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wsatoshi.girl&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 40417,
+        "wins": 28,
+        "delta": -1
+      },
+      {
+        "id": "w1",
+        "rank": 2,
+        "name": "Memelord",
+        "handle": "Memelord",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wMemelord&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 22045,
+        "wins": 26,
+        "delta": 0
+      },
+      {
+        "id": "w2",
+        "rank": 3,
+        "name": "zk.pilled",
+        "handle": "zk_pilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wzk.pilled&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 15156,
+        "wins": 24,
+        "delta": 1
+      },
+      {
+        "id": "w3",
+        "rank": 4,
+        "name": "gm.wagmi",
+        "handle": "gm_wagmi",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wgm.wagmi&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 11548,
+        "wins": 22,
+        "delta": -1
+      },
+      {
+        "id": "w4",
+        "rank": 5,
+        "name": "frenly.ape",
+        "handle": "frenly_ape",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wfrenly.ape&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 9327,
+        "wins": 20,
+        "delta": 0
+      },
+      {
+        "id": "w5",
+        "rank": 6,
+        "name": "based.dev",
+        "handle": "based_dev",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wbased.dev&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 7823,
+        "wins": 18,
+        "delta": 1
+      },
+      {
+        "id": "w6",
+        "rank": 7,
+        "name": "alpha.leaks",
+        "handle": "alpha_leaks",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=walpha.leaks&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 6736,
+        "wins": 16,
+        "delta": -1
+      },
+      {
+        "id": "w7",
+        "rank": 8,
+        "name": "pixel.witch",
+        "handle": "pixel_witch",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wpixel.witch&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 5915,
+        "wins": 14,
+        "delta": 0
+      },
+      {
+        "id": "w8",
+        "rank": 9,
+        "name": "degenicus",
+        "handle": "degenicus",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wdegenicus&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 5272,
+        "wins": 12,
+        "delta": 1
+      },
+      {
+        "id": "w9",
+        "rank": 10,
+        "name": "onchain.sam",
+        "handle": "onchain_sam",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wonchain.sam&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 4755,
+        "wins": 10,
+        "delta": -1
+      },
+      {
+        "id": "w10",
+        "rank": 11,
+        "name": "yield.farmer",
+        "handle": "yield_farmer",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wyield.farmer&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 4330,
+        "wins": 8,
+        "delta": 0
+      },
+      {
+        "id": "w11",
+        "rank": 12,
+        "name": "moon.boi",
+        "handle": "moon_boi",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=wmoon.boi&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 3975,
+        "wins": 6,
+        "delta": 1
+      }
+    ],
+    "contributors": [
+      {
+        "id": "c0",
+        "rank": 1,
+        "name": "moon.boi",
+        "handle": "moon_boi",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cmoon.boi&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 410,
+        "wins": 19,
+        "delta": -1
+      },
+      {
+        "id": "c1",
+        "rank": 2,
+        "name": "yield.farmer",
+        "handle": "yield_farmer",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cyield.farmer&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 382,
+        "wins": 18,
+        "delta": 0
+      },
+      {
+        "id": "c2",
+        "rank": 3,
+        "name": "onchain.sam",
+        "handle": "onchain_sam",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=conchain.sam&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 354,
+        "wins": 17,
+        "delta": 1
+      },
+      {
+        "id": "c3",
+        "rank": 4,
+        "name": "degenicus",
+        "handle": "degenicus",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cdegenicus&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 326,
+        "wins": 16,
+        "delta": -1
+      },
+      {
+        "id": "c4",
+        "rank": 5,
+        "name": "pixel.witch",
+        "handle": "pixel_witch",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cpixel.witch&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 298,
+        "wins": 15,
+        "delta": 0
+      },
+      {
+        "id": "c5",
+        "rank": 6,
+        "name": "alpha.leaks",
+        "handle": "alpha_leaks",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=calpha.leaks&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 270,
+        "wins": 14,
+        "delta": 1
+      },
+      {
+        "id": "c6",
+        "rank": 7,
+        "name": "based.dev",
+        "handle": "based_dev",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cbased.dev&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 242,
+        "wins": 13,
+        "delta": -1
+      },
+      {
+        "id": "c7",
+        "rank": 8,
+        "name": "frenly.ape",
+        "handle": "frenly_ape",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cfrenly.ape&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 214,
+        "wins": 12,
+        "delta": 0
+      },
+      {
+        "id": "c8",
+        "rank": 9,
+        "name": "gm.wagmi",
+        "handle": "gm_wagmi",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cgm.wagmi&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 186,
+        "wins": 11,
+        "delta": 1
+      },
+      {
+        "id": "c9",
+        "rank": 10,
+        "name": "zk.pilled",
+        "handle": "zk_pilled",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=czk.pilled&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 158,
+        "wins": 10,
+        "delta": -1
+      },
+      {
+        "id": "c10",
+        "rank": 11,
+        "name": "Memelord",
+        "handle": "Memelord",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=cMemelord&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 130,
+        "wins": 9,
+        "delta": 0
+      },
+      {
+        "id": "c11",
+        "rank": 12,
+        "name": "satoshi.girl",
+        "handle": "satoshi_girl",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=csatoshi.girl&backgroundType=gradientLinear",
+        "verified": false,
+        "value": 102,
+        "wins": 8,
+        "delta": 1
+      }
+    ],
+    "projects": [
+      {
+        "id": "p0",
+        "rank": 1,
+        "name": "BNB Chain",
+        "handle": "BNBChain",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pBNB Chain&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 283636,
+        "wins": 41,
+        "delta": -1
+      },
+      {
+        "id": "p1",
+        "rank": 2,
+        "name": "PancakeSwap",
+        "handle": "PancakeSwap",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pPancakeSwap&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 148571,
+        "wins": 37,
+        "delta": 0
+      },
+      {
+        "id": "p2",
+        "rank": 3,
+        "name": "Degen Lab",
+        "handle": "DegenLab",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pDegen Lab&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 100645,
+        "wins": 33,
+        "delta": 1
+      },
+      {
+        "id": "p3",
+        "rank": 4,
+        "name": "Pixel Pepe",
+        "handle": "PixelPepe",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pPixel Pepe&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 76098,
+        "wins": 29,
+        "delta": -1
+      },
+      {
+        "id": "p4",
+        "rank": 5,
+        "name": "Venus",
+        "handle": "Venus",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pVenus&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 61176,
+        "wins": 25,
+        "delta": 0
+      },
+      {
+        "id": "p5",
+        "rank": 6,
+        "name": "Trust Wallet",
+        "handle": "TrustWallet",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pTrust Wallet&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 51148,
+        "wins": 21,
+        "delta": 1
+      },
+      {
+        "id": "p6",
+        "rank": 7,
+        "name": "Thena",
+        "handle": "Thena",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pThena&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 43944,
+        "wins": 17,
+        "delta": -1
+      },
+      {
+        "id": "p7",
+        "rank": 8,
+        "name": "ApolloX",
+        "handle": "ApolloX",
+        "avatar": "https://api.dicebear.com/9.x/glass/svg?seed=pApolloX&backgroundType=gradientLinear",
+        "verified": true,
+        "value": 38519,
+        "wins": 13,
+        "delta": 0
+      }
+    ]
+  },
+  "tickerItems": [
+    {
+      "who": "satoshi.girl",
+      "amount": "1.6 BNB",
+      "challenge": "Meme Mania"
+    },
+    {
+      "who": "zk.pilled",
+      "amount": "1,000 USDT",
+      "challenge": "Alpha Threads"
+    },
+    {
+      "who": "Memelord",
+      "amount": "2.5M MEME",
+      "challenge": "Diamond Hands"
+    },
+    {
+      "who": "pixel.witch",
+      "amount": "0.8 BNB",
+      "challenge": "PFP Jam"
+    },
+    {
+      "who": "based.dev",
+      "amount": "2 ETH",
+      "challenge": "ZK ELI5"
+    },
+    {
+      "who": "gm.wagmi",
+      "amount": "1,800 CAKE",
+      "challenge": "GM Art"
+    }
+  ],
+  "platformStats": {
+    "totalRewards": 1840000,
+    "activeChallenges": 12,
+    "creators": 24300,
+    "submissions": 186400
+  }
+}

@@ -1,19 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Crown, ShieldAlert, Star, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge, VerifiedBadge } from "@/components/ui/Badge";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
-import { challenges, projects, submissions } from "@/lib/mock";
 import { cn, timeAgo } from "@/lib/utils";
+import { getAdminSummary } from "@/lib/api";
+import type { Challenge, ProjectProfile, Submission } from "@/lib/types";
 
 const sections = ["Projects", "Submissions", "Featured"] as const;
 type Section = (typeof sections)[number];
 
 export function AdminClient() {
   const [section, setSection] = useState<Section>("Projects");
+  const [counts, setCounts] = useState({
+    campaigns: 0,
+    submissions: 0,
+    pendingProjects: 0,
+    flagged: 0,
+  });
+  const [pendingSubmissions, setPendingSubmissions] = useState<Submission[]>([]);
+  const [projects, setProjects] = useState<ProjectProfile[]>([]);
+  const [featuredCampaigns, setFeaturedCampaigns] = useState<Challenge[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAdminSummary()
+      .then((summary) => {
+        if (cancelled) return;
+        setCounts({
+          campaigns: summary.counts.campaigns,
+          submissions: summary.counts.submissions,
+          pendingProjects: summary.counts.pendingProjects,
+          flagged: summary.counts.flagged,
+        });
+        setPendingSubmissions(summary.pendingSubmissions);
+        setProjects(summary.projects);
+        setFeaturedCampaigns(summary.featuredCampaigns);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCounts({ campaigns: 0, submissions: 0, pendingProjects: 0, flagged: 0 });
+        setPendingSubmissions([]);
+        setProjects([]);
+        setFeaturedCampaigns([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div>
@@ -26,10 +63,10 @@ export function AdminClient() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KStat label="Pending projects" value={2} tone="gold" />
-        <KStat label="Pending submissions" value={14} tone="gold" />
-        <KStat label="Live challenges" value={challenges.length} tone="green" />
-        <KStat label="Flagged" value={1} tone="red" />
+        <KStat label="Pending projects" value={counts.pendingProjects} tone="gold" />
+        <KStat label="Pending submissions" value={pendingSubmissions.length} tone="gold" />
+        <KStat label="Live campaigns" value={counts.campaigns} tone="green" />
+        <KStat label="Flagged" value={counts.flagged} tone="red" />
       </div>
 
       <div className="no-scrollbar mb-6 flex gap-1 overflow-x-auto rounded-full border border-border bg-surface/60 p-1">
@@ -43,9 +80,9 @@ export function AdminClient() {
 
       <AnimatePresence mode="wait">
         <motion.div key={section} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-          {section === "Projects" && <ProjectQueue />}
-          {section === "Submissions" && <SubmissionQueue />}
-          {section === "Featured" && <FeaturedManager />}
+          {section === "Projects" && <ProjectQueue projects={projects} />}
+          {section === "Submissions" && <SubmissionQueue pending={pendingSubmissions} />}
+          {section === "Featured" && <FeaturedManager campaigns={featuredCampaigns} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -64,8 +101,11 @@ function KStat({ label, value, tone }: { label: string; value: number; tone: "go
 
 type Verdict = "pending" | "approved" | "rejected";
 
-function ProjectQueue() {
+function ProjectQueue({ projects }: { projects: ProjectProfile[] }) {
   const [state, setState] = useState<Record<string, Verdict>>({});
+  if (!projects.length) {
+    return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No project requests yet.</div>;
+  }
   return (
     <div className="space-y-3">
       {projects.map((p) => {
@@ -90,9 +130,11 @@ function ProjectQueue() {
   );
 }
 
-function SubmissionQueue() {
+function SubmissionQueue({ pending }: { pending: Submission[] }) {
   const [state, setState] = useState<Record<string, Verdict | "winner">>({});
-  const pending = submissions.filter((s) => s.status !== "Rejected");
+  if (!pending.length) {
+    return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No pending submissions yet.</div>;
+  }
   return (
     <div className="space-y-3">
       {pending.map((s) => {
@@ -125,11 +167,14 @@ function SubmissionQueue() {
   );
 }
 
-function FeaturedManager() {
-  const [featured, setFeatured] = useState<string[]>([challenges[0].id]);
+function FeaturedManager({ campaigns }: { campaigns: Challenge[] }) {
+  const [featured, setFeatured] = useState<string[]>(campaigns[0]?.id ? [campaigns[0].id] : []);
+  if (!campaigns.length) {
+    return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No campaigns available to feature yet.</div>;
+  }
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {challenges.slice(0, 8).map((c) => {
+      {campaigns.slice(0, 8).map((c) => {
         const on = featured.includes(c.id);
         return (
           <button

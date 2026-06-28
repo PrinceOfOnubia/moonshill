@@ -87,10 +87,13 @@ export interface UserProfile {
   wallet: string;
   bio: string;
   xConnected: boolean;
+  xHandle?: string | null;
+  xUserId?: string | null;
   joined: number;
   created: number;
   wins: number;
   earned: number;
+  isAdmin?: boolean;
 }
 
 export type NotificationKind =

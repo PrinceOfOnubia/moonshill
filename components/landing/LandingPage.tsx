@@ -23,7 +23,7 @@ export function LandingPage() {
               Ready to <span className="text-gold-grad">compete?</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">
-              Launch App to enter Moonshill — discover live challenges and start
+              Launch App to enter Moonshill — discover live campaigns and start
               earning on-chain rewards.
             </p>
             <button

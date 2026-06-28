@@ -24,9 +24,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Moonshill — Every card is a challenge to join",
+  title: "Moonshill — Every card is a campaign to join",
   description:
-    "Moonshill is the community-first crypto arena. Projects fund missions, contests and challenges. Create on X, submit your link, compete for rewards.",
+    "Moonshill is the community-first crypto arena. Projects fund missions, contests and campaigns. Create on X, submit your link, compete for rewards.",
 };
 
 export const viewport: Viewport = {

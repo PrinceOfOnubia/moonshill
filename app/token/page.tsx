@@ -16,7 +16,7 @@ const allocation = [
 ];
 
 const utility = [
-  { icon: Coins, title: "Reward pools", body: "Projects fund challenges in $MEME and other tokens; winners are paid on-chain." },
+  { icon: Coins, title: "Reward pools", body: "Projects fund campaigns in $MEME and other tokens; winners are paid on-chain." },
   { icon: Users, title: "Creator boosts", body: "Hold $MEME to boost submission reach and unlock featured placement." },
   { icon: Lock, title: "Staking", body: "Stake to earn a share of platform fees and governance weight." },
   { icon: Flame, title: "Deflationary", body: "A portion of platform fees is used to buy back and burn supply." },
@@ -40,7 +40,7 @@ export default function TokenPage() {
           $MEME powers the arena
         </h1>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted">
-          $MEME is the utility token behind Moonshill — used to fund challenges, reward
+          $MEME is the utility token behind Moonshill — used to fund campaigns, reward
           creators, and align the community around the on-chain creator economy.
         </p>
         <ContractAddress className="mt-6 max-w-md" />

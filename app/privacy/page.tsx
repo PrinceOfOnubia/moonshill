@@ -18,12 +18,12 @@ const sections: DocSection[] = [
     id: "information-we-collect",
     heading: "Information we collect",
     body: [
-      "We collect information needed to run challenges and pay out rewards:",
+      "We collect information needed to run campaigns and pay out rewards:",
       {
         list: [
           "Account data — your X handle and public profile details when you connect your account.",
           "Wallet data — your public wallet address, used to verify ownership and send rewards.",
-          "Submissions — the links, posts, and uploads you submit to challenges, plus their review status.",
+          "Submissions — the links, posts, and uploads you submit to campaigns, plus their review status.",
           "Usage data — basic analytics such as pages viewed and actions taken, to improve the product.",
           "Device data — browser type, approximate region, and similar technical details.",
         ],
@@ -36,8 +36,8 @@ const sections: DocSection[] = [
     body: [
       {
         list: [
-          "To operate challenges — display entries, run reviews, and rank winners.",
-          "To pay rewards — send tokens to your verified wallet when a challenge settles.",
+          "To operate campaigns — display entries, run reviews, and rank winners.",
+          "To pay rewards — send tokens to your verified wallet when a campaign settles.",
           "To verify authenticity — confirm that submissions come from the account that owns them.",
           "To improve Moonshill — understand what's working and fix what isn't.",
           "To communicate — send essential notices about your entries, rewards, and account.",
@@ -50,7 +50,7 @@ const sections: DocSection[] = [
     heading: "On-chain & public data",
     body: [
       "Moonshill is built on public blockchains. Transactions such as reward payouts are recorded on-chain and are permanent and publicly visible. Your wallet address and any associated activity may be viewable by anyone.",
-      "Submissions you make public (for example an X post) are visible to other users and are surfaced in challenge galleries and leaderboards.",
+      "Submissions you make public (for example an X post) are visible to other users and are surfaced in campaign galleries and leaderboards.",
     ],
   },
   {
@@ -60,7 +60,7 @@ const sections: DocSection[] = [
       "We do not sell your personal information. We share data only as needed to run the service:",
       {
         list: [
-          "With challenge creators — so they can review and judge entries to their challenges.",
+          "With campaign creators — so they can review and judge entries to their campaigns.",
           "With service providers — infrastructure, analytics, and security partners under confidentiality terms.",
           "For legal reasons — where required by law or to protect the rights and safety of users.",
         ],

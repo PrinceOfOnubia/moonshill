@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
-import { challenges } from "@/lib/mock";
+import type { Challenge } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { getCampaigns } from "@/lib/api";
 
 const tabs = ["For You", "Trending", "Official", "Newest"] as const;
 type Tab = (typeof tabs)[number];
 
-function sortFor(tab: Tab) {
-  const list = [...challenges];
+function sortFor(tab: Tab, campaigns: Challenge[]) {
+  const list = [...campaigns];
   switch (tab) {
     case "Trending":
       return list.sort((a, b) => b.trending - a.trending);
@@ -25,7 +26,22 @@ function sortFor(tab: Tab) {
 
 export function FeedTabs() {
   const [tab, setTab] = useState<Tab>("For You");
-  const list = sortFor(tab);
+  const [campaigns, setCampaigns] = useState<Challenge[]>([]);
+  const list = sortFor(tab, campaigns);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCampaigns()
+      .then(({ campaigns: next }) => {
+        if (!cancelled) setCampaigns(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCampaigns([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section className="mt-12">
@@ -63,9 +79,13 @@ export function FeedTabs() {
           transition={{ duration: 0.25 }}
           className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {list.map((c, i) => (
-            <ChallengeCard key={c.id} c={c} index={i} />
-          ))}
+          {list.length ? (
+            list.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+          ) : (
+            <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted sm:col-span-2 lg:col-span-3">
+              No live campaigns yet.
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </section>

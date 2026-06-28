@@ -1,20 +1,33 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "next-view-transitions";
 import { Clock, Trophy } from "lucide-react";
 import type { Challenge } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
-import { challenges } from "@/lib/mock";
 import { compact, fmtUsd } from "@/lib/utils";
-
-const featured = challenges.slice(0, 2);
+import { getCampaigns } from "@/lib/api";
 
 export function FeaturedBanners() {
   const [active, setActive] = useState(0);
+  const [featured, setFeatured] = useState<Challenge[]>([]);
   const trackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCampaigns({ limit: 2 })
+      .then(({ campaigns }) => {
+        if (!cancelled) setFeatured(campaigns.slice(0, 2));
+      })
+      .catch(() => {
+        if (!cancelled) setFeatured([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function onScroll() {
     const el = trackRef.current;
@@ -25,7 +38,7 @@ export function FeaturedBanners() {
   return (
     <section>
       <div className="mb-4 flex items-end justify-between">
-        <h2 className="font-display text-xl font-bold sm:text-2xl">Featured challenges</h2>
+        <h2 className="font-display text-xl font-bold sm:text-2xl">Featured campaigns</h2>
         <Link href="/explore" className="text-[13px] font-medium text-muted transition-colors hover:text-text">
           View all
         </Link>
@@ -33,9 +46,13 @@ export function FeaturedBanners() {
 
       {/* Desktop: two large banners side by side */}
       <div className="hidden gap-5 md:grid md:grid-cols-2">
-        {featured.map((c) => (
-          <FeaturedBanner key={c.id} c={c} />
-        ))}
+        {featured.length ? (
+          featured.map((c) => <FeaturedBanner key={c.id} c={c} />)
+        ) : (
+          <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted md:col-span-2">
+            No featured campaigns yet.
+          </div>
+        )}
       </div>
 
       {/* Mobile: swipeable slider */}
@@ -45,11 +62,17 @@ export function FeaturedBanners() {
           onScroll={onScroll}
           className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1"
         >
-          {featured.map((c) => (
-            <div key={c.id} className="w-full shrink-0 snap-center">
-              <FeaturedBanner c={c} />
+          {featured.length ? (
+            featured.map((c) => (
+              <div key={c.id} className="w-full shrink-0 snap-center">
+                <FeaturedBanner c={c} />
+              </div>
+            ))
+          ) : (
+            <div className="w-full shrink-0 rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
+              No featured campaigns yet.
             </div>
-          ))}
+          )}
         </div>
         <div className="mt-3 flex justify-center gap-1.5">
           {featured.map((c, i) => (

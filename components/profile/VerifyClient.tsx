@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { BadgeCheck, Check, Globe, Loader2, ShieldCheck, Wallet, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { startXConnect } from "@/lib/api";
 
 const modes = ["Verify X account", "Verify a project"] as const;
 
@@ -50,8 +53,36 @@ export function VerifyClient() {
 }
 
 function XFlow() {
-  const [connected, setConnected] = useState(false);
-  const [linked, setLinked] = useState(false);
+  const searchParams = useSearchParams();
+  const { connected, address, user, openConnect, refreshUser } = useAuth();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const linked = !!user?.xConnected;
+
+  useEffect(() => {
+    if (searchParams.get("x") === "connected") {
+      void refreshUser();
+    }
+    const reason = searchParams.get("reason");
+    const x = searchParams.get("x");
+    if (x && x !== "connected") {
+      setError(reason || (x === "not-configured" ? "X connection not configured yet." : "X connection failed."));
+    }
+  }, [refreshUser, searchParams]);
+
+  async function connectX() {
+    setPending(true);
+    setError(null);
+    try {
+      const response = await startXConnect("/verify");
+      window.location.href = response.redirectUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "X connection failed.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <StepCard
@@ -59,7 +90,7 @@ function XFlow() {
         title="Connect your wallet"
         body="Your wallet is your identity on Moonshill."
         done={connected}
-        action={<Button variant={connected ? "glass" : "primary"} onClick={() => setConnected(true)}>{connected ? <><Check size={16} /> 0x7a…3D7c</> : <><Wallet size={16} /> Connect</>}</Button>}
+        action={<Button variant={connected ? "glass" : "primary"} onClick={openConnect}>{connected ? <><Check size={16} /> {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connected"}</> : <><Wallet size={16} /> Connect</>}</Button>}
       />
       <StepCard
         n={2}
@@ -67,13 +98,16 @@ function XFlow() {
         body="We check that submitted links come from this account before approval."
         done={linked}
         disabled={!connected}
-        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected} onClick={() => setLinked(true)}>{linked ? <><Check size={16} /> @satoshigirl</> : "Connect 𝕏"}</Button>}
+        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected || pending} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || user?.handle}</> : pending ? "Connecting…" : "Connect 𝕏"}</Button>}
       />
       {linked && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 rounded-2xl border border-green/25 bg-green/10 p-4">
           <BadgeCheck className="text-green" />
-          <p className="text-sm text-text">You can now submit entries. Links must come from <span className="font-medium">@satoshigirl</span>.</p>
+          <p className="text-sm text-text">You can now submit entries. Links must come from <span className="font-medium">@{user?.xHandle || user?.handle}</span>.</p>
         </motion.div>
+      )}
+      {error && (
+        <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">{error}</p>
       )}
     </div>
   );

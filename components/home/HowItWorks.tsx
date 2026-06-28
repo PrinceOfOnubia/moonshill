@@ -6,7 +6,7 @@ import { PenLine, Send, Trophy } from "lucide-react";
 
 const steps = [
   { icon: PenLine, title: "Create on X", body: "Post your meme, thread, video or design straight to X — your audience lives there.", n: "01" },
-  { icon: Send, title: "Submit the link", body: "Drop your post link into the challenge. We verify it belongs to your connected X account.", n: "02" },
+  { icon: Send, title: "Submit the link", body: "Drop your post link into the campaign. We verify it belongs to your connected X account.", n: "02" },
   { icon: Trophy, title: "Win rewards", body: "Get approved, climb the board, and split the funded reward pool with the top creators.", n: "03" },
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Pencil, Trophy, Wallet, Check } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -10,51 +10,89 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Modal } from "@/components/ui/Modal";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
 import { SubmissionRow } from "./SubmissionRow";
-import { challenges, me, submissions } from "@/lib/mock";
 import { cn, shortAddr } from "@/lib/utils";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { startXConnect, updateMe } from "@/lib/api";
 
 const tabs = ["Submissions", "Joined", "Created"] as const;
 
 export function UserProfileClient() {
+  const { user, refreshUser } = useAuth();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Submissions");
   const [copied, setCopied] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [name, setName] = useState(me.name);
-  const [bio, setBio] = useState(me.bio);
-  const joined = challenges.slice(0, 6);
-  const created = challenges.filter((c) => !c.official).slice(0, 3);
+  const [xPending, setXPending] = useState(false);
+  const [xError, setXError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const profile = user;
+  const joined = profile?.joinedCampaigns ?? [];
+  const created = profile?.createdCampaigns ?? [];
+  const submissions = profile?.submissions ?? [];
+  const sourceXHandle = profile?.xHandle || profile?.handle || "";
+  const xConnected = !!profile?.xConnected;
+
+  async function connectX() {
+    setXPending(true);
+    setXError(null);
+    try {
+      const response = await startXConnect("/profile");
+      window.location.href = response.redirectUrl;
+    } catch (err) {
+      setXError(err instanceof Error ? err.message : "X connection failed.");
+      setXPending(false);
+    }
+  }
 
   function copy() {
-    navigator.clipboard?.writeText(me.wallet);
+    if (!profile) return;
+    navigator.clipboard?.writeText(profile.wallet);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.name);
+    setBio(profile.bio);
+    setAvatar(profile.avatar);
+  }, [profile]);
+
+  if (!profile) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
+        Connect your wallet to load your profile.
+      </div>
+    );
   }
 
   return (
     <div className="-mt-6">
       {/* banner */}
       <div className="relative -mx-4 h-44 overflow-hidden sm:-mx-6 sm:h-56">
-        <img src={me.banner} alt="" className="h-full w-full object-cover" />
+        <img src={profile.banner} alt="" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/30 to-transparent" />
       </div>
 
       <div className="relative z-10 -mt-14 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-end gap-4">
           <span className="shrink-0 rounded-full bg-bg p-1.5">
-            <Avatar src={me.avatar} alt={me.name} size={100} verified={me.xConnected} />
+            <Avatar src={avatar} alt={profile.name} size={100} verified={xConnected} />
           </span>
           <div className="min-w-0 pb-1">
             <h1 className="flex items-center gap-1.5 font-display text-2xl font-bold text-text drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] sm:text-3xl">
               <span className="truncate">{name}</span>
-              {me.xConnected && <VerifiedBadge size={20} className="shrink-0" />}
+              {xConnected && <VerifiedBadge size={20} className="shrink-0" />}
             </h1>
-            <p className="text-sm text-faint">@{me.handle}</p>
+            <p className="text-sm text-faint">@{profile.handle}</p>
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button onClick={copy} className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong">
             <Wallet size={15} className="text-gold-bright" />
-            {shortAddr(me.wallet)}
+            {shortAddr(profile.wallet)}
             {copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />}
           </button>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
@@ -64,16 +102,28 @@ export function UserProfileClient() {
       </div>
 
       <p className="mt-4 max-w-xl text-[15px] text-muted">{bio}</p>
-      {me.xConnected && (
-        <Badge tone="blue" className="mt-3">𝕏 connected · @{me.handle}</Badge>
+      {xConnected ? (
+        <Badge tone="blue" className="mt-3">𝕏 connected · @{sourceXHandle}</Badge>
+      ) : (
+        <button
+          type="button"
+          onClick={connectX}
+          disabled={xPending}
+          className="mt-3 inline-flex items-center gap-1 rounded-full border border-blue/25 bg-blue/12 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-blue transition-colors hover:border-blue/40 hover:bg-blue/18 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {xPending ? "Connecting..." : "Connect 𝕏"}
+        </button>
+      )}
+      {xError && (
+        <p className="mt-2 text-sm text-red">{xError}</p>
       )}
 
       {/* stats */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Wins" value={<AnimatedNumber value={me.wins} />} icon={<Trophy size={16} className="text-gold-bright" />} />
-        <StatCard label="Rewards earned" value={<AnimatedNumber value={me.earned} prefix="$" useCompact />} accent />
-        <StatCard label="Challenges joined" value={<AnimatedNumber value={me.joined} />} />
-        <StatCard label="Created" value={<AnimatedNumber value={me.created} />} />
+        <StatCard label="Wins" value={<AnimatedNumber value={profile.wins} />} icon={<Trophy size={16} className="text-gold-bright" />} />
+        <StatCard label="Rewards earned" value={<AnimatedNumber value={profile.earned} prefix="$" useCompact />} accent />
+        <StatCard label="Campaigns joined" value={<AnimatedNumber value={profile.joined} />} />
+        <StatCard label="Created" value={<AnimatedNumber value={profile.created} />} />
       </div>
 
       {/* tabs */}
@@ -117,8 +167,22 @@ export function UserProfileClient() {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit profile">
         <div className="space-y-5">
           <div className="flex items-center gap-4">
-            <Avatar src={me.avatar} alt={me.name} size={64} verified={me.xConnected} />
-            <Button variant="outline" size="sm">Change avatar</Button>
+            <Avatar src={avatar} alt={profile.name} size={64} verified={xConnected} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setAvatar(String(reader.result || avatar));
+                reader.readAsDataURL(file);
+                e.target.value = "";
+              }}
+            />
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>Change avatar</Button>
           </div>
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-muted">Display name</label>
@@ -141,17 +205,29 @@ export function UserProfileClient() {
             <span className="flex items-center gap-2 text-[13px] text-muted">
               <Wallet size={15} className="text-gold-bright" /> Wallet
             </span>
-            <span className="font-mono text-[13px] text-green">{shortAddr(me.wallet)}</span>
+            <span className="font-mono text-[13px] text-green">{shortAddr(profile.wallet)}</span>
           </div>
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="text-[13px] text-muted">𝕏 account</span>
-            <span className="font-mono text-[13px] text-blue">@{me.handle}</span>
+            <span className="font-mono text-[13px] text-blue">@{sourceXHandle}</span>
           </div>
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" className="flex-1" onClick={() => { setName(me.name); setBio(me.bio); setEditOpen(false); }}>
+            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setEditOpen(false); }}>
               Cancel
             </Button>
-            <Button className="flex-1" onClick={() => setEditOpen(false)}>Save changes</Button>
+            <Button
+              className="flex-1"
+              onClick={async () => {
+                const updated = await updateMe({ name, bio, avatar });
+                setName(updated.user.name);
+                setBio(updated.user.bio);
+                setAvatar(updated.user.avatar);
+                setEditOpen(false);
+                await refreshUser();
+              }}
+            >
+              Save changes
+            </Button>
           </div>
         </div>
       </Modal>

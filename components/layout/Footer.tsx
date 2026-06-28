@@ -33,13 +33,13 @@ export function Footer() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-2 px-4 py-5 pb-28 text-[12px] text-faint sm:flex-row sm:px-6 md:pb-5">
-          <span>© {new Date().getFullYear()} Moonshill. Every card is a challenge to join.</span>
+          <span>© {new Date().getFullYear()} Moonshill. Every card is a campaign to join.</span>
           <span className="flex gap-4">
             <Link href="/docs" className="hover:text-text">Docs</Link>
             <Link href="/token" className="hover:text-text">Token</Link>
             <Link href="/privacy" className="hover:text-text">Privacy</Link>
             <Link href="/terms" className="hover:text-text">Terms</Link>
-            <a href="https://x.com" target="_blank" rel="noreferrer" className="hover:text-text">𝕏</a>
+            <a href="https://x.com/moonshillfun" target="_blank" rel="noreferrer" className="hover:text-text">𝕏</a>
           </span>
         </div>
       </div>

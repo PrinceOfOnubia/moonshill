@@ -7,7 +7,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { Challenge, SubmissionStatus } from "@/lib/types";
-import { me } from "@/lib/mock";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { submitCampaign } from "@/lib/api";
 
 const statusTone: Record<SubmissionStatus, "gold" | "green" | "blue" | "red"> = {
   "Pending Review": "gold",
@@ -25,21 +26,38 @@ export function SubmitEntry({
   open: boolean;
   onClose: () => void;
 }) {
+  const { user } = useAuth();
   const isMulti = challenge.submissionType === "Multiple Links";
   const isUpload = challenge.submissionType === "Image Upload";
   const [links, setLinks] = useState<string[]>([""]);
+  const [upload, setUpload] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"form" | "loading" | "done">("form");
+  const submitter = user;
 
-  const valid = isUpload ? true : links.some((l) => l.trim().length > 4);
+  const valid = !!submitter && (isUpload ? !!upload : links.some((l) => l.trim().length > 4));
 
-  function submit() {
+  async function submit() {
     setPhase("loading");
-    setTimeout(() => setPhase("done"), 1300);
+    setError(null);
+    try {
+      await submitCampaign(challenge.id, {
+        link: isUpload ? upload : links.find((l) => l.trim().length > 4),
+        links: links.filter((l) => l.trim().length > 4),
+        type: challenge.submissionType,
+      });
+      setPhase("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit entry.");
+      setPhase("form");
+    }
   }
 
   function reset() {
     setPhase("form");
     setLinks([""]);
+    setUpload(null);
+    setError(null);
     onClose();
   }
 
@@ -87,11 +105,16 @@ export function SubmitEntry({
         </div>
       ) : (
         <div className="space-y-5">
+          {!submitter && (
+            <p className="rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-[13px] text-gold-bright">
+              Connect your wallet before submitting.
+            </p>
+          )}
           {/* verified X account notice */}
           <div className="flex items-center gap-3 rounded-2xl border border-blue/20 bg-blue/8 p-3.5">
             <ShieldCheck size={20} className="shrink-0 text-blue" />
             <p className="text-[13px] text-muted">
-              Submitting as <span className="font-medium text-text">@{me.handle}</span>. Links must come
+              Submitting as <span className="font-medium text-text">@{submitter?.xHandle || submitter?.handle || "your connected X account"}</span>. Links must come
               from your connected X account to be approved.
             </p>
           </div>
@@ -107,8 +130,20 @@ export function SubmitEntry({
             <label className="flex h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border-strong bg-surface text-faint transition-colors hover:border-gold/50 hover:text-muted">
               <Upload size={24} />
               <span className="text-sm font-medium">Tap to upload your artwork</span>
-              <span className="text-[12px]">PNG / JPG · up to 12MB</span>
-              <input type="file" className="hidden" accept="image/*" />
+              <span className="text-[12px]">{upload ? "Artwork ready" : "PNG / JPG · up to 12MB"}</span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setUpload(String(reader.result || ""));
+                  reader.readAsDataURL(file);
+                  e.target.value = "";
+                }}
+              />
             </label>
           ) : (
             <div className="space-y-2.5">
@@ -163,6 +198,8 @@ export function SubmitEntry({
               </div>
             </div>
           )}
+
+          {error && <p className="rounded-xl border border-red/25 bg-red/10 px-3 py-2 text-[13px] text-red">{error}</p>}
 
         </div>
       )}

@@ -1,58 +1,155 @@
-# Moonshill 🏆
+# Moonshill
 
-> Every card is a challenge to join.
+Moonshill is a community-first Web3 campaign platform. The frontend is a Next.js app and this repo now also includes the production backend service used for wallet auth, profile persistence, X connect, campaign creation, submissions, and admin data.
 
-**Moonshill** is a community-first crypto arena where projects and users create funded
-missions, challenges and contests. Creators make content on **X**, submit the post link
-on Moonshill, and compete for real rewards. Moonshill is not a social network — X stays the
-distribution layer while Moonshill handles discovery, submissions, verification and rewards.
+## Stack
 
-This repo is the **V1 frontend** — an awwwards-style, dark-mode, mobile-first, image-first
-experience built on mock data.
+- Next.js 16, React 19, Tailwind CSS 4
+- Native Node HTTP backend in `backend/server.mjs`
+- PostgreSQL via `pg`
+- Wallet signature auth with `ethers`
+- Cookie session/JWT auth
 
-## ✨ Highlights
+## Local Setup
 
-- **Design system "THE ARENA"** — warm near-black canvas, BNB gold accents, reward-green &
-  verified X-blue signals, film grain, cursor spotlight, glass surfaces, mono numerics.
-- **Lenis** smooth inertial scroll + scroll-driven parallax, pinned sections and a draggable
-  category rail.
-- **View Transitions** shared-element morph (challenge cover → detail banner) via
-  `next-view-transitions`.
-- **Custom morphing cursor** (JOIN / arrow / DRAG).
-- Live reward ticker, animated counters, magnetic CTAs.
-
-## 🗺️ Routes
-
-| Route | Description |
-|---|---|
-| `/` | Home feed — hero, category rail, For You / Trending / Official / Newest tabs |
-| `/explore` | Search + category & sort filters |
-| `/create` | 3-step challenge creation wizard with live preview |
-| `/challenge/[slug]` | Challenge details — Join / Submit / Share, submission flow |
-| `/leaderboard` | Top Winners / Contributors / Projects × Weekly / Monthly / All-Time |
-| `/profile` · `/project/[handle]` | User & project profiles |
-| `/verify` | X-account and project verification flows |
-| `/admin` | Moderation dashboard — approvals, winners, featured |
-
-## 🧱 Stack
-
-- [Next.js 16](https://nextjs.org) (App Router, Turbopack) · React 19
-- Tailwind CSS 4
-- Framer Motion · Lenis · next-view-transitions
-- lucide-react · clsx · tailwind-merge
-
-## 🚀 Getting started
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Create local env files:
+
+```bash
+cp .env.example .env.local
+cp backend/.env.example backend/.env
+```
+
+Start the backend:
+
+```bash
+npm run backend
+```
+
+Start the frontend in a second terminal:
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Default local URLs:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
+- Health: `http://localhost:8080/health`
+- Public API: `http://localhost:8080/api/public`
+
+## Backend Environment
+
+Backend envs live in `backend/.env.example`.
+
+Required for production:
 
 ```bash
-npm run build   # production build
-npm run start   # serve the production build
+APP_NAME=Moonshill
+PORT=8080
+DATABASE_URL=
+JWT_SECRET=
+SESSION_SECRET=
+CLIENT_ORIGIN=https://moonshill.vercel.app
+CORS_ORIGIN=https://moonshill.vercel.app
+CHAIN_ID=56
+BNB_RPC_URL=https://bsc-dataseed.binance.org/
+ADMIN_WALLET=
+X_CLIENT_ID=
+X_CLIENT_SECRET=
+X_CALLBACK_URL=https://<railway-backend-url>/api/auth/x/callback
+X_HANDLE=moonshillfun
+SEED_DEMO_DATA=false
 ```
 
-> All data is mocked in `lib/mock.ts`. There is no backend in V1.
+Do not commit real secrets. Generate long random values for `JWT_SECRET` and `SESSION_SECRET`.
+
+## Frontend Environment
+
+Frontend envs live in `.env.example`.
+
+Required for production:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://moonshill.vercel.app
+NEXT_PUBLIC_APP_NAME=Moonshill
+NEXT_PUBLIC_API_URL=https://<railway-backend-url>
+NEXT_PUBLIC_CHAIN_ID=56
+NEXT_PUBLIC_CHAIN_NAME=BNB Smart Chain Mainnet
+NEXT_PUBLIC_BSC_RPC_URL=https://bsc-dataseed.binance.org/
+NEXT_PUBLIC_X_URL=https://x.com/moonshillfun
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
+```
+
+Only set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` if the active wallet stack needs it.
+
+## Backend API
+
+Implemented endpoints:
+
+- `GET /health`
+- `GET /api/public`
+- `GET /api/auth/wallet/challenge?address=0x...`
+- `POST /api/auth/wallet/verify`
+- `POST /api/auth/logout`
+- `GET /api/me`
+- `PATCH /api/me`
+- `GET /api/auth/x/start`
+- `GET /api/auth/x/callback`
+- `GET /api/leaderboard`
+- `GET /api/notifications`
+- `GET /api/projects/:handle`
+- `GET /api/campaigns`
+- `POST /api/campaigns`
+- `GET /api/campaigns/:slug`
+- `POST /api/campaigns/:id/join`
+- `POST /api/campaigns/:id/submissions`
+- `GET /api/admin/summary`
+
+## Deployment
+
+### Railway Backend
+
+1. Create a Railway project/service named `moonshill-backend`.
+2. Attach a PostgreSQL database and set `DATABASE_URL`.
+3. Set all backend env vars from `backend/.env.example`.
+4. Set the start command to `npm run backend`.
+5. After deploy, confirm:
+
+```bash
+curl https://<railway-backend-url>/health
+curl https://<railway-backend-url>/api/public
+```
+
+The included `railway.json` sets the backend start command and healthcheck path.
+
+### Vercel Frontend
+
+1. Create a Vercel project named `moonshill`.
+2. Set all frontend env vars from `.env.example`.
+3. Set `NEXT_PUBLIC_API_URL` to the Railway backend URL.
+4. Deploy the Next.js app.
+5. After deploy, confirm `/`, `/profile`, `/create`, `/verify`, `/explore`, and `/admin`.
+
+## Validation
+
+Useful local checks:
+
+```bash
+npm run lint
+npm run build
+curl http://localhost:8080/health
+curl http://localhost:8080/api/public
+```
+
+## Notes
+
+- The backend only seeds demo data when `SEED_DEMO_DATA=true` in production.
+- `lib/mock.ts` and `backend/seed-data.json` are demo/seed assets only; live app flows are API-backed.
+- X OAuth will report a clean not-configured state until `X_CLIENT_ID`, `X_CLIENT_SECRET`, and `X_CALLBACK_URL` are set.

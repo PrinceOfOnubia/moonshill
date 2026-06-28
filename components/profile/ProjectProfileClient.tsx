@@ -4,21 +4,19 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Copy, Globe, FileCode2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { Badge, VerifiedBadge } from "@/components/ui/Badge";
+import { VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
-import { challenges } from "@/lib/mock";
-import type { ProjectProfile } from "@/lib/types";
+import type { Challenge, ProjectProfile } from "@/lib/types";
 import { cn, shortAddr } from "@/lib/utils";
 
 const tabs = ["Active", "Completed"] as const;
 
-export function ProjectProfileClient({ p }: { p: ProjectProfile }) {
+export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; campaigns: Challenge[] }) {
   const [tab, setTab] = useState<(typeof tabs)[number]>("Active");
   const [copied, setCopied] = useState(false);
-  const owned = challenges.filter((c) => c.creator.handle === p.handle);
-  const active = owned.length ? owned : challenges.filter((c) => c.official).slice(0, 4);
+  const active = campaigns;
 
   return (
     <div className="-mt-6">
@@ -43,9 +41,11 @@ export function ProjectProfileClient({ p }: { p: ProjectProfile }) {
       <p className="mt-4 max-w-2xl text-[15px] text-muted">{p.description}</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <a href={`https://${p.website}`} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text">
-          <Globe size={14} className="text-blue" /> {p.website}
-        </a>
+        {p.website && (
+          <a href={p.website.startsWith("http") ? p.website : `https://${p.website}`} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text">
+            <Globe size={14} className="text-blue" /> {p.website}
+          </a>
+        )}
         <button
           onClick={() => { navigator.clipboard?.writeText(p.contract); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
           className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-[13px] text-muted transition-colors hover:text-text"
@@ -64,7 +64,7 @@ export function ProjectProfileClient({ p }: { p: ProjectProfile }) {
       <div className="mt-8 flex gap-1 border-b border-border">
         {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={cn("relative px-4 py-3 text-sm font-medium transition-colors", tab === t ? "text-text" : "text-faint hover:text-muted")}>
-            {t} challenges
+            {t} campaigns
             {tab === t && <motion.span layoutId="projtab" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-gold" />}
           </button>
         ))}
@@ -72,7 +72,13 @@ export function ProjectProfileClient({ p }: { p: ProjectProfile }) {
 
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {active.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)}
+          {active.length ? (
+            active.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+          ) : (
+            <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted sm:col-span-2 lg:col-span-3">
+              No campaigns yet.
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </div>

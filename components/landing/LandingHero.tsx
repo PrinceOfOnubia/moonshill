@@ -5,7 +5,7 @@ import { DollarSign, Flag, Send, Trophy, Users } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ContractAddress } from "./ContractAddress";
-import { DiscordIcon, SOCIALS, TelegramIcon, XIcon } from "./social";
+import { SOCIALS, TelegramIcon, XIcon } from "./social";
 
 type Stat = {
   icon: typeof Users;
@@ -17,7 +17,7 @@ type Stat = {
 
 const stats: Stat[] = [
   { icon: Users, value: 24_560, label: "Total Users", tint: "text-gold-bright" },
-  { icon: Flag, value: 1_248, label: "Challenges", tint: "text-violet-400" },
+  { icon: Flag, value: 1_248, label: "Campaigns", tint: "text-violet-400" },
   { icon: Trophy, value: 320, label: "Winners", tint: "text-gold-bright" },
   { icon: DollarSign, display: "$1.45M", label: "Rewards Distributed", tint: "text-green" },
 ];
@@ -85,10 +85,6 @@ export function LandingHero() {
             <span className="h-5 w-px bg-white/10" />
             <HeroSocial href={SOCIALS.telegram} label="Telegram">
               <TelegramIcon size={18} />
-            </HeroSocial>
-            <span className="h-5 w-px bg-white/10" />
-            <HeroSocial href={SOCIALS.discord} label="Discord">
-              <DiscordIcon size={18} />
             </HeroSocial>
           </div>
         </div>

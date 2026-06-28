@@ -8,11 +8,10 @@ import { Logo } from "./Logo";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { me } from "@/lib/mock";
 import { cn, shortAddr } from "@/lib/utils";
 
 const nav = [
-  { href: "/home", label: "Home" },
+  { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
@@ -20,9 +19,13 @@ const nav = [
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { address, disconnect } = useAuth();
+  const { address, disconnect, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const accountName = user?.name || (address ? shortAddr(address) : "Moonshill user");
+  const accountWallet = address || user?.wallet || "";
+  const accountAvatar = user?.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(accountWallet || "moonshill")}&backgroundType=gradientLinear`;
+  const accountVerified = !!user?.xConnected;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -40,7 +43,7 @@ export function TopBar() {
 
         <nav className="ml-4 hidden items-center gap-1 md:flex">
           {nav.map((n) => {
-            const active = pathname === n.href || pathname.startsWith(`${n.href}/`);
+            const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
             return (
               <Link
                 key={n.href}
@@ -62,7 +65,7 @@ export function TopBar() {
           className="ml-auto hidden h-10 w-64 items-center gap-2.5 rounded-full border border-border bg-surface/70 px-4 text-sm text-faint transition-colors hover:border-border-strong lg:flex"
         >
           <Search size={16} />
-          <span>Search challenges…</span>
+          <span>Search campaigns…</span>
           <kbd className="ml-auto rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">/</kbd>
         </button>
 
@@ -84,7 +87,7 @@ export function TopBar() {
           </Link>
           <button className="hidden h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:border-gold/50 sm:flex">
             <Wallet size={16} className="text-gold-bright" />
-            <span className="font-mono">{shortAddr(address ?? me.wallet)}</span>
+            <span className="font-mono">2.41 BNB</span>
           </button>
 
           <div ref={menuRef} className="relative">
@@ -94,15 +97,15 @@ export function TopBar() {
               onClick={() => setMenuOpen((v) => !v)}
               className="block rounded-full transition-opacity hover:opacity-90"
             >
-              <Avatar src={me.avatar} alt={me.name} size={38} verified={me.xConnected} ring />
+              <Avatar src={accountAvatar} alt={accountName} size={38} verified={accountVerified} ring />
             </button>
 
             {menuOpen && (
               <div className="absolute right-0 top-12 z-[95] w-60 overflow-hidden rounded-2xl border border-border-strong glass-strong">
                 <div className="border-b border-border px-4 py-3">
-                  <p className="text-sm font-semibold text-text">{me.name}</p>
+                  <p className="text-sm font-semibold text-text">{accountName}</p>
                   <p className="mt-0.5 font-mono text-[12px] text-faint">
-                    {shortAddr(address ?? me.wallet)}
+                    {accountWallet ? shortAddr(accountWallet) : "Not connected"}
                   </p>
                 </div>
                 <div className="p-1.5">
