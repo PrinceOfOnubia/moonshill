@@ -68,8 +68,11 @@ export function ChallengeCard({ c, index = 0 }: { c: Challenge; index?: number }
           </h3>
 
           <div className="flex items-center gap-2">
-            <Avatar src={c.creator.avatar} alt={c.creator.name} size={22} verified={c.creator.verified} />
+            <Avatar src={c.creator.avatar} alt={c.creator.name} size={22} verified={c.creator.type === "project" && c.creator.verified} />
             <span className="text-[13px] text-muted truncate">{c.creator.name}</span>
+            <Badge tone={c.creator.type === "project" ? "blue" : "neutral"} className="ml-auto">
+              {c.creator.type === "project" ? "Project" : "User"}
+            </Badge>
           </div>
 
           <div className="flex items-center justify-between border-t border-border pt-3 text-[12px]">

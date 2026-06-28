@@ -19,13 +19,16 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { getCampaigns, joinCampaign } from "@/lib/api";
 
 export function ChallengeDetail({ c }: { c: Challenge }) {
-  const { connected, openConnect } = useAuth();
+  const { connected, openConnect, user } = useAuth();
   const [joined, setJoined] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [shared, setShared] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [related, setRelated] = useState<Challenge[]>([]);
   const t = useTimeLeft(c.endsAt);
+  const isCreator = user?.id === c.creator.id;
+  const creatorHref = c.creator.type === "project" ? `/project/${c.creator.handle}` : `/u/${c.creator.handle}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +44,10 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
     };
   }, [c.category, c.id]);
 
+  useEffect(() => {
+    setJoined(!!user?.joinedCampaigns?.some((campaign) => campaign.id === c.id));
+  }, [c.id, user]);
+
   function share() {
     setShared(true);
     setTimeout(() => setShared(false), 1800);
@@ -51,10 +58,14 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
       openConnect();
       return;
     }
+    if (isCreator) return;
     setJoining(true);
+    setJoinError(null);
     try {
       await joinCampaign(c.id);
       setJoined(true);
+    } catch (error) {
+      setJoinError(error instanceof Error ? error.message : "Could not join campaign.");
     } finally {
       setJoining(false);
     }
@@ -86,13 +97,14 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
             {c.title}
           </h1>
 
-          <Link href={`/project/${c.creator.handle}`} className="mt-4 inline-flex items-center gap-2.5">
+          <Link href={creatorHref} className="mt-4 inline-flex items-center gap-2.5">
             <Avatar src={c.creator.avatar} alt={c.creator.name} size={36} verified={c.creator.verified} />
             <span className="flex items-center gap-1 text-sm">
               <span className="font-medium text-text">{c.creator.name}</span>
-              {c.creator.verified && <VerifiedBadge size={15} />}
+              {c.creator.type === "project" && c.creator.verified && <VerifiedBadge size={15} />}
             </span>
-            <span className="text-sm text-faint">@{c.creator.handle}</span>
+            <span className="text-sm text-faint">@{c.creator.xHandle || c.creator.handle}</span>
+            <Badge tone={c.creator.type === "project" ? "blue" : "neutral"}>{c.creator.type === "project" ? "Project" : "User"}</Badge>
           </Link>
 
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted">{c.description}</p>
@@ -111,7 +123,11 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              {!joined ? (
+              {isCreator ? (
+                <div className="flex-1 rounded-2xl border border-gold/25 bg-gold/10 px-4 py-3 text-center text-sm text-gold-bright">
+                  You created this campaign. Creators cannot join their own campaigns.
+                </div>
+              ) : !joined ? (
                 <Button className="flex-1" size="lg" onClick={join} disabled={joining}>
                   {joining ? "Joining…" : "Join campaign"}
                 </Button>
@@ -129,6 +145,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                 <CheckCircle2 size={13} /> You joined this campaign
               </p>
             )}
+            {joinError && <p className="mt-2 text-center text-[12px] text-red">{joinError}</p>}
           </div>
 
           {/* meta strip */}
@@ -209,7 +226,11 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
             </div>
 
             <div className="space-y-2.5 p-5">
-              {!joined ? (
+              {isCreator ? (
+                <div className="rounded-2xl border border-gold/25 bg-gold/10 px-4 py-3 text-center text-sm text-gold-bright">
+                  You created this campaign. Creators cannot join their own campaigns.
+                </div>
+              ) : !joined ? (
                 <Button className="w-full" size="lg" magnetic onClick={join} disabled={joining}>
                   {joining ? "Joining…" : "Join campaign"}
                 </Button>
@@ -229,6 +250,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
               <p className="pt-1 text-center text-[12px] text-faint">
                 {compact(c.participants)} creators already joined
               </p>
+              {joinError && <p className="text-center text-[12px] text-red">{joinError}</p>}
             </div>
           </div>
         </aside>

@@ -35,7 +35,9 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
             <p className="text-sm text-faint">@{p.handle}</p>
           </div>
         </div>
-        <Button>Follow on 𝕏</Button>
+        <a href={`https://x.com/${p.xHandle || p.handle}`} target="_blank" rel="noreferrer">
+          <Button>Follow on 𝕏</Button>
+        </a>
       </div>
 
       <p className="mt-4 max-w-2xl text-[15px] text-muted">{p.description}</p>
@@ -47,10 +49,10 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
           </a>
         )}
         <button
-          onClick={() => { navigator.clipboard?.writeText(p.contract); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+          onClick={() => { navigator.clipboard?.writeText(p.ownerWallet); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
           className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-[13px] text-muted transition-colors hover:text-text"
         >
-          <FileCode2 size={14} className="text-gold-bright" /> {shortAddr(p.contract)}
+          <FileCode2 size={14} className="text-gold-bright" /> {shortAddr(p.ownerWallet)}
           {copied ? <Check size={13} className="text-green" /> : <Copy size={13} className="text-faint" />}
         </button>
       </div>

@@ -1,4 +1,4 @@
-import type { AppNotification, Challenge, LeaderRow, ProjectProfile, Submission, UserProfile } from "./types";
+import type { AppNotification, Challenge, LeaderRow, ProjectProfile, PublicUserProfile, Submission, TokenMetadata, UserProfile } from "./types";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 
@@ -62,7 +62,7 @@ export async function logout() {
   return apiFetch<{ ok: true }>("/api/auth/logout", { method: "POST" });
 }
 
-export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string }) {
+export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; accountType?: "user" | "project"; website?: string }) {
   return apiFetch<{ user: MeResponse }>("/api/me", {
     method: "PATCH",
     body: JSON.stringify(patch),
@@ -101,6 +101,10 @@ export async function getBnbMarketPrice() {
   return apiFetch<{ symbol: "BNB"; currency: "USD"; price: number; source: string; updatedAt: string }>("/api/market/bnb");
 }
 
+export async function getTokenMetadata(address: string) {
+  return apiFetch<{ token: TokenMetadata }>(`/api/token-metadata?address=${encodeURIComponent(address)}`);
+}
+
 export async function getLeaderboard() {
   return apiFetch<{ winners: LeaderRow[]; contributors: LeaderRow[]; projects: LeaderRow[] }>("/api/leaderboard");
 }
@@ -111,6 +115,10 @@ export async function getNotifications() {
 
 export async function getProject(handle: string) {
   return apiFetch<{ project: ProjectProfile; campaigns: Challenge[] }>(`/api/projects/${encodeURIComponent(handle)}`);
+}
+
+export async function getPublicUser(handle: string) {
+  return apiFetch<{ user: PublicUserProfile }>(`/api/users/${encodeURIComponent(handle)}`);
 }
 
 export async function createCampaign(payload: Record<string, unknown>) {
@@ -135,7 +143,7 @@ export async function getAdminSummary() {
   return apiFetch<{
     counts: { users: number; campaigns: number; submissions: number; joins: number; pendingProjects: number; flagged: number };
     pendingSubmissions: Submission[];
-    projects: ProjectProfile[];
+    accounts: UserProfile[];
     featuredCampaigns: Challenge[];
   }>("/api/admin/summary");
 }

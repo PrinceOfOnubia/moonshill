@@ -19,6 +19,17 @@ const X_ME_URL = "https://api.x.com/2/users/me?user.fields=profile_image_url,ver
 const X_HANDLE = process.env.X_HANDLE || "moonshillfun";
 const REQUIRED_X_RULE = `Must follow @${X_HANDLE} on X`;
 const BNB_PRICE_TTL_MS = 60_000;
+const BNB_RPC_URL = process.env.BNB_RPC_URL || "https://bsc-dataseed1.bnbchain.org/";
+const BNB_RPC_URLS = Array.from(
+  new Set(
+    [
+      BNB_RPC_URL,
+      "https://bsc-dataseed1.bnbchain.org/",
+      "https://bsc-dataseed.binance.org/",
+      "https://binance.llamarpc.com",
+    ].filter(Boolean),
+  ),
+);
 let bnbPriceCache = { price: 600, source: "fallback", updatedAt: 0 };
 const isProd = process.env.NODE_ENV === "production";
 const shouldSeedDemoData = process.env.SEED_DEMO_DATA === "true" || (!isProd && process.env.SEED_DEMO_DATA !== "false");
@@ -55,6 +66,19 @@ function normalizeAddress(address = "") {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function isAddress(value = "") {
+  return /^0x[a-fA-F0-9]{40}$/.test(String(value).trim());
+}
+
+function sanitizeHandle(value = "") {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
 }
 
 function base64url(input) {
@@ -174,9 +198,12 @@ async function ensureSchema() {
       wallet_address text unique not null,
       display_name text not null,
       handle text not null,
+      account_type text not null default 'user',
       avatar text not null,
       banner text not null,
       bio text not null default '',
+      website text not null default '',
+      project_verified boolean not null default false,
       x_connected boolean not null default false,
       x_user_id text,
       x_handle text,
@@ -189,6 +216,9 @@ async function ensureSchema() {
       updated_at timestamptz not null default now()
     );
   `);
+  await query(`alter table users add column if not exists account_type text not null default 'user';`);
+  await query(`alter table users add column if not exists website text not null default '';`);
+  await query(`alter table users add column if not exists project_verified boolean not null default false;`);
   await query(`
     create table if not exists wallet_challenges (
       address text primary key,
@@ -226,6 +256,7 @@ async function ensureSchema() {
       category text not null,
       reward_pool numeric not null,
       reward_token text not null,
+      reward_token_meta jsonb,
       reward_amount numeric not null,
       winners integer not null,
       creator jsonb not null,
@@ -243,6 +274,7 @@ async function ensureSchema() {
       updated_at timestamptz not null default now()
     );
   `);
+  await query(`alter table campaigns add column if not exists reward_token_meta jsonb;`);
   await query(`
     create table if not exists campaign_members (
       campaign_id text not null references campaigns(id) on delete cascade,
@@ -364,6 +396,8 @@ async function ensureSeed() {
 }
 
 function campaignRow(row) {
+  const creator = row.creator || {};
+  const accountType = creator.type === "project" ? "project" : "user";
   return {
     id: row.id,
     slug: row.slug,
@@ -372,9 +406,20 @@ function campaignRow(row) {
     category: row.category,
     rewardPool: Number(row.reward_pool),
     rewardToken: row.reward_token,
+    rewardTokenMeta: row.reward_token_meta || null,
     rewardAmount: Number(row.reward_amount),
     winners: row.winners,
-    creator: row.creator,
+    creator: {
+      id: creator.id || "",
+      type: accountType,
+      name: creator.name || "Unknown",
+      handle: creator.handle || "unknown",
+      avatar: creator.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(creator.id || row.id)}&backgroundType=gradientLinear`,
+      verified: !!creator.verified,
+      xHandle: creator.xHandle || null,
+      website: creator.website || null,
+      ownerWallet: creator.ownerWallet || null,
+    },
     participants: row.participants,
     startsAt: row.starts_at,
     endsAt: row.ends_at,
@@ -389,14 +434,19 @@ function campaignRow(row) {
 }
 
 function userRow(row) {
+  const accountType = row.account_type === "project" ? "project" : "user";
+  const projectVerified = !!row.project_verified || (accountType === "project" && !!row.x_connected);
   return {
     id: row.id,
+    accountType,
     name: row.display_name,
     handle: row.handle,
     avatar: row.avatar,
     banner: row.banner,
     wallet: row.wallet_address,
     bio: row.bio,
+    website: row.website || "",
+    projectVerified,
     xConnected: row.x_connected,
     xUserId: row.x_user_id ?? null,
     xHandle: row.x_handle ?? null,
@@ -405,6 +455,46 @@ function userRow(row) {
     wins: row.wins,
     earned: Number(row.earned),
     isAdmin: row.is_admin,
+  };
+}
+
+function creatorFromUser(user) {
+  const verifiedProject = user.accountType === "project" && !!user.projectVerified;
+  return {
+    id: user.id,
+    type: user.accountType,
+    name: user.name,
+    handle: user.handle,
+    avatar: user.avatar,
+    verified: verifiedProject,
+    xHandle: user.xHandle || null,
+    website: user.website || null,
+    ownerWallet: user.wallet,
+  };
+}
+
+function projectProfileFromUser(user, campaigns = []) {
+  const activeChallenges = Array.isArray(campaigns) ? campaigns.length : Number(campaigns || 0);
+  const totalSponsored = Array.isArray(campaigns)
+    ? campaigns.reduce((sum, campaign) => sum + Number(campaign.rewardPool || 0), 0)
+    : Number(user.earned || 0);
+
+  return {
+    id: user.id,
+    accountType: "project",
+    name: user.name,
+    handle: user.handle,
+    avatar: user.avatar,
+    banner: user.banner,
+    verified: !!user.projectVerified,
+    description: user.bio,
+    website: user.website || "",
+    contract: user.wallet,
+    ownerWallet: user.wallet,
+    xHandle: user.xHandle || null,
+    totalSponsored,
+    activeChallenges,
+    completedChallenges: 0,
   };
 }
 
@@ -442,6 +532,89 @@ async function fetchBnbUsd() {
   }
 
   return bnbPriceCache;
+}
+
+async function rpcCall(method, params) {
+  let lastError = null;
+  for (const rpcUrl of BNB_RPC_URLS) {
+    try {
+      const response = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: crypto.randomUUID(),
+          method,
+          params,
+        }),
+        signal: AbortSignal.timeout(6_000),
+      });
+      if (!response.ok) {
+        lastError = new Error(`BNB RPC request failed with ${response.status}`);
+        continue;
+      }
+      const body = await response.json();
+      if (body.error) {
+        lastError = new Error(body.error.message || "BNB RPC request failed.");
+        continue;
+      }
+      return body.result;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("BNB RPC request failed.");
+}
+
+function decodeAbiString(hexValue) {
+  const hex = String(hexValue || "").replace(/^0x/, "");
+  if (!hex) return "";
+  if (hex.length >= 128) {
+    const length = Number.parseInt(hex.slice(64, 128), 16);
+    if (Number.isFinite(length) && length >= 0) {
+      const bytes = hex.slice(128, 128 + length * 2);
+      return Buffer.from(bytes, "hex").toString("utf8").replace(/\0+$/g, "");
+    }
+  }
+  return Buffer.from(hex.replace(/(00)+$/g, ""), "hex").toString("utf8").replace(/\0+$/g, "");
+}
+
+function decodeAbiUint(hexValue) {
+  const hex = String(hexValue || "").replace(/^0x/, "");
+  if (!hex) return 0;
+  return Number.parseInt(hex.slice(-64), 16);
+}
+
+async function fetchTokenMetadataFromChain(address) {
+  if (!isAddress(address)) {
+    throw new Error("Enter a valid BNB Chain token contract address.");
+  }
+
+  const code = await rpcCall("eth_getCode", [address, "latest"]);
+  if (!code || code === "0x") {
+    throw new Error("No token contract found at that address.");
+  }
+
+  const [nameHex, symbolHex, decimalsHex] = await Promise.all([
+    rpcCall("eth_call", [{ to: address, data: "0x06fdde03" }, "latest"]),
+    rpcCall("eth_call", [{ to: address, data: "0x95d89b41" }, "latest"]),
+    rpcCall("eth_call", [{ to: address, data: "0x313ce567" }, "latest"]),
+  ]);
+
+  const name = decodeAbiString(nameHex);
+  const symbol = decodeAbiString(symbolHex);
+  const decimals = decodeAbiUint(decimalsHex);
+
+  if (!name || !symbol || !Number.isFinite(decimals)) {
+    throw new Error("Could not read token metadata from BNB Chain.");
+  }
+
+  return {
+    name,
+    symbol,
+    decimals,
+    address,
+  };
 }
 
 async function getUserById(id) {
@@ -496,7 +669,7 @@ async function upsertWalletUser(address) {
   if (existing.rows[0]) return userRow(existing.rows[0]);
   const suffix = normalized.slice(-6);
   const id = crypto.randomUUID();
-  const handle = `user${suffix}`;
+  const handle = sanitizeHandle(`user${suffix}`);
   const displayName = `Moonshill ${suffix.toUpperCase()}`;
   const avatar = `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(normalized)}&backgroundType=gradientLinear`;
   const banner = `https://images.unsplash.com/photo-1614851099511-773084f6911d?auto=format&fit=crop&w=1400&q=80`;
@@ -606,14 +779,32 @@ async function handleMePatch(req, res) {
   const bio = typeof body.bio === "string" ? body.bio.trim() : user.bio;
   const avatar = typeof body.avatar === "string" && body.avatar.trim() ? body.avatar.trim() : user.avatar;
   const banner = typeof body.banner === "string" && body.banner.trim() ? body.banner.trim() : user.banner;
+  const accountType = body.accountType === "project" ? "project" : body.accountType === "user" ? "user" : user.accountType;
+  const nextHandle = typeof body.handle === "string" && body.handle.trim()
+    ? sanitizeHandle(body.handle)
+    : user.handle;
+  const website = typeof body.website === "string" ? body.website.trim() : user.website || "";
+
+  if (!nextHandle) {
+    return json(res, 400, { error: "A valid handle is required." });
+  }
+
+  const taken = await query(
+    "select id from users where lower(handle) = lower($1) and id <> $2 limit 1",
+    [nextHandle, user.id],
+  );
+  if (taken.rows[0]) {
+    return json(res, 409, { error: "That handle is already in use." });
+  }
+
   const updated = await query(
     `
     update users
-    set display_name = $2, bio = $3, avatar = $4, banner = $5, updated_at = now()
+    set display_name = $2, bio = $3, avatar = $4, banner = $5, account_type = $6, handle = $7, website = $8, updated_at = now()
     where id = $1
     returning *
     `,
-    [user.id, displayName, bio, avatar, banner],
+    [user.id, displayName, bio, avatar, banner, accountType, nextHandle, website],
   );
   json(res, 200, { user: userRow(updated.rows[0]) });
 }
@@ -723,6 +914,7 @@ async function handleXCallback(req, res, url) {
       set x_connected = true,
           x_user_id = $2,
           x_handle = $3,
+          project_verified = case when account_type = 'project' then true else project_verified end,
           updated_at = now()
       where id = $1
       `,
@@ -750,6 +942,19 @@ async function listCampaigns(url) {
   return result.rows.map(campaignRow);
 }
 
+async function handleTokenMetadata(req, res, url) {
+  const address = String(url.searchParams.get("address") || "").trim();
+  if (!address) {
+    return json(res, 400, { error: "Token contract address is required." });
+  }
+  try {
+    const token = await fetchTokenMetadataFromChain(address);
+    return json(res, 200, { token });
+  } catch (error) {
+    return json(res, 400, { error: error instanceof Error ? error.message : "Could not fetch token metadata." });
+  }
+}
+
 async function handleCampaigns(req, res, url) {
   if (req.method === "GET") {
     return json(res, 200, { campaigns: await listCampaigns(url) });
@@ -762,7 +967,7 @@ async function handleCampaigns(req, res, url) {
     const description = String(body.description || "").trim();
     const category = String(body.category || "Memes");
     const cover = String(body.cover || seed.challenges[0]?.cover || "");
-    const rewardToken = String(body.rewardToken || "BNB");
+    const requestedRewardToken = String(body.rewardToken || "BNB");
     const rewardAmount = Number(body.rewardAmount || 1);
     const winners = Math.max(1, Number(body.winners || 1));
     const days = Math.max(1, Number(body.days || 1));
@@ -774,27 +979,47 @@ async function handleCampaigns(req, res, url) {
     const requiredTags = Array.isArray(body.requiredTags)
       ? body.requiredTags
       : String(body.requiredTags || "").split(/\s+/).map((x) => x.trim()).filter(Boolean);
-    if (!title || !description || !category || !cover || !rewardToken || !rewardAmount || !winners) {
+    if (!title || !description || !category || !cover || !requestedRewardToken || !rewardAmount || !winners) {
       return json(res, 400, { error: "Title, description, cover, reward, and winners are required." });
     }
     const slugBase = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const slug = `${slugBase || "campaign"}-${crypto.randomUUID().slice(0, 8)}`;
-    const creator = {
-      id: user.id,
-      type: "user",
-      name: user.name,
-      handle: user.handle,
-      avatar: user.avatar,
-      verified: user.xConnected,
-    };
+    const creator = creatorFromUser(user);
     const bnbMarket = await fetchBnbUsd();
-    const rewardPool = Math.round(rewardAmount * (rewardToken === "USDT" ? 1 : rewardToken === "BNB" ? bnbMarket.price : rewardToken === "ETH" ? 3200 : rewardToken === "CAKE" ? 2.5 : 0.002));
+    let rewardToken = requestedRewardToken;
+    let rewardTokenMeta = null;
+    let rewardPool = 0;
+
+    if (requestedRewardToken === "CUSTOM") {
+      try {
+        rewardTokenMeta = await fetchTokenMetadataFromChain(
+          String(body.rewardTokenAddress || body.rewardTokenMeta?.address || "").trim(),
+        );
+      } catch (error) {
+        return json(res, 400, { error: error instanceof Error ? error.message : "Could not fetch token metadata." });
+      }
+      rewardToken = rewardTokenMeta.symbol;
+    } else {
+      rewardPool = Math.round(
+        rewardAmount
+        * (rewardToken === "USDT"
+          ? 1
+          : rewardToken === "BNB"
+            ? bnbMarket.price
+            : rewardToken === "ETH"
+              ? 3200
+              : rewardToken === "CAKE"
+                ? 2.5
+                : 0.002),
+      );
+    }
+
     const inserted = await query(
       `
       insert into campaigns
-        (id, slug, title, cover, category, reward_pool, reward_token, reward_amount, winners, creator, participants, starts_at, ends_at, submission_type, description, rules, proof, required_tags, official, trending)
+        (id, slug, title, cover, category, reward_pool, reward_token, reward_token_meta, reward_amount, winners, creator, participants, starts_at, ends_at, submission_type, description, rules, proof, required_tags, official, trending)
       values
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,0,now(), now() + ($11 || ' days')::interval, $12,$13,$14::jsonb,$15::jsonb,$16::jsonb,true,50)
+        ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,0,now(), now() + ($12 || ' days')::interval, $13,$14,$15::jsonb,$16::jsonb,$17::jsonb,$18,50)
       returning *
       `,
       [
@@ -805,6 +1030,7 @@ async function handleCampaigns(req, res, url) {
         category,
         rewardPool,
         rewardToken,
+        rewardTokenMeta ? JSON.stringify(rewardTokenMeta) : null,
         rewardAmount,
         winners,
         JSON.stringify(creator),
@@ -814,6 +1040,7 @@ async function handleCampaigns(req, res, url) {
         JSON.stringify(rules),
         JSON.stringify(proof),
         requiredTags.length ? JSON.stringify(requiredTags) : null,
+        user.accountType === "project",
       ],
     );
     await query("update users set created = created + 1, updated_at = now() where id = $1", [user.id]);
@@ -823,7 +1050,7 @@ async function handleCampaigns(req, res, url) {
 }
 
 async function handleCampaignBySlug(req, res, slug) {
-  const result = await query("select * from campaigns where slug = $1 limit 1", [slug]);
+  const result = await query("select * from campaigns where slug = $1 or id = $1 limit 1", [slug]);
   if (!result.rows[0]) return json(res, 404, { error: "Campaign not found." });
   json(res, 200, { campaign: campaignRow(result.rows[0]) });
 }
@@ -833,6 +1060,10 @@ async function handleJoinCampaign(req, res, campaignId) {
   if (!user) return;
   const campaign = await query("select * from campaigns where id = $1 limit 1", [campaignId]);
   if (!campaign.rows[0]) return json(res, 404, { error: "Campaign not found." });
+  const creator = campaign.rows[0].creator || {};
+  if (creator.id === user.id) {
+    return json(res, 403, { error: "You created this campaign. Creators cannot join their own campaigns." });
+  }
   const inserted = await query(
     `
     insert into campaign_members (campaign_id, user_id)
@@ -854,6 +1085,10 @@ async function handleSubmitCampaign(req, res, campaignId) {
   if (!user) return;
   const campaign = await query("select * from campaigns where id = $1 limit 1", [campaignId]);
   if (!campaign.rows[0]) return json(res, 404, { error: "Campaign not found." });
+  const creator = campaign.rows[0].creator || {};
+  if (creator.id === user.id) {
+    return json(res, 403, { error: "You created this campaign. Creators cannot submit entries to their own campaigns." });
+  }
   const body = await readBody(req);
   const link = String(body.link || body.links?.[0] || body.url || "").trim();
   if (!link) return json(res, 400, { error: "A submission link is required." });
@@ -876,7 +1111,21 @@ async function handleSubmitCampaign(req, res, campaignId) {
       String(body.type || campaign.rows[0].submission_type || "X Post"),
     ],
   );
-  json(res, 201, { submission: inserted.rows[0] });
+  const s = inserted.rows[0];
+  json(res, 201, {
+    submission: {
+      id: s.id,
+      challengeId: s.campaign_id,
+      challengeTitle: s.challenge_title,
+      cover: s.cover,
+      user: s.user,
+      link: s.link,
+      type: s.type,
+      status: s.status,
+      submittedAt: s.submitted_at,
+      reward: s.reward == null ? undefined : Number(s.reward),
+    },
+  });
 }
 
 async function handleAdminSummary(req, res) {
@@ -892,15 +1141,16 @@ async function handleAdminSummary(req, res) {
     query("select count(*)::int as count from campaign_members"),
   ]);
   const pendingSubmissions = await query("select * from submissions where status = 'Pending Review' order by submitted_at desc limit 20");
-  const projectRows = await query("select * from users where is_admin = true or x_connected = true order by updated_at desc limit 20");
+  const accountRows = await query("select * from users order by updated_at desc limit 50");
   const featuredRows = await query("select * from campaigns where official = true order by trending desc, created_at desc limit 12");
+  const pendingProjects = accountRows.rows.filter((row) => row.account_type === "project" && !row.project_verified && !row.x_connected).length;
   json(res, 200, {
     counts: {
       users: usersCount.rows[0].count,
       campaigns: campaignsCount.rows[0].count,
       submissions: submissionsCount.rows[0].count,
       joins: membersCount.rows[0].count,
-      pendingProjects: 0,
+      pendingProjects,
       flagged: 0,
     },
     pendingSubmissions: pendingSubmissions.rows.map((s) => ({
@@ -915,23 +1165,7 @@ async function handleAdminSummary(req, res) {
       submittedAt: s.submitted_at,
       reward: s.reward == null ? undefined : Number(s.reward),
     })),
-    projects: projectRows.rows.map((u) => {
-      const user = userRow(u);
-      return {
-        id: user.id,
-        name: user.name,
-        handle: user.xHandle || user.handle,
-        avatar: user.avatar,
-        banner: user.banner,
-        verified: user.xConnected,
-        description: user.bio,
-        website: "",
-        contract: user.wallet,
-        totalSponsored: user.earned,
-        activeChallenges: user.created,
-        completedChallenges: 0,
-      };
-    }),
+    accounts: accountRows.rows.map((u) => userRow(u)),
     featuredCampaigns: featuredRows.rows.map(campaignRow),
   });
 }
@@ -1021,7 +1255,8 @@ function buildLeaderboard(rows) {
       name: user.name,
       handle: user.xHandle || user.handle,
       avatar: user.avatar,
-      verified: user.xConnected,
+      verified: user.accountType === "project" ? !!user.projectVerified : !!user.xConnected,
+      accountType: user.accountType,
       value: user.earned,
       wins: user.wins,
       delta: 0,
@@ -1058,28 +1293,61 @@ async function handleNotifications(req, res) {
 
 async function handleProject(req, res, handle) {
   const userResult = await query(
-    "select * from users where lower(handle) = lower($1) or lower(x_handle) = lower($1) limit 1",
+    "select * from users where account_type = 'project' and (lower(handle) = lower($1) or lower(x_handle) = lower($1)) limit 1",
     [handle],
   );
   if (!userResult.rows[0]) return json(res, 404, { error: "Project not found." });
   const user = userRow(userResult.rows[0]);
   const campaigns = await query("select * from campaigns where creator->>'id' = $1 order by created_at desc limit 12", [user.id]);
   json(res, 200, {
-    project: {
-      id: user.id,
-      name: user.name,
-      handle: user.xHandle || user.handle,
-      avatar: user.avatar,
-      banner: user.banner,
-      verified: user.xConnected,
-      description: user.bio,
-      website: "",
-      contract: user.wallet,
-      totalSponsored: user.earned,
-      activeChallenges: campaigns.rows.length,
-      completedChallenges: 0,
-    },
+    project: projectProfileFromUser(user, campaigns.rows.map(campaignRow)),
     campaigns: campaigns.rows.map(campaignRow),
+  });
+}
+
+async function handlePublicUser(req, res, handle) {
+  const userResult = await query(
+    "select * from users where account_type = 'user' and (lower(handle) = lower($1) or lower(x_handle) = lower($1)) limit 1",
+    [handle],
+  );
+  if (!userResult.rows[0]) return json(res, 404, { error: "User not found." });
+  const account = userRow(userResult.rows[0]);
+  const joined = await query(
+    `
+    select c.* from campaigns c
+    join campaign_members m on m.campaign_id = c.id
+    where m.user_id = $1
+    order by m.created_at desc
+    limit 12
+    `,
+    [account.id],
+  );
+  const created = await query(
+    "select * from campaigns where creator->>'id' = $1 order by created_at desc limit 12",
+    [account.id],
+  );
+  const submissions = await query(
+    "select * from submissions where user_id = $1 order by submitted_at desc limit 12",
+    [account.id],
+  );
+  return json(res, 200, {
+    user: {
+      ...account,
+      joinedCampaigns: joined.rows.map(campaignRow),
+      createdCampaigns: created.rows.map(campaignRow),
+      submissions: submissions.rows.map((s) => ({
+        id: s.id,
+        challengeId: s.campaign_id,
+        challengeTitle: s.challenge_title,
+        cover: s.cover,
+        user: s.user,
+        link: s.link,
+        type: s.type,
+        status: s.status,
+        submittedAt: s.submitted_at,
+        reward: s.reward == null ? undefined : Number(s.reward),
+      })),
+    },
   });
 }
 
@@ -1102,10 +1370,14 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/health") return json(res, 200, { ok: true, appName: APP_NAME, time: nowIso() });
     if (url.pathname === "/api/public" && req.method === "GET") return handlePublic(req, res);
     if (url.pathname === "/api/market/bnb" && req.method === "GET") return handleBnbMarket(req, res);
+    if (url.pathname === "/api/token-metadata" && req.method === "GET") return handleTokenMetadata(req, res, url);
     if (url.pathname === "/api/leaderboard" && req.method === "GET") return handleLeaderboard(req, res);
     if (url.pathname === "/api/notifications" && req.method === "GET") return handleNotifications(req, res);
     if (/^\/api\/projects\/[^/]+$/.test(url.pathname) && req.method === "GET") {
       return handleProject(req, res, decodeURIComponent(url.pathname.split("/").pop()));
+    }
+    if (/^\/api\/users\/[^/]+$/.test(url.pathname) && req.method === "GET") {
+      return handlePublicUser(req, res, decodeURIComponent(url.pathname.split("/").pop()));
     }
     if (url.pathname === "/api/auth/wallet/challenge" && req.method === "GET") return handleWalletChallenge(req, res, url);
     if (url.pathname === "/api/auth/wallet/verify" && req.method === "POST") return handleWalletVerify(req, res);

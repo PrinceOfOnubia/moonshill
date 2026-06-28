@@ -17,17 +17,30 @@ export type SubmissionType =
   | "Image Upload"
   | "Multiple Links";
 
-export type RewardToken = "BNB" | "USDT" | "MEME" | "CAKE" | "ETH";
+export type PresetRewardToken = "BNB" | "USDT" | "MEME" | "CAKE" | "ETH";
+export type RewardTokenOption = PresetRewardToken | "CUSTOM";
+export type RewardToken = string;
+export type AccountType = "user" | "project";
 
 export type SubmissionStatus = "Pending Review" | "Approved" | "Rejected" | "Winner";
 
+export interface TokenMetadata {
+  name: string;
+  symbol: string;
+  decimals: number;
+  address: string;
+}
+
 export interface Creator {
   id: string;
-  type: "project" | "user";
+  type: AccountType;
   name: string;
-  handle: string; // X handle
+  handle: string;
   avatar: string;
   verified: boolean;
+  xHandle?: string | null;
+  website?: string | null;
+  ownerWallet?: string | null;
 }
 
 export interface Challenge {
@@ -39,6 +52,7 @@ export interface Challenge {
   rewardPool: number; // USD value
   rewardToken: RewardToken;
   rewardAmount: number; // token amount
+  rewardTokenMeta?: TokenMetadata | null;
   winners: number;
   creator: Creator;
   participants: number;
@@ -68,6 +82,7 @@ export interface Submission {
 
 export interface ProjectProfile {
   id: string;
+  accountType: "project";
   name: string;
   handle: string;
   avatar: string;
@@ -76,6 +91,8 @@ export interface ProjectProfile {
   description: string;
   website: string;
   contract: string;
+  ownerWallet: string;
+  xHandle?: string | null;
   totalSponsored: number;
   activeChallenges: number;
   completedChallenges: number;
@@ -83,12 +100,15 @@ export interface ProjectProfile {
 
 export interface UserProfile {
   id: string;
+  accountType: AccountType;
   name: string;
   handle: string;
   avatar: string;
   banner: string;
   wallet: string;
   bio: string;
+  website?: string;
+  projectVerified?: boolean;
   xConnected: boolean;
   xHandle?: string | null;
   xUserId?: string | null;
@@ -97,6 +117,12 @@ export interface UserProfile {
   wins: number;
   earned: number;
   isAdmin?: boolean;
+}
+
+export interface PublicUserProfile extends UserProfile {
+  joinedCampaigns: Challenge[];
+  createdCampaigns: Challenge[];
+  submissions: Submission[];
 }
 
 export type NotificationKind =
@@ -126,6 +152,7 @@ export interface LeaderRow {
   handle: string;
   avatar: string;
   verified: boolean;
+  accountType?: AccountType;
   value: number; // earnings / contributions / sponsored
   wins: number;
   delta: number; // rank change

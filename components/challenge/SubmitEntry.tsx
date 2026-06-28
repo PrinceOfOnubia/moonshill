@@ -27,6 +27,7 @@ export function SubmitEntry({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const isCreator = user?.id === challenge.creator.id;
   const isMulti = challenge.submissionType === "Multiple Links";
   const isUpload = challenge.submissionType === "Image Upload";
   const [links, setLinks] = useState<string[]>([""]);
@@ -36,11 +37,15 @@ export function SubmitEntry({
   const submitter = user;
 
   const cleanLinks = links.map((l) => l.trim()).filter(Boolean);
-  const valid = !!submitter && (isUpload ? !!upload : cleanLinks.some(isLikelyUrl));
+  const valid = !!submitter && !isCreator && (isUpload ? !!upload : cleanLinks.some(isLikelyUrl));
 
   async function submit() {
     if (!submitter) {
       setError("Connect your wallet before submitting.");
+      return;
+    }
+    if (isCreator) {
+      setError("You created this campaign. Creators cannot submit entries to their own campaigns.");
       return;
     }
     if (!isUpload && !cleanLinks.some(isLikelyUrl)) {
@@ -117,6 +122,11 @@ export function SubmitEntry({
           {!submitter && (
             <p className="rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-[13px] text-gold-bright">
               Connect your wallet before submitting.
+            </p>
+          )}
+          {isCreator && (
+            <p className="rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-[13px] text-gold-bright">
+              You created this campaign. Creators cannot submit entries to their own campaigns.
             </p>
           )}
           {/* verified X account notice */}

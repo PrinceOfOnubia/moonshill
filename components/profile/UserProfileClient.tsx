@@ -27,6 +27,9 @@ export function UserProfileClient() {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [handle, setHandle] = useState("");
+  const [accountType, setAccountType] = useState<"user" | "project">("user");
+  const [website, setWebsite] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const profile = user;
   const joined = profile?.joinedCampaigns ?? [];
@@ -59,6 +62,9 @@ export function UserProfileClient() {
     setName(profile.name);
     setBio(profile.bio);
     setAvatar(profile.avatar);
+    setHandle(profile.handle);
+    setAccountType(profile.accountType);
+    setWebsite(profile.website || "");
   }, [profile]);
 
   if (!profile) {
@@ -87,7 +93,15 @@ export function UserProfileClient() {
               <span className="truncate">{name}</span>
               {xConnected && <VerifiedBadge size={20} className="shrink-0" />}
             </h1>
-            <p className="text-sm text-faint">@{profile.handle}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-faint">@{profile.handle}</p>
+              <Badge tone={profile.accountType === "project" ? "blue" : "neutral"}>
+                {profile.accountType === "project" ? "Project account" : "User account"}
+              </Badge>
+              {profile.accountType === "project" && profile.projectVerified && (
+                <Badge tone="gold">Verified project</Badge>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
@@ -103,6 +117,9 @@ export function UserProfileClient() {
       </div>
 
       <p className="mt-4 max-w-xl text-[15px] text-muted">{bio}</p>
+      {profile.accountType === "project" && profile.website && (
+        <p className="mt-2 text-sm text-muted">{profile.website}</p>
+      )}
       {xConnected ? (
         <Badge tone="blue" className="mt-3">𝕏 connected · @{sourceXHandle}</Badge>
       ) : (
@@ -209,6 +226,32 @@ export function UserProfileClient() {
             />
           </div>
           <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-muted">Handle</label>
+            <input
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-muted">Account type</label>
+            <div className="flex gap-2">
+              {(["user", "project"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setAccountType(value)}
+                  className={cn(
+                    "rounded-full border px-4 py-2 text-[13px] font-medium transition-colors",
+                    accountType === value ? "border-gold/40 bg-gold/12 text-gold-bright" : "border-border bg-surface text-muted hover:text-text",
+                  )}
+                >
+                  {value === "project" ? "Project" : "User"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
             <label className="mb-1.5 block text-[13px] font-medium text-muted">Bio</label>
             <textarea
               value={bio}
@@ -217,6 +260,17 @@ export function UserProfileClient() {
               className="w-full resize-none rounded-xl border border-border bg-surface p-3.5 text-sm outline-none focus:border-gold/50"
             />
           </div>
+          {accountType === "project" && (
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium text-muted">Website</label>
+              <input
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://yourproject.org"
+                className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+              />
+            </div>
+          )}
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="flex items-center gap-2 text-[13px] text-muted">
               <Wallet size={15} className="text-gold-bright" /> Wallet
@@ -228,20 +282,28 @@ export function UserProfileClient() {
             <span className="font-mono text-[13px] text-blue">@{sourceXHandle}</span>
           </div>
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setEditOpen(false); }}>
+            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setAccountType(profile.accountType); setWebsite(profile.website || ""); setEditOpen(false); }}>
               Cancel
             </Button>
             <Button
               className="flex-1"
               onClick={async () => {
-                const updated = await updateMe({ name, bio, avatar });
-                setName(updated.user.name);
-                setBio(updated.user.bio);
-                setAvatar(updated.user.avatar);
-                setEditOpen(false);
-                await refreshUser();
-                setProfileMessage("Profile updated successfully.");
-                setTimeout(() => setProfileMessage(null), 2200);
+                try {
+                  const updated = await updateMe({ name, bio, avatar, handle, accountType, website });
+                  setName(updated.user.name);
+                  setBio(updated.user.bio);
+                  setAvatar(updated.user.avatar);
+                  setHandle(updated.user.handle);
+                  setAccountType(updated.user.accountType);
+                  setWebsite(updated.user.website || "");
+                  setEditOpen(false);
+                  await refreshUser();
+                  setProfileMessage("Profile updated successfully.");
+                  setTimeout(() => setProfileMessage(null), 2200);
+                } catch (error) {
+                  setProfileMessage(error instanceof Error ? error.message : "Could not update profile.");
+                  setTimeout(() => setProfileMessage(null), 2600);
+                }
               }}
             >
               Save changes

@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "next-view-transitions";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Clock, ImageIcon, PartyPopper, Upload, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
-import type { Category, RewardToken, SubmissionType } from "@/lib/types";
+import type { Category, PresetRewardToken, RewardTokenOption, SubmissionType, TokenMetadata } from "@/lib/types";
 import { cn, fmtUsd } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { createCampaign, getBnbMarketPrice } from "@/lib/api";
+import { createCampaign, getBnbMarketPrice, getTokenMetadata } from "@/lib/api";
 
 const categories: Category[] = ["Memes", "Threads", "Videos", "AI", "Design", "Research"];
-const tokens: RewardToken[] = ["BNB", "USDT", "MEME", "CAKE", "ETH"];
+const tokens: RewardTokenOption[] = ["BNB", "USDT", "MEME", "CAKE", "ETH", "CUSTOM"];
 const subTypes: SubmissionType[] = ["X Post", "Thread", "Quote", "Video"];
 const durationOptions = [
   { label: "1 Day (24 Hours)", value: "1" },
@@ -28,7 +29,7 @@ const covers = [
   "photo-1605792657660-596af9009e82", "photo-1526374965328-7f61d4dc18c5",
 ];
 const cover = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
-const fallbackTokenUsd: Record<RewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, MEME: 0.002, CAKE: 2.5 };
+const fallbackTokenUsd: Record<PresetRewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, MEME: 0.002, CAKE: 2.5 };
 
 const steps = ["Basics", "Reward & Schedule", "Rules & Submission"];
 
@@ -38,13 +39,18 @@ export function CreateClient() {
   const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdCampaignSlug, setCreatedCampaignSlug] = useState<string | null>(null);
 
   const [coverId, setCoverId] = useState(covers[0]);
   const [customCover, setCustomCover] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [category, setCategory] = useState<Category>("Memes");
-  const [token, setToken] = useState<RewardToken>("BNB");
+  const [token, setToken] = useState<RewardTokenOption>("BNB");
+  const [customTokenAddress, setCustomTokenAddress] = useState("");
+  const [customTokenMeta, setCustomTokenMeta] = useState<TokenMetadata | null>(null);
+  const [customTokenLoading, setCustomTokenLoading] = useState(false);
+  const [customTokenError, setCustomTokenError] = useState<string | null>(null);
   const [amount, setAmount] = useState(1);
   const [winners, setWinners] = useState(1);
   const [duration, setDuration] = useState<(typeof durationOptions)[number]["value"]>("1");
@@ -56,7 +62,7 @@ export function CreateClient() {
 
   const coverSrc = customCover ?? cover(coverId);
   const days = duration === "custom" ? Math.max(1, customDays) : Number(duration);
-  const tokenUsd = useMemo<Record<RewardToken, number>>(() => ({ ...fallbackTokenUsd, BNB: bnbPrice }), [bnbPrice]);
+  const tokenUsd = useMemo<Record<PresetRewardToken, number>>(() => ({ ...fallbackTokenUsd, BNB: bnbPrice }), [bnbPrice]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,10 +87,30 @@ export function CreateClient() {
     e.target.value = "";
   }
 
-  const pool = Math.round(amount * tokenUsd[token]);
+  const pool = token === "CUSTOM" ? 0 : Math.round(amount * tokenUsd[token]);
   const creator = user;
+  const rewardLabel = token === "CUSTOM" ? (customTokenMeta?.symbol || "Custom token") : token;
   const canNext =
-    step === 0 ? title.trim().length > 2 : step === 1 ? amount > 0 && winners > 0 : true;
+    step === 0 ? title.trim().length > 2 : step === 1 ? amount > 0 && winners > 0 && (token !== "CUSTOM" || !!customTokenMeta) : true;
+
+  async function fetchCustomToken() {
+    if (!customTokenAddress.trim()) {
+      setCustomTokenError("Paste a token contract address first.");
+      setCustomTokenMeta(null);
+      return;
+    }
+    setCustomTokenLoading(true);
+    setCustomTokenError(null);
+    try {
+      const response = await getTokenMetadata(customTokenAddress.trim());
+      setCustomTokenMeta(response.token);
+    } catch (err) {
+      setCustomTokenMeta(null);
+      setCustomTokenError(err instanceof Error ? err.message : "Could not fetch token metadata.");
+    } finally {
+      setCustomTokenLoading(false);
+    }
+  }
 
   async function publish() {
     if (!connected) {
@@ -96,12 +122,14 @@ export function CreateClient() {
     try {
       const selectedTypes = submissionTypes.length ? submissionTypes : ["X Post"];
       const proof = selectedTypes.map((type) => `Submit ${type.toLowerCase()} link`);
-      await createCampaign({
+      const created = await createCampaign({
         title,
         description: desc,
         category,
         cover: coverSrc,
         rewardToken: token,
+        rewardTokenAddress: customTokenMeta?.address,
+        rewardTokenMeta: customTokenMeta,
         rewardAmount: amount,
         winners,
         days,
@@ -111,6 +139,7 @@ export function CreateClient() {
         proof,
         requiredTags: tags.split(/\s+/).filter(Boolean),
       });
+      setCreatedCampaignSlug(created.campaign.slug);
       setPublished(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create campaign.");
@@ -133,10 +162,15 @@ export function CreateClient() {
         <h1 className="mt-6 font-display text-3xl font-bold">Campaign created successfully.</h1>
         <p className="mx-auto mt-3 max-w-sm text-muted">
           <span className="text-text">{title || "Your campaign"}</span> is live with a{" "}
-          <span className="font-mono text-green">{fmtUsd(pool)}</span> pool. The timeline awaits.
+          <span className="font-mono text-green">{token === "CUSTOM" ? `${amount} ${rewardLabel}` : fmtUsd(pool)}</span> pool. The timeline awaits.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Button size="lg" onClick={() => { setPublished(false); setStep(0); }}>Create another</Button>
+          <Button size="lg" onClick={() => { setPublished(false); setStep(0); setCreatedCampaignSlug(null); }}>Create another</Button>
+          {createdCampaignSlug && (
+            <Link href={`/challenge/${createdCampaignSlug}`}>
+              <Button size="lg" variant="outline">View campaign</Button>
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -253,11 +287,56 @@ export function CreateClient() {
               {step === 1 && (
                 <>
                   <Field label="Reward token">
-                    <Chips options={tokens} value={token} onChange={setToken} />
+                    <Chips
+                      options={tokens}
+                      value={token}
+                      onChange={(next) => {
+                        setToken(next);
+                        setCustomTokenError(null);
+                        if (next !== "CUSTOM") {
+                          setCustomTokenAddress("");
+                          setCustomTokenMeta(null);
+                        }
+                      }}
+                      render={(value) => value === "CUSTOM" ? "Custom Token" : value}
+                    />
                   </Field>
+                  {token === "CUSTOM" && (
+                    <div className="rounded-xl border border-border bg-surface/60 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="flex-1">
+                          <label className="mb-1.5 block text-[13px] font-medium text-muted">Token contract address</label>
+                          <Input
+                            value={customTokenAddress}
+                            onChange={(value) => {
+                              setCustomTokenAddress(value);
+                              setCustomTokenMeta(null);
+                              setCustomTokenError(null);
+                            }}
+                            placeholder="0x..."
+                          />
+                        </div>
+                        <div className="sm:pt-7">
+                          <Button variant="outline" onClick={fetchCustomToken} disabled={customTokenLoading}>
+                            {customTokenLoading ? "Fetching..." : "Fetch token"}
+                          </Button>
+                        </div>
+                      </div>
+                      {customTokenMeta && (
+                        <div className="mt-4 rounded-xl border border-green/20 bg-green/8 p-3.5 text-sm">
+                          <p className="font-medium text-text">{customTokenMeta.name} ({customTokenMeta.symbol})</p>
+                          <p className="mt-1 text-muted">Decimals: {customTokenMeta.decimals}</p>
+                          <p className="mt-1 font-mono text-[12px] text-green">{customTokenMeta.address}</p>
+                        </div>
+                      )}
+                      {customTokenError && (
+                        <p className="mt-3 rounded-xl border border-red/25 bg-red/10 px-3 py-2 text-[13px] text-red">{customTokenError}</p>
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Reward amount">
-                      <NumberInput value={amount} onChange={setAmount} suffix={token} />
+                      <NumberInput value={amount} onChange={setAmount} suffix={rewardLabel} />
                     </Field>
                     <Field label="Number of winners">
                       <NumberInput value={winners} onChange={setWinners} />
@@ -266,7 +345,9 @@ export function CreateClient() {
                   <div className="rounded-xl border border-green/20 bg-green/8 p-4">
                     <p className="text-[12px] text-faint">Total reward pool (est.)</p>
                     <p className="font-mono text-2xl font-bold text-green">{fmtUsd(pool)}</p>
-                    <p className="mt-0.5 text-[12px] text-muted">≈ {fmtUsd(Math.round(pool / winners))} per winner</p>
+                    <p className="mt-0.5 text-[12px] text-muted">
+                      {token === "CUSTOM" ? "Custom token campaigns keep token rewards without a USD estimate." : `≈ ${fmtUsd(Math.round(pool / winners))} per winner`}
+                    </p>
                   </div>
                   <Field label="Duration">
                     <Chips
@@ -365,12 +446,12 @@ export function CreateClient() {
               <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/30 to-transparent" />
               <div className="absolute inset-x-3 top-3 flex justify-between">
                 <Badge tone="neutral" className="bg-black/45 backdrop-blur border-white/10 text-white">{category}</Badge>
-                {creator?.xConnected && <Badge tone="blue" className="bg-black/45 backdrop-blur">Official</Badge>}
+                {creator?.accountType === "project" && <Badge tone="blue" className="bg-black/45 backdrop-blur">{creator.projectVerified ? "Verified project" : "Project"}</Badge>}
               </div>
               <div className="absolute bottom-3 left-3">
                 <span className="text-[11px] uppercase tracking-wider text-white/60">Reward pool</span>
                 <p className="font-mono text-2xl font-bold text-white">{fmtUsd(pool)}</p>
-                <p className="text-[12px] font-medium text-green">{amount} {token} · {winners} winners</p>
+                <p className="text-[12px] font-medium text-green">{amount} {rewardLabel} · {winners} winners</p>
               </div>
             </div>
             <div className="space-y-3 p-4">
@@ -382,7 +463,7 @@ export function CreateClient() {
                   src={creator?.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(user?.wallet || "moonshill")}&backgroundType=gradientLinear`}
                   alt={creator?.name || "Connected wallet"}
                   size={22}
-                  verified={!!creator?.xConnected}
+                  verified={creator?.accountType === "project" ? !!creator?.projectVerified : !!creator?.xConnected}
                 />
                 <span className="text-[13px] text-muted">{creator?.name || "Connected wallet"}</span>
               </div>

@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { DollarSign, Flag, Send, Trophy, Users } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { getPublicData } from "@/lib/api";
 import { ContractAddress } from "./ContractAddress";
 import { SOCIALS, TelegramIcon, XIcon } from "./social";
 
@@ -15,15 +17,40 @@ type Stat = {
   display?: string;
 };
 
-const stats: Stat[] = [
-  { icon: Users, value: 24_560, label: "Total Users", tint: "text-gold-bright" },
-  { icon: Flag, value: 1_248, label: "Campaigns", tint: "text-violet-400" },
-  { icon: Trophy, value: 320, label: "Winners", tint: "text-gold-bright" },
-  { icon: DollarSign, display: "$1.45M", label: "Rewards Distributed", tint: "text-green" },
-];
-
 export function LandingHero() {
   const { openConnect } = useAuth();
+  const [stats, setStats] = useState<Stat[]>([
+    { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
+    { icon: Flag, value: 0, label: "Campaigns", tint: "text-violet-400" },
+    { icon: Trophy, value: 0, label: "Winners", tint: "text-gold-bright" },
+    { icon: DollarSign, display: "$0", label: "Rewards Distributed", tint: "text-green" },
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPublicData()
+      .then((data) => {
+        if (cancelled) return;
+        setStats([
+          { icon: Users, value: data.platformStats.creators, label: "Total Users", tint: "text-gold-bright" },
+          { icon: Flag, value: data.platformStats.activeChallenges, label: "Campaigns", tint: "text-violet-400" },
+          { icon: Trophy, value: data.leaderboard.winners.length, label: "Winners", tint: "text-gold-bright" },
+          { icon: DollarSign, display: `$${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(data.platformStats.totalRewards)}`, label: "Rewards Distributed", tint: "text-green" },
+        ]);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStats([
+          { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
+          { icon: Flag, value: 0, label: "Campaigns", tint: "text-violet-400" },
+          { icon: Trophy, value: 0, label: "Winners", tint: "text-gold-bright" },
+          { icon: DollarSign, display: "$0", label: "Rewards Distributed", tint: "text-green" },
+        ]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section className="relative">

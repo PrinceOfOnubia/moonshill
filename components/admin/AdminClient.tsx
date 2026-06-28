@@ -8,13 +8,15 @@ import { Badge, VerifiedBadge } from "@/components/ui/Badge";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { cn, timeAgo } from "@/lib/utils";
 import { getAdminSummary, updateSubmissionStatus } from "@/lib/api";
-import type { Challenge, ProjectProfile, Submission } from "@/lib/types";
+import { useAuth } from "@/components/providers/AuthProvider";
+import type { Challenge, Submission, UserProfile } from "@/lib/types";
 
-const sections = ["Projects", "Submissions", "Featured"] as const;
+const sections = ["Accounts", "Submissions", "Featured"] as const;
 type Section = (typeof sections)[number];
 
 export function AdminClient() {
-  const [section, setSection] = useState<Section>("Projects");
+  const { user } = useAuth();
+  const [section, setSection] = useState<Section>("Accounts");
   const [counts, setCounts] = useState({
     campaigns: 0,
     submissions: 0,
@@ -22,10 +24,11 @@ export function AdminClient() {
     flagged: 0,
   });
   const [pendingSubmissions, setPendingSubmissions] = useState<Submission[]>([]);
-  const [projects, setProjects] = useState<ProjectProfile[]>([]);
+  const [accounts, setAccounts] = useState<UserProfile[]>([]);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Challenge[]>([]);
 
   useEffect(() => {
+    if (!user?.isAdmin) return;
     let cancelled = false;
     getAdminSummary()
       .then((summary) => {
@@ -37,20 +40,28 @@ export function AdminClient() {
           flagged: summary.counts.flagged,
         });
         setPendingSubmissions(summary.pendingSubmissions);
-        setProjects(summary.projects);
+        setAccounts(summary.accounts);
         setFeaturedCampaigns(summary.featuredCampaigns);
       })
       .catch(() => {
         if (cancelled) return;
         setCounts({ campaigns: 0, submissions: 0, pendingProjects: 0, flagged: 0 });
         setPendingSubmissions([]);
-        setProjects([]);
+        setAccounts([]);
         setFeaturedCampaigns([]);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user?.isAdmin]);
+
+  if (!user?.isAdmin) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
+        Admin access required.
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -80,7 +91,7 @@ export function AdminClient() {
 
       <AnimatePresence mode="wait">
         <motion.div key={section} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-          {section === "Projects" && <ProjectQueue projects={projects} />}
+          {section === "Accounts" && <AccountQueue accounts={accounts} />}
           {section === "Submissions" && <SubmissionQueue pending={pendingSubmissions} />}
           {section === "Featured" && <FeaturedManager campaigns={featuredCampaigns} />}
         </motion.div>
@@ -101,27 +112,36 @@ function KStat({ label, value, tone }: { label: string; value: number; tone: "go
 
 type Verdict = "pending" | "approved" | "rejected";
 
-function ProjectQueue({ projects }: { projects: ProjectProfile[] }) {
+function AccountQueue({ accounts }: { accounts: UserProfile[] }) {
   const [state, setState] = useState<Record<string, Verdict>>({});
-  if (!projects.length) {
-    return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No project requests yet.</div>;
+  if (!accounts.length) {
+    return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No accounts yet.</div>;
   }
   return (
     <div className="space-y-3">
-      {projects.map((p) => {
-        const v = state[p.id] ?? "pending";
+      {accounts.map((account) => {
+        const v = state[account.id] ?? "pending";
         return (
-          <div key={p.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-surface/50 p-4">
-            <Avatar src={p.avatar} alt={p.name} size={48} className="rounded-xl" />
+          <div key={account.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-surface/50 p-4">
+            <Avatar src={account.avatar} alt={account.name} size={48} className="rounded-xl" />
             <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1 font-semibold">{p.name} <VerifiedBadge size={14} /></p>
-              <p className="truncate text-[13px] text-faint">{p.website} · <span className="font-mono">{p.contract.slice(0, 12)}…</span></p>
+              <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+                {account.name}
+                {account.accountType === "project" && account.projectVerified && <VerifiedBadge size={14} />}
+                <Badge tone={account.accountType === "project" ? "blue" : "neutral"}>
+                  {account.accountType === "project" ? "Project" : "User"}
+                </Badge>
+                {account.accountType === "project" && account.projectVerified && <Badge tone="gold">Verified</Badge>}
+              </p>
+              <p className="truncate text-[13px] text-faint">
+                @{account.xHandle || account.handle} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span>
+              </p>
             </div>
             <Actions
               verdict={v}
-              onApprove={() => setState({ ...state, [p.id]: "approved" })}
-              onReject={() => setState({ ...state, [p.id]: "rejected" })}
-              extra={<button onClick={() => setState({ ...state, [p.id]: "rejected" })} className="rounded-full border border-border px-3 py-2 text-[12px] font-medium text-faint hover:text-red">Suspend</button>}
+              onApprove={() => setState({ ...state, [account.id]: "approved" })}
+              onReject={() => setState({ ...state, [account.id]: "rejected" })}
+              extra={<button onClick={() => setState({ ...state, [account.id]: "rejected" })} className="rounded-full border border-border px-3 py-2 text-[12px] font-medium text-faint hover:text-red">Suspend</button>}
             />
           </div>
         );
@@ -195,7 +215,13 @@ function FeaturedManager({ campaigns }: { campaigns: Challenge[] }) {
             <img src={c.cover} alt="" className="h-12 w-12 rounded-lg object-cover" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{c.title}</p>
-              <p className="text-[12px] text-faint">{c.category}</p>
+              <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-faint">
+                <span>{c.category}</span>
+                <Badge tone={c.creator.type === "project" ? "blue" : "neutral"}>
+                  {c.creator.type === "project" ? "Project creator" : "User creator"}
+                </Badge>
+                {c.creator.type === "project" && c.creator.verified && <Badge tone="gold">Verified</Badge>}
+              </div>
             </div>
             <span className={cn("grid h-8 w-8 place-items-center rounded-full", on ? "bg-gold text-black" : "bg-surface-2 text-faint")}><Star size={15} className={on ? "fill-black" : ""} /></span>
           </button>
