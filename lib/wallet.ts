@@ -17,6 +17,8 @@ export interface InjectedProvider {
   isBinanceChain?: boolean;
   isTrustWallet?: boolean;
   isTrust?: boolean;
+  providerInfo?: { name?: string; rdns?: string; uuid?: string };
+  selectedProvider?: InjectedProvider;
   providers?: InjectedProvider[];
   request(args: { method: string; params?: unknown[] | Record<string, unknown> }): Promise<unknown>;
   on?(event: string, handler: (...args: unknown[]) => void): void;
@@ -32,16 +34,22 @@ declare global {
 function pickProvider(walletId?: WalletFlavor) {
   const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!ethereum) return null;
-  const candidates = ethereum.providers?.length ? ethereum.providers : [ethereum];
+  const source = ethereum.providers?.length ? ethereum.providers : ethereum.selectedProvider ? [ethereum.selectedProvider, ethereum] : [ethereum];
+  const candidates = Array.from(new Set(source.filter(Boolean)));
+  const getProviderLabel = (provider: InjectedProvider) =>
+    `${provider.providerInfo?.name || ""} ${provider.providerInfo?.rdns || ""}`.toLowerCase();
   const pickers: Record<WalletFlavor, (provider: InjectedProvider) => boolean> = {
-    metamask: (provider) => !!provider.isMetaMask && !provider.isTrust && !provider.isTrustWallet,
-    walletconnect: () => true,
-    coinbase: (provider) => !!provider.isCoinbaseWallet,
-    binance: (provider) => !!provider.isBinance || !!provider.isBinanceChain,
-    trust: (provider) => !!provider.isTrust || !!provider.isTrustWallet,
+    metamask: (provider) => {
+      const label = getProviderLabel(provider);
+      return (!!provider.isMetaMask || label.includes("metamask")) && !provider.isTrust && !provider.isTrustWallet && !label.includes("trust");
+    },
+    walletconnect: (provider) => getProviderLabel(provider).includes("walletconnect"),
+    coinbase: (provider) => !!provider.isCoinbaseWallet || getProviderLabel(provider).includes("coinbase"),
+    binance: (provider) => !!provider.isBinance || !!provider.isBinanceChain || getProviderLabel(provider).includes("binance"),
+    trust: (provider) => !!provider.isTrust || !!provider.isTrustWallet || getProviderLabel(provider).includes("trust"),
   };
   if (!walletId) return candidates[0] || ethereum;
-  return candidates.find(pickers[walletId]) || candidates[0] || ethereum;
+  return candidates.find(pickers[walletId]) || null;
 }
 
 export async function ensureBscMainnet(provider: InjectedProvider) {
@@ -76,6 +84,9 @@ export async function ensureBscMainnet(provider: InjectedProvider) {
 export async function connectInjectedWallet(walletId?: WalletFlavor) {
   const provider = pickProvider(walletId);
   if (!provider) {
+    if (walletId) {
+      throw new Error(`The selected wallet (${walletId}) is not available in this browser. Open that wallet extension/app and try again.`);
+    }
     throw new Error("No browser wallet found. Install MetaMask, Trust Wallet, Binance Web3 Wallet, or another injected wallet.");
   }
   const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];

@@ -47,27 +47,8 @@ if (!isProd) {
 
 const seedPath = new URL("./seed-data.json", import.meta.url);
 const seed = JSON.parse(await fs.readFile(seedPath, "utf8"));
-const seedCreatorsById = new Map(
-  Object.values(seed.creators || {})
-    .filter(Boolean)
-    .map((creator) => [String(creator.id), creator]),
-);
-const seedCreatorsByHandle = new Map(
-  Object.values(seed.creators || {})
-    .filter(Boolean)
-    .flatMap((creator) => [creator.handle, creator.name].filter(Boolean).map((value) => [String(value).toLowerCase(), creator])),
-);
-const seedProjectsById = new Map(
-  (seed.projects || [])
-    .filter(Boolean)
-    .map((project) => [String(project.id), project]),
-);
-const seedProjectsByHandle = new Map(
-  (seed.projects || [])
-    .filter(Boolean)
-    .flatMap((project) => [project.handle, project.name].filter(Boolean).map((value) => [String(value).toLowerCase(), project])),
-);
 const seedUserIds = new Set([
+  ...(Object.values(seed.creators || {}).map((creator) => creator.id)),
   ...((seed.users || []).map((user) => user.id)),
   seed.me?.id,
 ].filter(Boolean));
@@ -106,6 +87,10 @@ function sanitizeHandle(value = "") {
     .replace(/[^a-z0-9_]+/g, "")
     .replace(/^_+|_+$/g, "")
     .slice(0, 32);
+}
+
+function seedWalletAddress(id = "") {
+  return `0x${crypto.createHash("sha256").update(`moonshill-seed:${id}`).digest("hex").slice(0, 40)}`;
 }
 
 function base64url(input) {
@@ -340,34 +325,103 @@ async function ensureSchema() {
 }
 
 async function ensureSeed() {
-  const usersCount = await query("select count(*)::int as count from users");
-  if (usersCount.rows[0].count === 0) {
-    const me = seed.me;
+  const projectMetaById = new Map((seed.projects || []).map((project) => [project.id, project]));
+  for (const creator of Object.values(seed.creators || {})) {
+    const projectMeta = projectMetaById.get(creator.id);
+    const accountType = creator.type === "project" ? "project" : "user";
+    const wins = (seed.submissions || [])
+      .filter((submission) => submission.user?.id === creator.id && submission.status === "Winner")
+      .length;
+    const earned = (seed.submissions || [])
+      .filter((submission) => submission.user?.id === creator.id)
+      .reduce((sum, submission) => sum + Number(submission.reward || 0), 0);
+    const created = (seed.challenges || [])
+      .filter((campaign) => campaign.creator?.id === creator.id)
+      .length;
     await query(
       `
-      insert into users (id, wallet_address, display_name, handle, avatar, banner, bio, project_verification_status, x_connected, x_user_id, x_handle, joined, created, wins, earned, is_admin)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      insert into users (
+        id, wallet_address, display_name, handle, account_type, avatar, banner, bio, website,
+        project_verified, project_verification_status, x_connected, x_user_id, x_handle, joined,
+        created, wins, earned, is_admin
+      )
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,false,null,null,0,$12,$13,$14,false)
+      on conflict (id) do update set
+        handle = excluded.handle,
+        display_name = excluded.display_name,
+        account_type = excluded.account_type,
+        avatar = excluded.avatar,
+        banner = excluded.banner,
+        bio = excluded.bio,
+        website = excluded.website,
+        project_verified = excluded.project_verified,
+        project_verification_status = excluded.project_verification_status,
+        created = excluded.created,
+        wins = excluded.wins,
+        earned = excluded.earned,
+        updated_at = now()
       `,
       [
-        me.id,
-        me.wallet,
-        me.name,
-        me.handle,
-        me.avatar,
-        me.banner,
-        me.bio,
-        "unverified",
-        me.xConnected,
-        "seed_x_user",
-        me.handle,
-        me.joined,
-        me.created,
-        me.wins,
-        me.earned,
-        true,
+        creator.id,
+        seedWalletAddress(creator.id),
+        creator.name,
+        sanitizeHandle(creator.handle || creator.name),
+        accountType,
+        creator.avatar,
+        projectMeta?.banner || seed.me?.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
+        projectMeta?.description || `${creator.name} ${accountType === "project" ? "project" : "creator"} profile.`,
+        projectMeta?.website || "",
+        Boolean(projectMeta?.verified || creator.verified),
+        Boolean(projectMeta?.verified || creator.verified) ? "approved" : "unverified",
+        created,
+        wins,
+        earned,
       ],
     );
   }
+
+  const me = seed.me;
+  await query(
+    `
+    insert into users (id, wallet_address, display_name, handle, avatar, banner, bio, project_verification_status, x_connected, x_user_id, x_handle, joined, created, wins, earned, is_admin)
+    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+    on conflict (id) do update set
+      wallet_address = excluded.wallet_address,
+      display_name = excluded.display_name,
+      handle = excluded.handle,
+      avatar = excluded.avatar,
+      banner = excluded.banner,
+      bio = excluded.bio,
+      project_verification_status = excluded.project_verification_status,
+      x_connected = excluded.x_connected,
+      x_user_id = excluded.x_user_id,
+      x_handle = excluded.x_handle,
+      joined = excluded.joined,
+      created = excluded.created,
+      wins = excluded.wins,
+      earned = excluded.earned,
+      is_admin = excluded.is_admin,
+      updated_at = now()
+    `,
+    [
+      me.id,
+      me.wallet,
+      me.name,
+      me.handle,
+      me.avatar,
+      me.banner,
+      me.bio,
+      "unverified",
+      me.xConnected,
+      "seed_x_user",
+      me.handle,
+      me.joined,
+      me.created,
+      me.wins,
+      me.earned,
+      true,
+    ],
+  );
 
   const campaignCount = await query("select count(*)::int as count from campaigns");
   if (campaignCount.rows[0].count === 0) {
@@ -546,85 +600,6 @@ function projectProfileFromUser(user, campaigns = []) {
     totalSponsored,
     activeChallenges,
     completedChallenges: 0,
-  };
-}
-
-function getSeedCreator(identifier = "") {
-  const key = String(identifier || "").trim();
-  if (!key) return null;
-  return seedCreatorsById.get(key) || seedCreatorsByHandle.get(key.toLowerCase()) || null;
-}
-
-function getSeedProject(identifier = "") {
-  const key = String(identifier || "").trim();
-  if (!key) return null;
-  return seedProjectsById.get(key) || seedProjectsByHandle.get(key.toLowerCase()) || null;
-}
-
-function buildSeedProjectProfile(identifier = "") {
-  const creator = getSeedCreator(identifier);
-  const project = getSeedProject(identifier);
-  const source = project || creator;
-  if (!source || source.type === "user") return null;
-  const campaigns = (seed.challenges || [])
-    .filter((campaign) => campaign?.creator?.id === source.id || String(campaign?.creator?.handle || "").toLowerCase() === String(source.handle || "").toLowerCase())
-    .map(campaignRow);
-  return {
-    project: {
-      id: source.id,
-      accountType: "project",
-      name: source.name,
-      handle: source.handle,
-      avatar: source.avatar,
-      banner: project?.banner || seed.me?.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
-      verified: Boolean(project?.verified ?? source.verified),
-      verificationStatus: Boolean(project?.verified ?? source.verified) ? "approved" : "unverified",
-      description: project?.description || `${source.name} project profile.`,
-      website: project?.website || "",
-      contract: project?.contract || "",
-      ownerWallet: project?.contract || "",
-      xHandle: null,
-      totalSponsored: project?.totalSponsored ?? campaigns.reduce((sum, campaign) => sum + Number(campaign.rewardPool || 0), 0),
-      activeChallenges: project?.activeChallenges ?? campaigns.length,
-      completedChallenges: project?.completedChallenges ?? 0,
-    },
-    campaigns,
-  };
-}
-
-function buildSeedPublicUserProfile(identifier = "") {
-  const source = getSeedCreator(identifier);
-  if (!source || source.type !== "user") return null;
-  const createdCampaigns = (seed.challenges || [])
-    .filter((campaign) => campaign?.creator?.id === source.id || String(campaign?.creator?.handle || "").toLowerCase() === String(source.handle || "").toLowerCase())
-    .map(campaignRow);
-  const submissions = (seed.submissions || [])
-    .filter((submission) => submission?.user?.handle === source.handle || submission?.user?.name === source.name)
-    .map(submissionRow);
-  const joinedCampaignIds = new Set(submissions.map((submission) => submission.challengeId));
-  const joinedCampaigns = (seed.challenges || [])
-    .filter((campaign) => joinedCampaignIds.has(campaign.id) && campaign?.creator?.id !== source.id)
-    .map(campaignRow);
-  return {
-    user: {
-      id: source.id,
-      accountType: "user",
-      name: source.name,
-      handle: source.handle,
-      avatar: source.avatar,
-      banner: seed.me?.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
-      wallet: "0x0000000000000000000000000000000000000000",
-      bio: `${source.name} creator profile.`,
-      xConnected: false,
-      xHandle: null,
-      joined: joinedCampaigns.length,
-      created: createdCampaigns.length,
-      wins: submissions.filter((submission) => submission.status === "Winner").length,
-      earned: submissions.reduce((sum, submission) => sum + Number(submission.reward || 0), 0),
-      joinedCampaigns,
-      createdCampaigns,
-      submissions,
-    },
   };
 }
 
@@ -1584,11 +1559,7 @@ async function handleProject(req, res, handle) {
     "select * from users where account_type = 'project' and (id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1)) limit 1",
     [handle],
   );
-  if (!userResult.rows[0]) {
-    const seedProject = buildSeedProjectProfile(handle);
-    if (seedProject) return json(res, 200, seedProject);
-    return json(res, 404, { error: "Project not found." });
-  }
+  if (!userResult.rows[0]) return json(res, 404, { error: "Project not found." });
   const user = userRow(userResult.rows[0]);
   const campaigns = await query("select * from campaigns where creator->>'id' = $1 order by created_at desc limit 12", [user.id]);
   json(res, 200, {
@@ -1602,11 +1573,7 @@ async function handlePublicUser(req, res, handle) {
     "select * from users where account_type = 'user' and (id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1)) limit 1",
     [handle],
   );
-  if (!userResult.rows[0]) {
-    const seedUser = buildSeedPublicUserProfile(handle);
-    if (seedUser) return json(res, 200, seedUser);
-    return json(res, 404, { error: "User not found." });
-  }
+  if (!userResult.rows[0]) return json(res, 404, { error: "User not found." });
   const account = userRow(userResult.rows[0]);
   const joined = await query(
     `
