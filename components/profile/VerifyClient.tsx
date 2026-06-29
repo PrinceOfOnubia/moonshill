@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { BadgeCheck, Check, Globe, Loader2, ShieldCheck, Wallet, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { startXConnect } from "@/lib/api";
+import { startXConnect, submitProjectVerification } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function VerifyClient() {
@@ -111,11 +112,48 @@ function XFlow() {
 }
 
 function ProjectFlow() {
-  const [phase, setPhase] = useState<"form" | "loading" | "pending">("form");
-  const [website, setWebsite] = useState("");
-  const [contract, setContract] = useState("");
+  const searchParams = useSearchParams();
+  const { connected, address, user, openConnect, refreshUser } = useAuth();
+  const [phase, setPhase] = useState<"form" | "loading">("form");
+  const [error, setError] = useState<string | null>(null);
+  const linked = !!user?.xConnected;
+  const verificationStatus = user?.projectVerificationStatus || "unverified";
 
-  if (phase === "pending") {
+  useEffect(() => {
+    if (searchParams.get("x") === "connected") {
+      void refreshUser();
+    }
+    const reason = searchParams.get("reason");
+    const x = searchParams.get("x");
+    if (x && x !== "connected") {
+      setError(reason || (x === "not-configured" ? "X connection not configured yet." : "X connection failed."));
+    }
+  }, [refreshUser, searchParams]);
+
+  async function connectX() {
+    setError(null);
+    try {
+      const response = await startXConnect("/verify");
+      window.location.href = response.redirectUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "X connection failed.");
+    }
+  }
+
+  async function submit() {
+    setPhase("loading");
+    setError(null);
+    try {
+      await submitProjectVerification();
+      await refreshUser();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit project verification.");
+    } finally {
+      setPhase("form");
+    }
+  }
+
+  if (verificationStatus === "pending") {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-gold/25 bg-gold/8 p-8 text-center">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gold/15 text-gold-bright">
@@ -130,24 +168,42 @@ function ProjectFlow() {
 
   return (
     <div className="space-y-4 rounded-2xl border border-border bg-surface/50 p-6">
-      <Row icon={<Wallet size={16} className="text-gold-bright" />} label="Project wallet" value="0x0E09…1cE82 (connected)" />
-      <Row icon={<BadgeCheck size={16} className="text-blue" />} label="Official 𝕏 account" value="@verified (connected)" />
-      <div>
-        <label className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium text-muted"><Globe size={14} /> Website</label>
-        <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourproject.org" className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none placeholder:text-faint focus:border-gold/50" />
-      </div>
-      <div>
-        <label className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium text-muted"><FileCode2 size={14} /> Contract address</label>
-        <input value={contract} onChange={(e) => setContract(e.target.value)} placeholder="0x…" className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 font-mono text-sm outline-none placeholder:text-faint focus:border-gold/50" />
-      </div>
+      <StepCard
+        n={1}
+        title="Connect your project wallet"
+        body="Your approved wallet becomes the permanent login for this project account."
+        done={connected}
+        action={<Button variant={connected ? "glass" : "primary"} onClick={() => openConnect("/verify")}>{connected ? <><Check size={16} /> {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connected"}</> : <><Wallet size={16} /> Connect</>}</Button>}
+      />
+      <StepCard
+        n={2}
+        title="Connect your official 𝕏 account"
+        body="Admins review the linked X handle alongside your owner wallet before approval."
+        done={linked}
+        disabled={!connected}
+        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || "connected"}</> : "Connect 𝕏"}</Button>}
+      />
+      <Row icon={<Globe size={16} className="text-blue" />} label="Project website" value={user?.website || "Add website in Profile first"} />
+      <Row icon={<FileCode2 size={16} className="text-gold-bright" />} label="Owner wallet" value={address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect wallet first"} />
+      {verificationStatus === "rejected" && (
+        <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">
+          This project verification was rejected. Review your profile details, reconnect the correct X account if needed, and submit again.
+        </p>
+      )}
+      <Link href="/profile" className="inline-flex items-center gap-1.5 text-sm text-blue transition-colors hover:text-text">
+        Update project profile details
+      </Link>
       <Button
         className="w-full"
         size="lg"
-        disabled={phase === "loading"}
-        onClick={() => { setPhase("loading"); setTimeout(() => setPhase("pending"), 1200); }}
+        disabled={phase === "loading" || !connected || !linked}
+        onClick={submit}
       >
-        {phase === "loading" ? <><Loader2 size={18} className="animate-spin" /> Submitting…</> : "Submit for verification"}
+        {phase === "loading" ? <><Loader2 size={18} className="animate-spin" /> Submitting…</> : verificationStatus === "rejected" ? "Resubmit for verification" : "Submit for verification"}
       </Button>
+      {error && (
+        <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">{error}</p>
+      )}
     </div>
   );
 }

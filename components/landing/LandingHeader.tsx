@@ -94,24 +94,24 @@ export function LandingHeader() {
           >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 360, damping: 34 }}
-              className="absolute right-0 top-0 flex h-full w-[82%] max-w-xs flex-col glass-strong border-l border-border-strong"
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="absolute inset-0 flex flex-col bg-black/95"
             >
-              <div className="flex h-16 items-center justify-between border-b border-border px-5">
+              <div className="flex h-16 items-center justify-between border-b border-border px-5 pt-[max(0px,env(safe-area-inset-top))]">
                 <Logo />
                 <button
                   aria-label="Close menu"
                   onClick={() => setOpen(false)}
-                  className="grid h-9 w-9 place-items-center rounded-full text-faint transition-colors hover:bg-surface-2 hover:text-text"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-border text-faint transition-colors hover:bg-surface-2 hover:text-text"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <nav className="flex flex-col gap-1 p-4">
+              <nav className="flex flex-col gap-2 px-5 py-6">
                 {navItems.map((n) =>
                   "gated" in n ? (
                     <button
@@ -120,7 +120,7 @@ export function LandingHeader() {
                         setOpen(false);
                         openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard");
                       }}
-                      className="rounded-xl px-4 py-3 text-left text-[15px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                      className="rounded-2xl border border-transparent bg-surface/40 px-4 py-3.5 text-left text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                     >
                       {n.label}
                     </button>
@@ -129,7 +129,7 @@ export function LandingHeader() {
                       key={n.label}
                       href={n.href}
                       onClick={() => setOpen(false)}
-                      className="rounded-xl px-4 py-3 text-[15px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                      className="rounded-2xl border border-transparent bg-surface/40 px-4 py-3.5 text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                     >
                       {n.label}
                     </Link>
@@ -138,14 +138,14 @@ export function LandingHeader() {
                 <Link
                   href="/token"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl px-4 py-3 text-[15px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                  className="rounded-2xl border border-transparent bg-surface/40 px-4 py-3.5 text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                 >
                   Token
                 </Link>
               </nav>
 
-              <div className="mt-auto space-y-4 border-t border-border p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                <div className="flex items-center gap-3">
+              <div className="mt-auto space-y-5 border-t border-border px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                <div className="flex items-center justify-center gap-3">
                   <SocialButton href={SOCIALS.x} label="X">
                     <XIcon size={16} />
                   </SocialButton>
@@ -186,7 +186,7 @@ function SocialButton({
       target="_blank"
       rel="noreferrer"
       aria-label={label}
-      className="grid h-10 w-10 place-items-center rounded-full border border-border text-muted transition-colors hover:border-border-strong hover:text-text"
+      className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface/30 text-muted transition-colors hover:border-border-strong hover:text-text"
     >
       {children}
     </a>

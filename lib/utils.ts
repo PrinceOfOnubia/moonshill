@@ -22,6 +22,12 @@ export function fmtToken(n: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
 }
 
+export function displayRewardToken(token: string): string {
+  const normalized = String(token || "").trim().toUpperCase();
+  if (normalized === "MEME" || normalized === "SHILL" || normalized === "$SHILL") return "$SHILL";
+  return token;
+}
+
 export function shortAddr(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }

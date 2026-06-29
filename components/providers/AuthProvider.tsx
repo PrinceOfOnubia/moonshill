@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [, setPostConnectPath] = useState("/home");
 
   const refreshUser = useCallback(async () => {
     try {
@@ -149,7 +148,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const openConnectWithPath = useCallback((nextPath = "/home") => {
-    setPostConnectPath(nextPath);
     try {
       localStorage.setItem(STORAGE_POST_CONNECT_KEY, nextPath);
     } catch {
@@ -165,6 +163,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const connect = useCallback(async (walletId: string) => {
     setConnectError(null);
     try {
+      try {
+        await logout();
+      } catch {
+        /* ignore */
+      }
+      setUser(null);
+      setAddress(null);
+      setChainId(null);
       const { address: nextAddress, provider } = await connectInjectedWallet(walletId as Parameters<typeof connectInjectedWallet>[0]);
       const challenge = await walletChallenge(nextAddress);
       const signature = (await provider.request({

@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import type { Category, PresetRewardToken, RewardTokenOption, SubmissionType, TokenMetadata } from "@/lib/types";
-import { cn, fmtUsd } from "@/lib/utils";
+import { cn, displayRewardToken, fmtUsd } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { createCampaign, getBnbMarketPrice, getTokenMetadata } from "@/lib/api";
 
 const categories: Category[] = ["Memes", "Threads", "Videos", "AI", "Design", "Research"];
-const tokens: RewardTokenOption[] = ["BNB", "USDT", "USDC", "MEME", "ETH"];
+const tokens: RewardTokenOption[] = ["BNB", "USDT", "USDC", "SHILL", "ETH"];
 const subTypes: SubmissionType[] = ["X Post", "Thread", "Quote", "Video"];
 const durationOptions = [
   { label: "1 Day (24 Hours)", value: "1" },
@@ -29,7 +29,7 @@ const covers = [
   "photo-1605792657660-596af9009e82", "photo-1526374965328-7f61d4dc18c5",
 ];
 const cover = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
-const fallbackTokenUsd: Record<PresetRewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, USDC: 1, MEME: 0.002, CAKE: 2.5 };
+const fallbackTokenUsd: Record<PresetRewardToken, number> = { BNB: 600, ETH: 3200, USDT: 1, USDC: 1, SHILL: 0.002 };
 
 const steps = ["Basics", "Reward & Schedule", "Rules & Submission"];
 
@@ -89,7 +89,7 @@ export function CreateClient() {
 
   const pool = token === "CUSTOM" ? 0 : Math.round(amount * tokenUsd[token]);
   const creator = user;
-  const rewardLabel = token === "CUSTOM" ? (customTokenMeta?.symbol || "Custom token") : token;
+  const rewardLabel = token === "CUSTOM" ? (customTokenMeta?.symbol || "Custom token") : displayRewardToken(token);
   const canNext =
     step === 0 ? title.trim().length > 2 : step === 1 ? amount > 0 && winners > 0 && (token !== "CUSTOM" || !!customTokenMeta) : true;
 
@@ -298,7 +298,7 @@ export function CreateClient() {
                           setCustomTokenMeta(null);
                         }
                       }}
-                      render={(value) => value === "CUSTOM" ? "Custom Token" : value}
+                      render={(value) => value === "CUSTOM" ? "Custom Token" : displayRewardToken(value)}
                     />
                   </Field>
                   {token === "CUSTOM" && (

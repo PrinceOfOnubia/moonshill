@@ -4,7 +4,7 @@ import { Link } from "next-view-transitions";
 import { usePathname, useRouter } from "next/navigation";
 import { formatEther } from "ethers";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, LogOut, Plus, Search, User, Wallet } from "lucide-react";
+import { BadgeCheck, LogOut, Plus, RefreshCcw, Search, User, Wallet } from "lucide-react";
 import { Logo } from "./Logo";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { Avatar } from "@/components/ui/Avatar";
@@ -22,7 +22,7 @@ const nav = [
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { address, disconnect, user } = useAuth();
+  const { address, disconnect, openConnect, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -238,6 +238,16 @@ export function TopBar() {
                   >
                     <BadgeCheck size={16} /> Get Verified
                   </Link>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      disconnect();
+                      openConnect("/home");
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                  >
+                    <RefreshCcw size={16} /> Switch wallet
+                  </button>
                   <button
                     onClick={() => {
                       setMenuOpen(false);

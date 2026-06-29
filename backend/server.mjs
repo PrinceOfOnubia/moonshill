@@ -47,6 +47,26 @@ if (!isProd) {
 
 const seedPath = new URL("./seed-data.json", import.meta.url);
 const seed = JSON.parse(await fs.readFile(seedPath, "utf8"));
+const seedCreatorsById = new Map(
+  Object.values(seed.creators || {})
+    .filter(Boolean)
+    .map((creator) => [String(creator.id), creator]),
+);
+const seedCreatorsByHandle = new Map(
+  Object.values(seed.creators || {})
+    .filter(Boolean)
+    .flatMap((creator) => [creator.handle, creator.name].filter(Boolean).map((value) => [String(value).toLowerCase(), creator])),
+);
+const seedProjectsById = new Map(
+  (seed.projects || [])
+    .filter(Boolean)
+    .map((project) => [String(project.id), project]),
+);
+const seedProjectsByHandle = new Map(
+  (seed.projects || [])
+    .filter(Boolean)
+    .flatMap((project) => [project.handle, project.name].filter(Boolean).map((value) => [String(value).toLowerCase(), project])),
+);
 const seedUserIds = new Set([
   ...((seed.users || []).map((user) => user.id)),
   seed.me?.id,
@@ -82,8 +102,9 @@ function sanitizeHandle(value = "") {
   return String(value)
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]+/g, "")
+    .replace(/^_+|_+$/g, "")
     .slice(0, 32);
 }
 
@@ -210,6 +231,7 @@ async function ensureSchema() {
       bio text not null default '',
       website text not null default '',
       project_verified boolean not null default false,
+      project_verification_status text not null default 'unverified',
       x_connected boolean not null default false,
       x_user_id text,
       x_handle text,
@@ -225,6 +247,15 @@ async function ensureSchema() {
   await query(`alter table users add column if not exists account_type text not null default 'user';`);
   await query(`alter table users add column if not exists website text not null default '';`);
   await query(`alter table users add column if not exists project_verified boolean not null default false;`);
+  await query(`alter table users add column if not exists project_verification_status text not null default 'unverified';`);
+  await query(`
+    update users
+    set project_verification_status = case
+      when project_verified = true then 'approved'
+      when account_type = 'project' and project_verification_status not in ('pending', 'approved', 'rejected') then 'unverified'
+      else coalesce(project_verification_status, 'unverified')
+    end
+  `);
   await query(`
     create table if not exists wallet_challenges (
       address text primary key,
@@ -314,8 +345,8 @@ async function ensureSeed() {
     const me = seed.me;
     await query(
       `
-      insert into users (id, wallet_address, display_name, handle, avatar, banner, bio, x_connected, x_user_id, x_handle, joined, created, wins, earned, is_admin)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+      insert into users (id, wallet_address, display_name, handle, avatar, banner, bio, project_verification_status, x_connected, x_user_id, x_handle, joined, created, wins, earned, is_admin)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       `,
       [
         me.id,
@@ -325,6 +356,7 @@ async function ensureSeed() {
         me.avatar,
         me.banner,
         me.bio,
+        "unverified",
         me.xConnected,
         "seed_x_user",
         me.handle,
@@ -404,6 +436,9 @@ async function ensureSeed() {
 function campaignRow(row) {
   const creator = row.creator || {};
   const accountType = creator.type === "project" ? "project" : "user";
+  const verified = accountType === "project" ? !!creator.verified : !!creator.xConnected;
+  const rewardToken = String(row.reward_token || "");
+  const displayRewardToken = rewardToken === "MEME" || rewardToken === "SHILL" ? "$SHILL" : rewardToken;
   return {
     id: row.id,
     slug: row.slug,
@@ -411,7 +446,7 @@ function campaignRow(row) {
     cover: row.cover,
     category: row.category,
     rewardPool: Number(row.reward_pool),
-    rewardToken: row.reward_token,
+    rewardToken: displayRewardToken,
     rewardTokenMeta: row.reward_token_meta || null,
     rewardAmount: Number(row.reward_amount),
     winners: row.winners,
@@ -421,7 +456,7 @@ function campaignRow(row) {
       name: creator.name || "Unknown",
       handle: creator.handle || "unknown",
       avatar: creator.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(creator.id || row.id)}&backgroundType=gradientLinear`,
-      verified: !!creator.verified,
+      verified,
       xHandle: creator.xHandle || null,
       website: creator.website || null,
       ownerWallet: creator.ownerWallet || null,
@@ -441,7 +476,15 @@ function campaignRow(row) {
 
 function userRow(row) {
   const accountType = row.account_type === "project" ? "project" : "user";
-  const projectVerified = !!row.project_verified || (accountType === "project" && !!row.x_connected);
+  const projectVerificationStatus =
+    row.project_verification_status === "pending"
+    || row.project_verification_status === "approved"
+    || row.project_verification_status === "rejected"
+      ? row.project_verification_status
+      : accountType === "project"
+        ? (row.project_verified ? "approved" : "unverified")
+        : "unverified";
+  const projectVerified = accountType === "project" && projectVerificationStatus === "approved";
   return {
     id: row.id,
     accountType,
@@ -453,6 +496,7 @@ function userRow(row) {
     bio: row.bio,
     website: row.website || "",
     projectVerified,
+    projectVerificationStatus,
     xConnected: row.x_connected,
     xUserId: row.x_user_id ?? null,
     xHandle: row.x_handle ?? null,
@@ -465,7 +509,7 @@ function userRow(row) {
 }
 
 function creatorFromUser(user) {
-  const verifiedProject = user.accountType === "project" && !!user.projectVerified;
+  const verifiedProject = user.accountType === "project" && user.projectVerificationStatus === "approved";
   return {
     id: user.id,
     type: user.accountType,
@@ -492,7 +536,8 @@ function projectProfileFromUser(user, campaigns = []) {
     handle: user.handle,
     avatar: user.avatar,
     banner: user.banner,
-    verified: !!user.projectVerified,
+    verified: user.projectVerificationStatus === "approved",
+    verificationStatus: user.projectVerificationStatus || "unverified",
     description: user.bio,
     website: user.website || "",
     contract: user.wallet,
@@ -501,6 +546,85 @@ function projectProfileFromUser(user, campaigns = []) {
     totalSponsored,
     activeChallenges,
     completedChallenges: 0,
+  };
+}
+
+function getSeedCreator(identifier = "") {
+  const key = String(identifier || "").trim();
+  if (!key) return null;
+  return seedCreatorsById.get(key) || seedCreatorsByHandle.get(key.toLowerCase()) || null;
+}
+
+function getSeedProject(identifier = "") {
+  const key = String(identifier || "").trim();
+  if (!key) return null;
+  return seedProjectsById.get(key) || seedProjectsByHandle.get(key.toLowerCase()) || null;
+}
+
+function buildSeedProjectProfile(identifier = "") {
+  const creator = getSeedCreator(identifier);
+  const project = getSeedProject(identifier);
+  const source = project || creator;
+  if (!source || source.type === "user") return null;
+  const campaigns = (seed.challenges || [])
+    .filter((campaign) => campaign?.creator?.id === source.id || String(campaign?.creator?.handle || "").toLowerCase() === String(source.handle || "").toLowerCase())
+    .map(campaignRow);
+  return {
+    project: {
+      id: source.id,
+      accountType: "project",
+      name: source.name,
+      handle: source.handle,
+      avatar: source.avatar,
+      banner: project?.banner || seed.me?.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
+      verified: Boolean(project?.verified ?? source.verified),
+      verificationStatus: Boolean(project?.verified ?? source.verified) ? "approved" : "unverified",
+      description: project?.description || `${source.name} project profile.`,
+      website: project?.website || "",
+      contract: project?.contract || "",
+      ownerWallet: project?.contract || "",
+      xHandle: null,
+      totalSponsored: project?.totalSponsored ?? campaigns.reduce((sum, campaign) => sum + Number(campaign.rewardPool || 0), 0),
+      activeChallenges: project?.activeChallenges ?? campaigns.length,
+      completedChallenges: project?.completedChallenges ?? 0,
+    },
+    campaigns,
+  };
+}
+
+function buildSeedPublicUserProfile(identifier = "") {
+  const source = getSeedCreator(identifier);
+  if (!source || source.type !== "user") return null;
+  const createdCampaigns = (seed.challenges || [])
+    .filter((campaign) => campaign?.creator?.id === source.id || String(campaign?.creator?.handle || "").toLowerCase() === String(source.handle || "").toLowerCase())
+    .map(campaignRow);
+  const submissions = (seed.submissions || [])
+    .filter((submission) => submission?.user?.handle === source.handle || submission?.user?.name === source.name)
+    .map(submissionRow);
+  const joinedCampaignIds = new Set(submissions.map((submission) => submission.challengeId));
+  const joinedCampaigns = (seed.challenges || [])
+    .filter((campaign) => joinedCampaignIds.has(campaign.id) && campaign?.creator?.id !== source.id)
+    .map(campaignRow);
+  return {
+    user: {
+      id: source.id,
+      accountType: "user",
+      name: source.name,
+      handle: source.handle,
+      avatar: source.avatar,
+      banner: seed.me?.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
+      wallet: "0x0000000000000000000000000000000000000000",
+      bio: `${source.name} creator profile.`,
+      xConnected: false,
+      xHandle: null,
+      joined: joinedCampaigns.length,
+      created: createdCampaigns.length,
+      wins: submissions.filter((submission) => submission.status === "Winner").length,
+      earned: submissions.reduce((sum, submission) => sum + Number(submission.reward || 0), 0),
+      joinedCampaigns,
+      createdCampaigns,
+      submissions,
+    },
   };
 }
 
@@ -693,8 +817,8 @@ async function upsertWalletUser(address) {
   const banner = `https://images.unsplash.com/photo-1614851099511-773084f6911d?auto=format&fit=crop&w=1400&q=80`;
   const inserted = await query(
     `
-    insert into users (id, wallet_address, display_name, handle, avatar, banner, bio, x_connected, joined, created, wins, earned, is_admin)
-    values ($1,$2,$3,$4,$5,$6,$7,false,0,0,0,0,false)
+    insert into users (id, wallet_address, display_name, handle, avatar, banner, bio, project_verification_status, x_connected, joined, created, wins, earned, is_admin)
+    values ($1,$2,$3,$4,$5,$6,$7,'unverified',false,0,0,0,0,false)
     returning *
     `,
     [id, normalized, displayName, handle, avatar, banner, "New Moonshill wallet. Add your bio from Profile.",],
@@ -818,13 +942,52 @@ async function handleMePatch(req, res) {
   const updated = await query(
     `
     update users
-    set display_name = $2, bio = $3, avatar = $4, banner = $5, account_type = $6, handle = $7, website = $8, updated_at = now()
+    set display_name = $2,
+        bio = $3,
+        avatar = $4,
+        banner = $5,
+        account_type = $6,
+        handle = $7,
+        website = $8,
+        project_verified = case when $6 = 'project' and project_verification_status = 'approved' then true else false end,
+        project_verification_status = case
+          when $6 = 'project' and account_type <> 'project' then 'unverified'
+          when $6 = 'user' then 'unverified'
+          else project_verification_status
+        end,
+        updated_at = now()
     where id = $1
     returning *
     `,
     [user.id, displayName, bio, avatar, banner, accountType, nextHandle, website],
   );
   json(res, 200, { user: userRow(updated.rows[0]) });
+}
+
+async function handleProjectVerificationRequest(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  if (user.accountType !== "project") {
+    return json(res, 400, { error: "Only project accounts can request project verification." });
+  }
+  if (!user.xConnected || !user.xHandle) {
+    return json(res, 400, { error: "Connect your X account before requesting project verification." });
+  }
+  if (!user.website) {
+    return json(res, 400, { error: "Add your project website in Profile before requesting verification." });
+  }
+  const updated = await query(
+    `
+    update users
+    set project_verified = false,
+        project_verification_status = 'pending',
+        updated_at = now()
+    where id = $1
+    returning *
+    `,
+    [user.id],
+  );
+  return json(res, 200, { user: userRow(updated.rows[0]) });
 }
 
 async function handleLogout(req, res) {
@@ -932,7 +1095,6 @@ async function handleXCallback(req, res, url) {
       set x_connected = true,
           x_user_id = $2,
           x_handle = $3,
-          project_verified = case when account_type = 'project' then true else project_verified end,
           updated_at = now()
       where id = $1
       `,
@@ -985,7 +1147,7 @@ async function handleCampaigns(req, res, url) {
     const description = String(body.description || "").trim();
     const category = String(body.category || "Memes");
     const cover = String(body.cover || seed.challenges[0]?.cover || "");
-    const requestedRewardToken = String(body.rewardToken || "BNB");
+    const requestedRewardToken = String(body.rewardToken || "BNB").trim().toUpperCase();
     const rewardAmount = Number(body.rewardAmount || 1);
     const winners = Math.max(1, Number(body.winners || 1));
     const days = Math.max(1, Number(body.days || 1));
@@ -1026,11 +1188,11 @@ async function handleCampaigns(req, res, url) {
             ? 1
           : rewardToken === "BNB"
             ? bnbMarket.price
+            : rewardToken === "SHILL" || rewardToken === "MEME"
+              ? 0.002
             : rewardToken === "ETH"
               ? 3200
-              : rewardToken === "CAKE"
-                ? 2.5
-                : 0.002),
+              : 0.002),
       );
     }
 
@@ -1162,8 +1324,11 @@ async function handleAdminSummary(req, res) {
   ]);
   const pendingSubmissions = await query("select * from submissions where status = 'Pending Review' order by submitted_at desc limit 20");
   const accountRows = await query("select * from users order by updated_at desc limit 50");
+  const verificationRows = await query(
+    "select * from users where account_type = 'project' and project_verification_status in ('pending', 'rejected') order by updated_at desc limit 50",
+  );
   const featuredRows = await query("select * from campaigns where official = true order by trending desc, created_at desc limit 12");
-  const pendingProjects = accountRows.rows.filter((row) => row.account_type === "project" && !row.project_verified && !row.x_connected).length;
+  const pendingProjects = verificationRows.rows.filter((row) => row.project_verification_status === "pending").length;
   json(res, 200, {
     counts: {
       users: usersCount.rows[0].count,
@@ -1186,8 +1351,37 @@ async function handleAdminSummary(req, res) {
       reward: s.reward == null ? undefined : Number(s.reward),
     })),
     accounts: accountRows.rows.map((u) => userRow(u)),
+    projectVerificationRequests: verificationRows.rows.map((u) => userRow(u)),
     featuredCampaigns: featuredRows.rows.map(campaignRow),
   });
+}
+
+async function handleAdminProjectVerification(req, res, userId) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  if (!user.isAdmin) {
+    return json(res, 403, { error: "Admin access required." });
+  }
+  const body = await readBody(req);
+  const status = String(body.status || "").trim().toLowerCase();
+  if (status !== "approved" && status !== "rejected") {
+    return json(res, 400, { error: "Valid project verification status is required." });
+  }
+  const updated = await query(
+    `
+    update users
+    set project_verification_status = $2,
+        project_verified = $2 = 'approved',
+        updated_at = now()
+    where id = $1 and account_type = 'project'
+    returning *
+    `,
+    [userId, status],
+  );
+  if (!updated.rows[0]) {
+    return json(res, 404, { error: "Project account not found." });
+  }
+  return json(res, 200, { user: userRow(updated.rows[0]) });
 }
 
 async function handleAdminSubmissionStatus(req, res, submissionId) {
@@ -1387,10 +1581,14 @@ async function handleNotifications(req, res) {
 
 async function handleProject(req, res, handle) {
   const userResult = await query(
-    "select * from users where account_type = 'project' and (lower(handle) = lower($1) or lower(x_handle) = lower($1)) limit 1",
+    "select * from users where account_type = 'project' and (id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1)) limit 1",
     [handle],
   );
-  if (!userResult.rows[0]) return json(res, 404, { error: "Project not found." });
+  if (!userResult.rows[0]) {
+    const seedProject = buildSeedProjectProfile(handle);
+    if (seedProject) return json(res, 200, seedProject);
+    return json(res, 404, { error: "Project not found." });
+  }
   const user = userRow(userResult.rows[0]);
   const campaigns = await query("select * from campaigns where creator->>'id' = $1 order by created_at desc limit 12", [user.id]);
   json(res, 200, {
@@ -1401,10 +1599,14 @@ async function handleProject(req, res, handle) {
 
 async function handlePublicUser(req, res, handle) {
   const userResult = await query(
-    "select * from users where account_type = 'user' and (lower(handle) = lower($1) or lower(x_handle) = lower($1)) limit 1",
+    "select * from users where account_type = 'user' and (id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1)) limit 1",
     [handle],
   );
-  if (!userResult.rows[0]) return json(res, 404, { error: "User not found." });
+  if (!userResult.rows[0]) {
+    const seedUser = buildSeedPublicUserProfile(handle);
+    if (seedUser) return json(res, 200, seedUser);
+    return json(res, 404, { error: "User not found." });
+  }
   const account = userRow(userResult.rows[0]);
   const joined = await query(
     `
@@ -1480,6 +1682,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/auth/x/callback" && req.method === "GET") return handleXCallback(req, res, url);
     if (url.pathname === "/api/me" && req.method === "GET") return handleMeGet(req, res);
     if (url.pathname === "/api/me" && req.method === "PATCH") return handleMePatch(req, res);
+    if (url.pathname === "/api/me/project-verification" && req.method === "POST") return handleProjectVerificationRequest(req, res);
     if (url.pathname === "/api/campaigns" && (req.method === "GET" || req.method === "POST")) return handleCampaigns(req, res, url);
     if (/^\/api\/campaigns\/[^/]+$/.test(url.pathname) && req.method === "GET") {
       return handleCampaignBySlug(req, res, decodeURIComponent(url.pathname.split("/").pop()));
@@ -1491,6 +1694,9 @@ const server = http.createServer(async (req, res) => {
       return handleSubmitCampaign(req, res, decodeURIComponent(url.pathname.split("/")[3]));
     }
     if (url.pathname === "/api/admin/summary" && req.method === "GET") return handleAdminSummary(req, res);
+    if (/^\/api\/admin\/projects\/[^/]+\/verification$/.test(url.pathname) && req.method === "PATCH") {
+      return handleAdminProjectVerification(req, res, decodeURIComponent(url.pathname.split("/")[4]));
+    }
     if (/^\/api\/admin\/submissions\/[^/]+$/.test(url.pathname) && req.method === "PATCH") {
       return handleAdminSubmissionStatus(req, res, decodeURIComponent(url.pathname.split("/").pop()));
     }

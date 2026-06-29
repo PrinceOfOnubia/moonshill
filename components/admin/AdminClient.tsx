@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge, VerifiedBadge } from "@/components/ui/Badge";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { cn, timeAgo } from "@/lib/utils";
-import { getAdminSummary, updateSubmissionStatus } from "@/lib/api";
+import { getAdminSummary, updateProjectVerificationStatus, updateSubmissionStatus } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Challenge, Submission, UserProfile } from "@/lib/types";
 
@@ -25,6 +25,7 @@ export function AdminClient() {
   });
   const [pendingSubmissions, setPendingSubmissions] = useState<Submission[]>([]);
   const [accounts, setAccounts] = useState<UserProfile[]>([]);
+  const [projectRequests, setProjectRequests] = useState<UserProfile[]>([]);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Challenge[]>([]);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export function AdminClient() {
         });
         setPendingSubmissions(summary.pendingSubmissions);
         setAccounts(summary.accounts);
+        setProjectRequests(summary.projectVerificationRequests);
         setFeaturedCampaigns(summary.featuredCampaigns);
       })
       .catch(() => {
@@ -48,6 +50,7 @@ export function AdminClient() {
         setCounts({ campaigns: 0, submissions: 0, pendingProjects: 0, flagged: 0 });
         setPendingSubmissions([]);
         setAccounts([]);
+        setProjectRequests([]);
         setFeaturedCampaigns([]);
       });
     return () => {
@@ -91,7 +94,7 @@ export function AdminClient() {
 
       <AnimatePresence mode="wait">
         <motion.div key={section} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-          {section === "Accounts" && <AccountQueue accounts={accounts} />}
+          {section === "Accounts" && <AccountQueue accounts={accounts} projectRequests={projectRequests} onProjectStatusChange={setProjectRequests} />}
           {section === "Submissions" && <SubmissionQueue pending={pendingSubmissions} />}
           {section === "Featured" && <FeaturedManager campaigns={featuredCampaigns} />}
         </motion.div>
@@ -112,13 +115,95 @@ function KStat({ label, value, tone }: { label: string; value: number; tone: "go
 
 type Verdict = "pending" | "approved" | "rejected";
 
-function AccountQueue({ accounts }: { accounts: UserProfile[] }) {
+function AccountQueue({
+  accounts,
+  projectRequests,
+  onProjectStatusChange,
+}: {
+  accounts: UserProfile[];
+  projectRequests: UserProfile[];
+  onProjectStatusChange: React.Dispatch<React.SetStateAction<UserProfile[]>>;
+}) {
   const [state, setState] = useState<Record<string, Verdict>>({});
+  const [pendingProject, setPendingProject] = useState<string | null>(null);
   if (!accounts.length) {
     return <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">No accounts yet.</div>;
   }
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Project verification requests</h2>
+          <p className="mt-1 text-sm text-faint">Review linked project handles, X accounts, and owner wallets before approval.</p>
+        </div>
+        {projectRequests.length ? (
+          projectRequests.map((account) => {
+            const status = account.projectVerificationStatus || "pending";
+            return (
+              <div key={account.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-surface/50 p-4">
+                <Avatar src={account.avatar} alt={account.name} size={48} className="rounded-xl" />
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+                    {account.name}
+                    {account.projectVerified && <VerifiedBadge size={14} />}
+                    {account.projectVerified && <Badge tone="gold">Verified</Badge>}
+                  </p>
+                  <p className="truncate text-[13px] text-faint">@{account.handle}</p>
+                  <p className="mt-1 truncate text-[13px] text-faint">𝕏 {account.xHandle ? `@${account.xHandle}` : "Not connected"} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span></p>
+                </div>
+                {status === "pending" ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={pendingProject === account.id}
+                      onClick={async () => {
+                        setPendingProject(account.id);
+                        try {
+                          await updateProjectVerificationStatus(account.id, "rejected");
+                          onProjectStatusChange((current) => current.filter((entry) => entry.id !== account.id));
+                        } finally {
+                          setPendingProject(null);
+                        }
+                      }}
+                      className="rounded-full border border-red/30 bg-red/10 px-4 py-2 text-[12px] font-medium text-red hover:bg-red/20 disabled:opacity-60"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      disabled={pendingProject === account.id}
+                      onClick={async () => {
+                        setPendingProject(account.id);
+                        try {
+                          await updateProjectVerificationStatus(account.id, "approved");
+                          onProjectStatusChange((current) => current.filter((entry) => entry.id !== account.id));
+                        } finally {
+                          setPendingProject(null);
+                        }
+                      }}
+                      className="rounded-full bg-gradient-to-b from-green to-green-dim px-4 py-2 text-[12px] font-semibold text-black disabled:opacity-60"
+                    >
+                      Approve
+                    </button>
+                  </div>
+                ) : (
+                  <Badge tone={status === "approved" ? "green" : "red"}>
+                    {status === "approved" ? "Approved" : "Rejected"}
+                  </Badge>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-border bg-surface/40 p-6 text-center text-muted">
+            No pending project verification requests.
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Accounts</h2>
+          <p className="mt-1 text-sm text-faint">Quick view of current user and project accounts.</p>
+        </div>
       {accounts.map((account) => {
         const v = state[account.id] ?? "pending";
         return (
@@ -131,7 +216,7 @@ function AccountQueue({ accounts }: { accounts: UserProfile[] }) {
                 {account.accountType === "project" && account.projectVerified && <Badge tone="gold">Verified</Badge>}
               </p>
               <p className="truncate text-[13px] text-faint">
-                @{account.xHandle || account.handle} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span>
+                @{account.handle}{account.xHandle ? ` · 𝕏 @${account.xHandle}` : ""} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span>
               </p>
             </div>
             <Actions
@@ -143,6 +228,7 @@ function AccountQueue({ accounts }: { accounts: UserProfile[] }) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

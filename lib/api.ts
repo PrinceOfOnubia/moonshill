@@ -69,6 +69,12 @@ export async function updateMe(patch: { name?: string; bio?: string; avatar?: st
   });
 }
 
+export async function submitProjectVerification() {
+  return apiFetch<{ user: MeResponse }>("/api/me/project-verification", {
+    method: "POST",
+  });
+}
+
 export async function startXConnect(returnTo?: string) {
   const url = `/api/auth/x/start?format=json${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`;
   return apiFetch<{ redirectUrl: string }>(url, {
@@ -144,12 +150,20 @@ export async function getAdminSummary() {
     counts: { users: number; campaigns: number; submissions: number; joins: number; pendingProjects: number; flagged: number };
     pendingSubmissions: Submission[];
     accounts: UserProfile[];
+    projectVerificationRequests: UserProfile[];
     featuredCampaigns: Challenge[];
   }>("/api/admin/summary");
 }
 
 export async function updateSubmissionStatus(submissionId: string, status: "Pending Review" | "Approved" | "Rejected" | "Winner") {
   return apiFetch<{ submission: Submission }>(`/api/admin/submissions/${encodeURIComponent(submissionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateProjectVerificationStatus(userId: string, status: "approved" | "rejected") {
+  return apiFetch<{ user: MeResponse }>(`/api/admin/projects/${encodeURIComponent(userId)}/verification`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });

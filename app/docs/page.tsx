@@ -73,7 +73,7 @@ const sections: DocSection[] = [
     id: "rewards",
     heading: "Rewards & payouts",
     body: [
-      "Rewards are paid in the campaign's token — BNB, USDT, MEME, CAKE, or ETH — directly to your connected wallet when a campaign settles.",
+      "Rewards are paid in the campaign's token — BNB, USDT, USDC, SHILLINGS ($SHILL), or ETH — directly to your connected wallet when a campaign settles.",
       "The live reward ticker and leaderboards show recent payouts and the top earners across the platform.",
     ],
   },

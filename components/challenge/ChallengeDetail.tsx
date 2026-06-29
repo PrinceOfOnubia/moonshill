@@ -14,7 +14,7 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { SubmitEntry } from "./SubmitEntry";
 import { ChallengeCard } from "./ChallengeCard";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
-import { compact, fmtToken, fmtUsd } from "@/lib/utils";
+import { compact, displayRewardToken, fmtToken, fmtUsd } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getCampaigns, joinCampaign } from "@/lib/api";
 
@@ -28,7 +28,10 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
   const [related, setRelated] = useState<Challenge[]>([]);
   const t = useTimeLeft(c.endsAt);
   const isCreator = user?.id === c.creator.id;
-  const creatorHref = c.creator.type === "project" ? `/project/${c.creator.handle}` : `/u/${c.creator.handle}`;
+  const creatorHref = c.creator.type === "project"
+    ? `/project/${c.creator.id || c.creator.handle}`
+    : `/u/${c.creator.id || c.creator.handle}`;
+  const rewardTicker = displayRewardToken(c.rewardToken);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +121,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-gold-bright">Reward pool</p>
                 <p className="font-mono text-2xl font-bold leading-none">{fmtUsd(c.rewardPool)}</p>
-                <p className="mt-1 text-[12px] font-medium text-green">{fmtToken(c.rewardAmount)} {c.rewardToken} · {c.winners} winners</p>
+                <p className="mt-1 text-[12px] font-medium text-green">{fmtToken(c.rewardAmount)} {rewardTicker} · {c.winners} winners</p>
               </div>
               <div className="text-right">
                 <p className="text-[11px] uppercase tracking-wider text-faint">Ends in</p>
@@ -214,7 +217,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                 <AnimatedNumber value={c.rewardPool} prefix="$" useCompact />
               </p>
               <p className="mt-1 font-mono text-sm font-medium text-green">
-                {fmtToken(c.rewardAmount)} {c.rewardToken}
+                {fmtToken(c.rewardAmount)} {rewardTicker}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border/60 pt-4 text-sm">
                 <div>

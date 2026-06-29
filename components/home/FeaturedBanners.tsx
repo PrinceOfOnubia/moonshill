@@ -7,7 +7,7 @@ import type { Challenge } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
-import { compact, fmtUsd } from "@/lib/utils";
+import { compact, displayRewardToken, fmtUsd } from "@/lib/utils";
 import { getCampaigns } from "@/lib/api";
 
 export function FeaturedBanners() {
@@ -148,6 +148,7 @@ export function FeaturedBanners() {
 
 function FeaturedBanner({ c }: { c: Challenge }) {
   const t = useTimeLeft(c.endsAt);
+  const rewardTicker = displayRewardToken(c.rewardToken);
 
   return (
     <Link
@@ -185,7 +186,7 @@ function FeaturedBanner({ c }: { c: Challenge }) {
             <p className="text-[11px] uppercase tracking-wider text-white/50">Reward pool</p>
             <p className="font-mono text-2xl font-bold text-white sm:text-3xl">{fmtUsd(c.rewardPool)}</p>
             <p className="text-[12px] font-medium text-green">
-              {compact(c.rewardAmount)} {c.rewardToken} · {c.winners} winners
+              {compact(c.rewardAmount)} {rewardTicker} · {c.winners} winners
             </p>
           </div>
           <div className="text-right">

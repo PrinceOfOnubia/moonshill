@@ -14,6 +14,8 @@ export interface InjectedProvider {
   isMetaMask?: boolean;
   isCoinbaseWallet?: boolean;
   isBinance?: boolean;
+  isBinanceChain?: boolean;
+  isTrustWallet?: boolean;
   isTrust?: boolean;
   providers?: InjectedProvider[];
   request(args: { method: string; params?: unknown[] | Record<string, unknown> }): Promise<unknown>;
@@ -32,11 +34,11 @@ function pickProvider(walletId?: WalletFlavor) {
   if (!ethereum) return null;
   const candidates = ethereum.providers?.length ? ethereum.providers : [ethereum];
   const pickers: Record<WalletFlavor, (provider: InjectedProvider) => boolean> = {
-    metamask: (provider) => !!provider.isMetaMask,
+    metamask: (provider) => !!provider.isMetaMask && !provider.isTrust && !provider.isTrustWallet,
     walletconnect: () => true,
     coinbase: (provider) => !!provider.isCoinbaseWallet,
-    binance: (provider) => !!provider.isBinance,
-    trust: (provider) => !!provider.isTrust,
+    binance: (provider) => !!provider.isBinance || !!provider.isBinanceChain,
+    trust: (provider) => !!provider.isTrust || !!provider.isTrustWallet,
   };
   if (!walletId) return candidates[0] || ethereum;
   return candidates.find(pickers[walletId]) || candidates[0] || ethereum;

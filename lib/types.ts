@@ -17,10 +17,11 @@ export type SubmissionType =
   | "Image Upload"
   | "Multiple Links";
 
-export type PresetRewardToken = "BNB" | "USDT" | "USDC" | "MEME" | "CAKE" | "ETH";
+export type PresetRewardToken = "BNB" | "USDT" | "USDC" | "SHILL" | "ETH";
 export type RewardTokenOption = PresetRewardToken | "CUSTOM";
 export type RewardToken = string;
 export type AccountType = "user" | "project";
+export type ProjectVerificationStatus = "unverified" | "pending" | "approved" | "rejected";
 
 export type SubmissionStatus = "Pending Review" | "Approved" | "Rejected" | "Winner";
 
@@ -88,6 +89,7 @@ export interface ProjectProfile {
   avatar: string;
   banner: string;
   verified: boolean;
+  verificationStatus?: ProjectVerificationStatus;
   description: string;
   website: string;
   contract: string;
@@ -109,6 +111,7 @@ export interface UserProfile {
   bio: string;
   website?: string;
   projectVerified?: boolean;
+  projectVerificationStatus?: ProjectVerificationStatus;
   xConnected: boolean;
   xHandle?: string | null;
   xUserId?: string | null;

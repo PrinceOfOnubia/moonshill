@@ -83,7 +83,7 @@ export const challenges: Challenge[] = [
     cover: img("photo-1634986666676-ec8fd927c23d"),
     category: "Design",
     rewardPool: 8000,
-    rewardToken: "MEME",
+    rewardToken: "SHILL",
     rewardAmount: 4_000_000,
     winners: 15,
     creator: creators.pixelpepe,
@@ -173,7 +173,7 @@ export const challenges: Challenge[] = [
     cover: img("photo-1611162617474-5b21e879e113"),
     category: "Memes",
     rewardPool: 3000,
-    rewardToken: "MEME",
+    rewardToken: "SHILL",
     rewardAmount: 1_500_000,
     winners: 20,
     creator: creators.memelord,
@@ -195,7 +195,7 @@ export const challenges: Challenge[] = [
     cover: img("photo-1502082553048-f009c37129b9"),
     category: "Design",
     rewardPool: 4500,
-    rewardToken: "CAKE",
+    rewardToken: "USDC",
     rewardAmount: 1800,
     winners: 18,
     creator: creators.satoshigirl,
@@ -262,7 +262,7 @@ export const challenges: Challenge[] = [
     cover: img("photo-1605792657660-596af9009e82"),
     category: "Memes",
     rewardPool: 5000,
-    rewardToken: "MEME",
+    rewardToken: "SHILL",
     rewardAmount: 2_500_000,
     winners: 25,
     creator: creators.memelord,
@@ -476,10 +476,10 @@ export const leaderboard = {
 export const tickerItems = [
   { who: "satoshi.girl", amount: "1.6 BNB", challenge: "Meme Mania" },
   { who: "zk.pilled", amount: "1,000 USDT", challenge: "Alpha Threads" },
-  { who: "Memelord", amount: "2.5M MEME", challenge: "Diamond Hands" },
+  { who: "Memelord", amount: "2.5M $SHILL", challenge: "Diamond Hands" },
   { who: "pixel.witch", amount: "0.8 BNB", challenge: "PFP Jam" },
   { who: "based.dev", amount: "2 ETH", challenge: "ZK ELI5" },
-  { who: "gm.wagmi", amount: "1,800 CAKE", challenge: "GM Art" },
+  { who: "gm.wagmi", amount: "1,800 USDC", challenge: "GM Art" },
 ];
 
 export const platformStats = {

@@ -7,10 +7,11 @@ import type { Challenge } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
-import { compact, fmtUsd } from "@/lib/utils";
+import { compact, displayRewardToken, fmtUsd } from "@/lib/utils";
 
 export function ChallengeCard({ c, index = 0 }: { c: Challenge; index?: number }) {
   const t = useTimeLeft(c.endsAt);
+  const rewardTicker = displayRewardToken(c.rewardToken);
 
   return (
     <motion.div
@@ -56,7 +57,7 @@ export function ChallengeCard({ c, index = 0 }: { c: Challenge; index?: number }
               {fmtUsd(c.rewardPool)}
             </span>
             <span className="mt-0.5 text-[12px] font-medium text-green">
-              {compact(c.rewardAmount)} {c.rewardToken} · {c.winners} winners
+              {compact(c.rewardAmount)} {rewardTicker} · {c.winners} winners
             </span>
           </div>
         </div>
