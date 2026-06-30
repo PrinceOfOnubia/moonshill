@@ -215,6 +215,8 @@ async function ensureSchema() {
       banner text not null,
       bio text not null default '',
       website text not null default '',
+      project_category text,
+      telegram_url text not null default '',
       project_verified boolean not null default false,
       project_verification_status text not null default 'unverified',
       x_connected boolean not null default false,
@@ -233,6 +235,8 @@ async function ensureSchema() {
   await query(`create unique index if not exists users_wallet_address_account_type_idx on users (lower(wallet_address), account_type);`);
   await query(`alter table users add column if not exists account_type text not null default 'user';`);
   await query(`alter table users add column if not exists website text not null default '';`);
+  await query(`alter table users add column if not exists project_category text;`);
+  await query(`alter table users add column if not exists telegram_url text not null default '';`);
   await query(`alter table users add column if not exists project_verified boolean not null default false;`);
   await query(`alter table users add column if not exists project_verification_status text not null default 'unverified';`);
   await query(`
@@ -284,6 +288,8 @@ async function ensureSchema() {
       reward_amount numeric not null,
       winners integer not null,
       creator jsonb not null,
+      holder_requirement jsonb,
+      creator_requirements jsonb,
       participants integer not null default 0,
       starts_at timestamptz not null,
       ends_at timestamptz not null,
@@ -299,6 +305,8 @@ async function ensureSchema() {
     );
   `);
   await query(`alter table campaigns add column if not exists reward_token_meta jsonb;`);
+  await query(`alter table campaigns add column if not exists holder_requirement jsonb;`);
+  await query(`alter table campaigns add column if not exists creator_requirements jsonb;`);
   await query(`
     create table if not exists campaign_members (
       campaign_id text not null references campaigns(id) on delete cascade,
@@ -352,10 +360,11 @@ async function ensureSeed() {
       `
       insert into users (
         id, wallet_address, display_name, handle, account_type, avatar, banner, bio, website,
+        project_category, telegram_url,
         project_verified, project_verification_status, x_connected, x_user_id, x_handle, joined,
         created, wins, earned, is_admin
       )
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,false,null,null,0,$12,$13,$14,false)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,false,null,null,0,$13,$14,$15,false)
       on conflict (id) do update set
         handle = excluded.handle,
         display_name = excluded.display_name,
@@ -364,6 +373,8 @@ async function ensureSeed() {
         banner = excluded.banner,
         bio = excluded.bio,
         website = excluded.website,
+        project_category = excluded.project_category,
+        telegram_url = excluded.telegram_url,
         project_verified = excluded.project_verified,
         project_verification_status = excluded.project_verification_status,
         created = excluded.created,
@@ -381,6 +392,8 @@ async function ensureSeed() {
         projectMeta?.banner || seed.me?.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
         projectMeta?.description || `${creator.name} ${accountType === "project" ? "project" : "creator"} profile.`,
         projectMeta?.website || "",
+        projectMeta?.category || null,
+        projectMeta?.telegramUrl || "",
         Boolean(projectMeta?.verified || creator.verified),
         Boolean(projectMeta?.verified || creator.verified) ? "approved" : "unverified",
         created,
@@ -524,6 +537,8 @@ function campaignRow(row) {
       xHandle: creator.xHandle || null,
       website: creator.website || null,
       ownerWallet: creator.ownerWallet || null,
+      telegramUrl: creator.telegramUrl || null,
+      projectCategory: creator.projectCategory || null,
     },
     participants: row.participants,
     startsAt: row.starts_at,
@@ -533,6 +548,8 @@ function campaignRow(row) {
     rules: row.rules || [],
     proof: row.proof || [],
     requiredTags: row.required_tags || undefined,
+    holderRequirement: row.holder_requirement || null,
+    creatorRequirements: row.creator_requirements || null,
     official: row.official,
     trending: row.trending,
   };
@@ -559,6 +576,8 @@ function userRow(row) {
     wallet: row.wallet_address,
     bio: row.bio,
     website: row.website || "",
+    projectCategory: row.project_category || null,
+    telegramUrl: row.telegram_url || "",
     projectVerified,
     projectVerificationStatus,
     xConnected: row.x_connected,
@@ -584,6 +603,8 @@ function creatorFromUser(user) {
     xHandle: user.xHandle || null,
     website: user.website || null,
     ownerWallet: user.wallet,
+    telegramUrl: user.telegramUrl || null,
+    projectCategory: user.projectCategory || null,
   };
 }
 
@@ -603,10 +624,12 @@ function projectProfileFromUser(user, campaigns = []) {
     verified: user.projectVerificationStatus === "approved",
     verificationStatus: user.projectVerificationStatus || "unverified",
     description: user.bio,
+    category: user.projectCategory || null,
     website: user.website || "",
     contract: user.wallet,
     ownerWallet: user.wallet,
     xHandle: user.xHandle || null,
+    telegramUrl: user.telegramUrl || null,
     totalSponsored,
     activeChallenges,
     completedChallenges: 0,
@@ -741,6 +764,34 @@ async function fetchTokenMetadataFromChain(address) {
     symbol,
     decimals,
     address,
+    chain: "BNB Smart Chain",
+    source: "BNB RPC",
+  };
+}
+
+async function fetchTokenMetadataFromDexscreener(address) {
+  if (!isAddress(address)) {
+    throw new Error("Enter a valid BNB Chain token contract address.");
+  }
+
+  const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+  if (!response.ok) {
+    throw new Error(`Dexscreener lookup failed with ${response.status}.`);
+  }
+  const body = await response.json();
+  const pairs = Array.isArray(body?.pairs) ? body.pairs : [];
+  const pair = pairs.find((entry) => String(entry?.chainId || "").toLowerCase() === "bsc") || pairs[0];
+  const baseToken = pair?.baseToken;
+  if (!baseToken?.name || !baseToken?.symbol || !baseToken?.address) {
+    throw new Error("Token not found on Dexscreener.");
+  }
+  return {
+    name: String(baseToken.name),
+    symbol: String(baseToken.symbol),
+    decimals: 18,
+    address: String(baseToken.address),
+    chain: pair?.chainId ? String(pair.chainId) : "bsc",
+    source: "Dexscreener",
   };
 }
 
@@ -822,10 +873,11 @@ async function createProjectAccountFromUser(user) {
     `
     insert into users (
       id, wallet_address, display_name, handle, account_type, avatar, banner, bio, website,
+      project_category, telegram_url,
       project_verified, project_verification_status, x_connected, x_user_id, x_handle, joined,
       created, wins, earned, is_admin
     )
-    values ($1,$2,$3,$4,'project',$5,$6,$7,$8,false,'unverified',false,null,null,0,0,0,0,false)
+    values ($1,$2,$3,$4,'project',$5,$6,$7,$8,$9,$10,false,'unverified',false,null,null,0,0,0,0,false)
     returning *
     `,
     [
@@ -837,6 +889,8 @@ async function createProjectAccountFromUser(user) {
       user.banner,
       "Project account. Update your profile before requesting verification.",
       user.website || "",
+      user.projectCategory || null,
+      user.telegramUrl || "",
     ],
   );
   return userRow(inserted.rows[0]);
@@ -964,6 +1018,10 @@ async function handleMePatch(req, res) {
     ? sanitizeHandle(body.handle)
     : user.handle;
   const website = typeof body.website === "string" ? body.website.trim() : user.website || "";
+  const projectCategory = typeof body.projectCategory === "string" && body.projectCategory.trim()
+    ? body.projectCategory.trim()
+    : user.projectCategory || null;
+  const telegramUrl = typeof body.telegramUrl === "string" ? body.telegramUrl.trim() : user.telegramUrl || "";
 
   if (!nextHandle) {
     return json(res, 400, { error: "A valid handle is required." });
@@ -986,11 +1044,13 @@ async function handleMePatch(req, res) {
         banner = $5,
         handle = $6,
         website = $7,
+        project_category = $8,
+        telegram_url = $9,
         updated_at = now()
     where id = $1
     returning *
     `,
-    [user.id, displayName, bio, avatar, banner, nextHandle, website],
+    [user.id, displayName, bio, avatar, banner, nextHandle, website, projectCategory, telegramUrl],
   );
   json(res, 200, { user: userRow(updated.rows[0]) });
 }
@@ -1175,11 +1235,14 @@ async function listCampaigns(url) {
 
 async function handleTokenMetadata(req, res, url) {
   const address = String(url.searchParams.get("address") || "").trim();
+  const provider = String(url.searchParams.get("provider") || "dexscreener").trim().toLowerCase();
   if (!address) {
     return json(res, 400, { error: "Token contract address is required." });
   }
   try {
-    const token = await fetchTokenMetadataFromChain(address);
+    const token = provider === "chain"
+      ? await fetchTokenMetadataFromChain(address)
+      : await fetchTokenMetadataFromDexscreener(address);
     return json(res, 200, { token });
   } catch (error) {
     return json(res, 400, { error: error instanceof Error ? error.message : "Could not fetch token metadata." });
@@ -1210,6 +1273,21 @@ async function handleCampaigns(req, res, url) {
     const requiredTags = Array.isArray(body.requiredTags)
       ? body.requiredTags
       : String(body.requiredTags || "").split(/\s+/).map((x) => x.trim()).filter(Boolean);
+    const holderRequirement = body.holderRequirement && typeof body.holderRequirement === "object"
+      ? {
+        enabled: Boolean(body.holderRequirement.enabled),
+        tokenAddress: String(body.holderRequirement.tokenAddress || "").trim() || undefined,
+        tokenName: String(body.holderRequirement.tokenName || "").trim() || undefined,
+        tokenSymbol: String(body.holderRequirement.tokenSymbol || "").trim() || undefined,
+        minimumAmount: Number(body.holderRequirement.minimumAmount || 0) || undefined,
+      }
+      : null;
+    const creatorRequirements = body.creatorRequirements && typeof body.creatorRequirements === "object"
+      ? {
+        minFollowers: Number(body.creatorRequirements.minFollowers || 0) || undefined,
+        minViews: Number(body.creatorRequirements.minViews || 0) || undefined,
+      }
+      : null;
     if (!title || !description || !category || !cover || !requestedRewardToken || !rewardAmount || !winners) {
       return json(res, 400, { error: "Title, description, cover, reward, and winners are required." });
     }
@@ -1223,7 +1301,7 @@ async function handleCampaigns(req, res, url) {
 
     if (requestedRewardToken === "CUSTOM") {
       try {
-        rewardTokenMeta = await fetchTokenMetadataFromChain(
+        rewardTokenMeta = await fetchTokenMetadataFromDexscreener(
           String(body.rewardTokenAddress || body.rewardTokenMeta?.address || "").trim(),
         );
       } catch (error) {
@@ -1250,9 +1328,9 @@ async function handleCampaigns(req, res, url) {
     const inserted = await query(
       `
       insert into campaigns
-        (id, slug, title, cover, category, reward_pool, reward_token, reward_token_meta, reward_amount, winners, creator, participants, starts_at, ends_at, submission_type, description, rules, proof, required_tags, official, trending)
+        (id, slug, title, cover, category, reward_pool, reward_token, reward_token_meta, reward_amount, winners, creator, holder_requirement, creator_requirements, participants, starts_at, ends_at, submission_type, description, rules, proof, required_tags, official, trending)
       values
-        ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,0,now(), now() + ($12 || ' days')::interval, $13,$14,$15::jsonb,$16::jsonb,$17::jsonb,$18,50)
+        ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,0,now(), now() + ($14 || ' days')::interval, $15,$16,$17::jsonb,$18::jsonb,$19::jsonb,$20,50)
       returning *
       `,
       [
@@ -1267,6 +1345,10 @@ async function handleCampaigns(req, res, url) {
         rewardAmount,
         winners,
         JSON.stringify(creator),
+        holderRequirement?.enabled ? JSON.stringify(holderRequirement) : null,
+        creatorRequirements && (creatorRequirements.minFollowers || creatorRequirements.minViews)
+          ? JSON.stringify(creatorRequirements)
+          : null,
         days,
         submissionType,
         description,

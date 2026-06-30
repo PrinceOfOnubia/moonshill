@@ -62,7 +62,7 @@ export async function logout() {
   return apiFetch<{ ok: true }>("/api/auth/logout", { method: "POST" });
 }
 
-export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; website?: string }) {
+export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; website?: string; projectCategory?: string; telegramUrl?: string }) {
   return apiFetch<{ user: MeResponse }>("/api/me", {
     method: "PATCH",
     body: JSON.stringify(patch),
@@ -119,8 +119,8 @@ export async function getBnbMarketPrice() {
   return apiFetch<{ symbol: "BNB"; currency: "USD"; price: number; source: string; updatedAt: string }>("/api/market/bnb");
 }
 
-export async function getTokenMetadata(address: string) {
-  return apiFetch<{ token: TokenMetadata }>(`/api/token-metadata?address=${encodeURIComponent(address)}`);
+export async function getTokenMetadata(address: string, provider: "dexscreener" | "chain" = "dexscreener") {
+  return apiFetch<{ token: TokenMetadata }>(`/api/token-metadata?address=${encodeURIComponent(address)}&provider=${encodeURIComponent(provider)}`);
 }
 
 export async function getLeaderboard() {

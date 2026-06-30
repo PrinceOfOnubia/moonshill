@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { DollarSign, Flag, Send, Trophy, Users } from "lucide-react";
+import { DollarSign, Flag, Megaphone, Rocket, Send, Trophy, Users } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getPublicData } from "@/lib/api";
@@ -18,7 +18,42 @@ type Stat = {
   display?: string;
 };
 
-export function LandingHero() {
+const pathwayContent = {
+  creator: {
+    badge: "Creators",
+    title: (
+      <>
+        Your Web3
+        <br />
+        <span className="text-gold-grad">Attention Engine</span>
+      </>
+    ),
+    body: "Create content, join campaigns, build your reputation, and earn rewards as a top shiller.",
+    primaryLabel: "Launch App",
+    secondaryLabel: "Start Shilling",
+  },
+  project: {
+    badge: "Projects",
+    title: (
+      <>
+        Turn community
+        <br />
+        <span className="text-gold-grad">attention into growth</span>
+      </>
+    ),
+    body: "Launch campaigns, reward creators, grow your community, and drive organic visibility with Moonshill.",
+    primaryLabel: "Launch App",
+    secondaryLabel: "Start Campaign",
+  },
+} as const;
+
+export function LandingHero({
+  pathway,
+  onPathwayChange,
+}: {
+  pathway: "creator" | "project";
+  onPathwayChange: (pathway: "creator" | "project") => void;
+}) {
   const { openConnect } = useAuth();
   const [stats, setStats] = useState<Stat[]>([
     { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
@@ -52,6 +87,7 @@ export function LandingHero() {
       cancelled = true;
     };
   }, []);
+  const content = pathwayContent[pathway];
 
   return (
     <section className="relative">
@@ -74,18 +110,37 @@ export function LandingHero() {
         {/* content — constrained to the page grid */}
         <div className="relative mx-auto max-w-[1240px] px-4 py-20 sm:px-6 sm:py-24 lg:py-32">
           <div className="max-w-lg">
+            <div className="inline-flex rounded-full border border-white/10 bg-black/45 p-1 backdrop-blur">
+              <button
+                type="button"
+                onClick={() => onPathwayChange("creator")}
+                className={`rounded-full px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                  pathway === "creator" ? "bg-gold text-black" : "text-faint hover:text-text"
+                }`}
+              >
+                Creators
+              </button>
+              <button
+                type="button"
+                onClick={() => onPathwayChange("project")}
+                className={`rounded-full px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                  pathway === "project" ? "bg-gold text-black" : "text-faint hover:text-text"
+                }`}
+              >
+                Projects
+              </button>
+            </div>
+
             <span className="inline-flex items-center rounded-full border border-gold/40 bg-gold/5 px-4 py-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gold-bright">
-              Create. Compete. Earn.
+              {content.badge}
             </span>
 
             <h1 className="mt-6 font-display text-[44px] font-bold leading-[1.02] tracking-tight sm:text-[62px]">
-              Your Web3
-              <br />
-              <span className="text-gold-grad">Attention Engine</span>
+              {content.title}
             </h1>
 
             <p className="mt-5 text-[17px] font-medium text-muted">
-              Grow. Engage. Earn.
+              {content.body}
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -93,14 +148,23 @@ export function LandingHero() {
                 onClick={() => openConnect("/home")}
                 className="flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-b from-gold-bright to-gold px-7 text-[15px] font-semibold text-black transition-shadow hover:shadow-[0_12px_44px_-8px_rgba(240,185,11,0.65)]"
               >
-                Launch App <Send size={18} />
+                {content.primaryLabel} <Send size={18} />
               </button>
-              <Link
-                href="/build"
-                className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-black/40 px-7 text-[15px] font-semibold text-text backdrop-blur transition-colors hover:border-gold/50 hover:text-gold-bright"
-              >
-                Build with Moonshill
-              </Link>
+              {pathway === "creator" ? (
+                <button
+                  onClick={() => openConnect("/explore")}
+                  className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-black/40 px-7 text-[15px] font-semibold text-text backdrop-blur transition-colors hover:border-gold/50 hover:text-gold-bright"
+                >
+                  {content.secondaryLabel} <Megaphone size={18} />
+                </button>
+              ) : (
+                <Link
+                  href="/build"
+                  className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-black/40 px-7 text-[15px] font-semibold text-text backdrop-blur transition-colors hover:border-gold/50 hover:text-gold-bright"
+                >
+                  {content.secondaryLabel} <Rocket size={18} />
+                </Link>
+              )}
             </div>
 
             <ContractAddress className="mt-7 w-full max-w-sm" />

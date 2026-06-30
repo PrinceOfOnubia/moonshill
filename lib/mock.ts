@@ -19,10 +19,10 @@ const av = (seed: string) =>
 
 /* ── creators ───────────────────────────────────────────── */
 export const creators: Record<string, Creator> = {
-  bnbchain: { id: "c1", type: "project", name: "BNB Chain", handle: "BNBCHAIN", avatar: av("bnbchain"), verified: true },
-  pancake: { id: "c2", type: "project", name: "PancakeSwap", handle: "PancakeSwap", avatar: av("pancake"), verified: true },
-  pixelpepe: { id: "c3", type: "project", name: "Pixel Pepe", handle: "pixelpepe", avatar: av("pixelpepe"), verified: true },
-  degenlab: { id: "c4", type: "project", name: "Degen Lab", handle: "degenlab", avatar: av("degenlab"), verified: true },
+  bnbchain: { id: "c1", type: "project", name: "BNB Chain", handle: "BNBCHAIN", avatar: av("bnbchain"), verified: true, xHandle: "BNBCHAIN", website: "bnbchain.org", telegramUrl: "https://t.me/bnbchain", projectCategory: "Infrastructure" },
+  pancake: { id: "c2", type: "project", name: "PancakeSwap", handle: "PancakeSwap", avatar: av("pancake"), verified: true, xHandle: "PancakeSwap", website: "pancakeswap.finance", telegramUrl: "https://t.me/pancakeswap", projectCategory: "DeFi" },
+  pixelpepe: { id: "c3", type: "project", name: "Pixel Pepe", handle: "pixelpepe", avatar: av("pixelpepe"), verified: true, xHandle: "pixelpepe", website: "pixelpepe.xyz", projectCategory: "NFT" },
+  degenlab: { id: "c4", type: "project", name: "Degen Lab", handle: "degenlab", avatar: av("degenlab"), verified: true, xHandle: "degenlab", website: "degenlab.xyz", projectCategory: "AI" },
   satoshigirl: { id: "u1", type: "user", name: "satoshi.girl", handle: "satoshigirl", avatar: av("satoshigirl"), verified: false },
   memelord: { id: "u2", type: "user", name: "Memelord", handle: "memelord_eth", avatar: av("memelord"), verified: false },
   zkpilled: { id: "u3", type: "user", name: "zk.pilled", handle: "zkpilled", avatar: av("zkpilled"), verified: false },
@@ -400,7 +400,9 @@ export const projects: ProjectProfile[] = [
     verified: true,
     description:
       "The community-driven blockchain ecosystem powering the next generation of Web3. Building the on-chain creator economy.",
+    category: "Infrastructure",
     website: "bnbchain.org",
+    telegramUrl: "https://t.me/bnbchain",
     contract: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
     ownerWallet: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
     xHandle: "BNBCHAIN",
@@ -418,7 +420,9 @@ export const projects: ProjectProfile[] = [
     verified: true,
     description:
       "The #1 DEX on BNB Chain. Trade, earn, and win with the syrup pool of campaigns and creator missions.",
+    category: "DeFi",
     website: "pancakeswap.finance",
+    telegramUrl: "https://t.me/pancakeswap",
     contract: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
     ownerWallet: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
     xHandle: "PancakeSwap",

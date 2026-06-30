@@ -2,18 +2,29 @@
 
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { PenLine, Send, Trophy } from "lucide-react";
+import { Megaphone, PenLine, Rocket, Search, Send, Trophy, Users } from "lucide-react";
 
-const steps = [
-  { icon: PenLine, title: "Create on X", body: "Post your meme, thread, video or design straight to X — your audience lives there.", n: "01" },
-  { icon: Send, title: "Submit the link", body: "Drop your post link into the campaign. We verify it belongs to your connected X account.", n: "02" },
-  { icon: Trophy, title: "Win rewards", body: "Get approved, climb the board, and split the funded reward pool with the top creators.", n: "03" },
-];
+const steps = {
+  creator: [
+    { icon: Search, title: "Find campaigns", body: "Browse live campaigns, pick your lane, and join the missions that fit your style.", n: "01" },
+    { icon: PenLine, title: "Create and submit", body: "Make the content, post it on X, and submit your link through your connected Moonshill account.", n: "02" },
+    { icon: Trophy, title: "Earn rewards and reputation", body: "Climb the board, stack wins, and build a track record as a shiller worth noticing.", n: "03" },
+  ],
+  project: [
+    { icon: Rocket, title: "Create campaign", body: "Launch a campaign from your project profile and frame the exact kind of attention you want to drive.", n: "01" },
+    { icon: Users, title: "Set rewards and requirements", body: "Choose your reward token, define the rules, and set creator or holder requirements when needed.", n: "02" },
+    { icon: Megaphone, title: "Review submissions and grow", body: "Reward the best creators, surface winning content, and turn the campaign into community momentum.", n: "03" },
+  ],
+} as const;
 
-export function HowItWorks() {
+export function HowItWorks({ pathway = "creator" }: { pathway?: "creator" | "project" }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 80%", "end 60%"] });
   const lineH = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+  const activeSteps = steps[pathway];
+  const intro = pathway === "creator"
+    ? "Moonshill keeps creators in motion: find a campaign, post where your audience already lives, and turn attention into on-chain rewards."
+    : "Moonshill gives projects a clean path to fund attention: launch a campaign, set the rules, and review submissions without leaving the platform.";
 
   return (
     <section ref={ref} className="mt-20">
@@ -25,7 +36,7 @@ export function HowItWorks() {
             Create. Submit. <span className="text-gold-grad">Earn.</span>
           </h2>
           <p className="mt-4 max-w-sm text-muted">
-            No new social network to learn. Moonshill plugs straight into X — you keep your audience, we handle the rest.
+            {intro}
           </p>
         </div>
 
@@ -35,7 +46,7 @@ export function HowItWorks() {
             <motion.div style={{ height: lineH }} className="w-full bg-gradient-to-b from-gold-bright to-gold" />
           </div>
           <div className="space-y-5">
-            {steps.map((s, i) => (
+            {activeSteps.map((s, i) => (
               <motion.div
                 key={s.n}
                 initial={{ opacity: 0, x: 24 }}

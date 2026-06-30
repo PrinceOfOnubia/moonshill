@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "next-view-transitions";
 import { motion } from "framer-motion";
 import {
-  Check, CheckCircle2, ClipboardCheck, Clock, FileCheck2, Share2, Tag, Trophy, Users,
+  Check, CheckCircle2, ClipboardCheck, Clock, FileCheck2, Globe, MessageCircleMore, Share2, Tag, Trophy, Users,
 } from "lucide-react";
 import type { Challenge } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -52,9 +52,23 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
     setJoined(!!user?.joinedCampaigns?.some((campaign) => campaign.id === c.id));
   }, [c.id, user]);
 
-  function share() {
-    setShared(true);
-    setTimeout(() => setShared(false), 1800);
+  async function share() {
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: c.title,
+          text: `Check out this Moonshill campaign: ${c.title}`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard?.writeText(shareUrl);
+      }
+      setShared(true);
+      setTimeout(() => setShared(false), 1800);
+    } catch {
+      // user dismissed native share or clipboard was unavailable
+    }
   }
 
   async function join() {
@@ -115,6 +129,40 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
           </div>
 
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted">{c.description}</p>
+          {c.creator.type === "project" && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {c.creator.xHandle && (
+                <a
+                  href={`https://x.com/${c.creator.xHandle}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text"
+                >
+                  @{c.creator.xHandle}
+                </a>
+              )}
+              {c.creator.website && (
+                <a
+                  href={c.creator.website.startsWith("http") ? c.creator.website : `https://${c.creator.website}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text"
+                >
+                  <Globe size={13} className="text-blue" /> Website
+                </a>
+              )}
+              {c.creator.telegramUrl && (
+                <a
+                  href={c.creator.telegramUrl.startsWith("http") ? c.creator.telegramUrl : `https://${c.creator.telegramUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text"
+                >
+                  <MessageCircleMore size={13} className="text-gold-bright" /> Telegram
+                </a>
+              )}
+            </div>
+          )}
 
           {/* mobile action card — keeps Join/Submit near the top on phones */}
           <div className="mt-6 rounded-[20px] border border-gold/20 bg-gradient-to-br from-gold/10 to-transparent p-4 lg:hidden">
@@ -199,6 +247,44 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
               </div>
             )}
           </Section>
+
+          {(c.holderRequirement?.enabled || c.creatorRequirements?.minFollowers || c.creatorRequirements?.minViews || c.rewardTokenMeta) && (
+            <Section title="Campaign details" icon={Tag}>
+              <div className="space-y-3 text-[15px] text-muted">
+                {c.rewardTokenMeta && (
+                  <div className="rounded-2xl border border-border bg-bg-2 px-4 py-3">
+                    <p className="text-[12px] uppercase tracking-wide text-faint">Reward token</p>
+                    <p className="mt-1 font-medium text-text">
+                      {c.rewardTokenMeta.name} ({c.rewardTokenMeta.symbol})
+                    </p>
+                    {c.rewardTokenMeta.chain && (
+                      <p className="mt-1 text-[13px] text-muted">{c.rewardTokenMeta.chain}</p>
+                    )}
+                    <p className="mt-1 font-mono text-[12px] text-green">{c.rewardTokenMeta.address}</p>
+                  </div>
+                )}
+                {c.holderRequirement?.enabled && (
+                  <div className="rounded-2xl border border-border bg-bg-2 px-4 py-3">
+                    <p className="text-[12px] uppercase tracking-wide text-faint">Holder requirement</p>
+                    <p className="mt-1 text-text">
+                      Hold at least {Number(c.holderRequirement.minimumAmount || 0).toLocaleString()} {c.holderRequirement.tokenSymbol || c.holderRequirement.tokenName || "tokens"}
+                    </p>
+                  </div>
+                )}
+                {(c.creatorRequirements?.minFollowers || c.creatorRequirements?.minViews) && (
+                  <div className="rounded-2xl border border-border bg-bg-2 px-4 py-3">
+                    <p className="text-[12px] uppercase tracking-wide text-faint">Creator requirements</p>
+                    {c.creatorRequirements?.minFollowers ? (
+                      <p className="mt-1 text-text">Minimum X followers: {Number(c.creatorRequirements.minFollowers).toLocaleString()}</p>
+                    ) : null}
+                    {c.creatorRequirements?.minViews ? (
+                      <p className="mt-1 text-text">Minimum views: {Number(c.creatorRequirements.minViews).toLocaleString()}</p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
 
           {related.length > 0 && (
             <div className="mt-12">

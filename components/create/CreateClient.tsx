@@ -13,7 +13,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { createCampaign, getBnbMarketPrice, getTokenMetadata } from "@/lib/api";
 
 const categories: Category[] = ["Memes", "Threads", "Videos", "AI", "Design", "Research"];
-const tokens: RewardTokenOption[] = ["BNB", "USDT", "USDC", "SHILL", "ETH"];
+const tokens: RewardTokenOption[] = ["BNB", "USDT", "USDC", "SHILL", "ETH", "CUSTOM"];
 const subTypes: SubmissionType[] = ["X Post", "Thread", "Quote", "Video"];
 const durationOptions = [
   { label: "1 Day (24 Hours)", value: "1" },
@@ -51,6 +51,14 @@ export function CreateClient() {
   const [customTokenMeta, setCustomTokenMeta] = useState<TokenMetadata | null>(null);
   const [customTokenLoading, setCustomTokenLoading] = useState(false);
   const [customTokenError, setCustomTokenError] = useState<string | null>(null);
+  const [holderRequirementEnabled, setHolderRequirementEnabled] = useState(false);
+  const [holderTokenAddress, setHolderTokenAddress] = useState("");
+  const [holderTokenMeta, setHolderTokenMeta] = useState<TokenMetadata | null>(null);
+  const [holderTokenLoading, setHolderTokenLoading] = useState(false);
+  const [holderTokenError, setHolderTokenError] = useState<string | null>(null);
+  const [holderMinimumAmount, setHolderMinimumAmount] = useState(10000);
+  const [minFollowers, setMinFollowers] = useState(0);
+  const [minViews, setMinViews] = useState(0);
   const [amount, setAmount] = useState(1);
   const [winners, setWinners] = useState(1);
   const [duration, setDuration] = useState<(typeof durationOptions)[number]["value"]>("1");
@@ -91,7 +99,12 @@ export function CreateClient() {
   const creator = user;
   const rewardLabel = token === "CUSTOM" ? (customTokenMeta?.symbol || "Custom token") : displayRewardToken(token);
   const canNext =
-    step === 0 ? title.trim().length > 2 : step === 1 ? amount > 0 && winners > 0 && (token !== "CUSTOM" || !!customTokenMeta) : true;
+    step === 0 ? title.trim().length > 2 : step === 1
+      ? amount > 0
+        && winners > 0
+        && (token !== "CUSTOM" || !!customTokenMeta)
+        && (!holderRequirementEnabled || (!!holderTokenMeta && holderMinimumAmount > 0))
+      : true;
 
   async function fetchCustomToken() {
     if (!customTokenAddress.trim()) {
@@ -109,6 +122,25 @@ export function CreateClient() {
       setCustomTokenError(err instanceof Error ? err.message : "Could not fetch token metadata.");
     } finally {
       setCustomTokenLoading(false);
+    }
+  }
+
+  async function fetchHolderToken() {
+    if (!holderTokenAddress.trim()) {
+      setHolderTokenError("Paste a token contract address first.");
+      setHolderTokenMeta(null);
+      return;
+    }
+    setHolderTokenLoading(true);
+    setHolderTokenError(null);
+    try {
+      const response = await getTokenMetadata(holderTokenAddress.trim());
+      setHolderTokenMeta(response.token);
+    } catch (err) {
+      setHolderTokenMeta(null);
+      setHolderTokenError(err instanceof Error ? err.message : "Could not fetch token metadata.");
+    } finally {
+      setHolderTokenLoading(false);
     }
   }
 
@@ -135,6 +167,17 @@ export function CreateClient() {
         days,
         submissionType: selectedTypes.join(", "),
         submissionTypes: selectedTypes,
+        holderRequirement: holderRequirementEnabled ? {
+          enabled: true,
+          tokenAddress: holderTokenMeta?.address,
+          tokenName: holderTokenMeta?.name,
+          tokenSymbol: holderTokenMeta?.symbol,
+          minimumAmount: holderMinimumAmount,
+        } : { enabled: false },
+        creatorRequirements: {
+          minFollowers: minFollowers || undefined,
+          minViews: minViews || undefined,
+        },
         rules: [requiredMoonshillRule, ...rules.split("\n").map((rule) => rule.trim()).filter(Boolean)],
         proof,
         requiredTags: tags.split(/\s+/).filter(Boolean),
@@ -326,6 +369,7 @@ export function CreateClient() {
                         <div className="mt-4 rounded-xl border border-green/20 bg-green/8 p-3.5 text-sm">
                           <p className="font-medium text-text">{customTokenMeta.name} ({customTokenMeta.symbol})</p>
                           <p className="mt-1 text-muted">Decimals: {customTokenMeta.decimals}</p>
+                          {customTokenMeta.chain && <p className="mt-1 text-muted">Network: {customTokenMeta.chain}</p>}
                           <p className="mt-1 font-mono text-[12px] text-green">{customTokenMeta.address}</p>
                         </div>
                       )}
@@ -362,6 +406,68 @@ export function CreateClient() {
                       </div>
                     )}
                   </Field>
+                  <div className="rounded-xl border border-border bg-surface/60 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[13px] font-medium text-text">Holder requirement</p>
+                        <p className="mt-1 text-[13px] text-muted">
+                          Optionally require creators to hold a token before they can join or submit.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHolderRequirementEnabled((value) => !value)}
+                        className={cn(
+                          "relative h-7 w-12 rounded-full border transition-colors",
+                          holderRequirementEnabled ? "border-gold bg-gold/25" : "border-border bg-bg-2",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-1 h-5 w-5 rounded-full bg-white transition-all",
+                            holderRequirementEnabled ? "left-6 bg-gold-bright" : "left-1",
+                          )}
+                        />
+                      </button>
+                    </div>
+
+                    {holderRequirementEnabled && (
+                      <div className="mt-4 space-y-4">
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <div className="flex-1">
+                            <label className="mb-1.5 block text-[13px] font-medium text-muted">Holder token contract</label>
+                            <Input
+                              value={holderTokenAddress}
+                              onChange={(value) => {
+                                setHolderTokenAddress(value);
+                                setHolderTokenMeta(null);
+                                setHolderTokenError(null);
+                              }}
+                              placeholder="0x..."
+                            />
+                          </div>
+                          <div className="sm:pt-7">
+                            <Button variant="outline" onClick={fetchHolderToken} disabled={holderTokenLoading}>
+                              {holderTokenLoading ? "Fetching..." : "Fetch token"}
+                            </Button>
+                          </div>
+                        </div>
+                        {holderTokenMeta && (
+                          <div className="rounded-xl border border-green/20 bg-green/8 p-3.5 text-sm">
+                            <p className="font-medium text-text">{holderTokenMeta.name} ({holderTokenMeta.symbol})</p>
+                            {holderTokenMeta.chain && <p className="mt-1 text-muted">Network: {holderTokenMeta.chain}</p>}
+                            <p className="mt-1 font-mono text-[12px] text-green">{holderTokenMeta.address}</p>
+                          </div>
+                        )}
+                        {holderTokenError && (
+                          <p className="rounded-xl border border-red/25 bg-red/10 px-3 py-2 text-[13px] text-red">{holderTokenError}</p>
+                        )}
+                        <Field label="Minimum amount required">
+                          <NumberInput value={holderMinimumAmount} onChange={setHolderMinimumAmount} suffix={holderTokenMeta?.symbol || "tokens"} />
+                        </Field>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -412,6 +518,20 @@ export function CreateClient() {
                   <Field label="Required X tags (optional)">
                     <Input value={tags} onChange={setTags} placeholder="@project #hashtag" />
                   </Field>
+                  <div className="rounded-xl border border-border bg-surface/60 p-4">
+                    <p className="text-[13px] font-medium text-text">Creator requirements</p>
+                    <p className="mt-1 text-[13px] text-muted">
+                      Leave these empty to keep the campaign open to all creators.
+                    </p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <Field label="Minimum X followers">
+                        <NumberInput value={minFollowers} onChange={setMinFollowers} />
+                      </Field>
+                      <Field label="Minimum views required">
+                        <NumberInput value={minViews} onChange={setMinViews} />
+                      </Field>
+                    </div>
+                  </div>
                 </>
               )}
             </motion.div>
@@ -472,6 +592,15 @@ export function CreateClient() {
                 <span className="flex items-center gap-1.5"><Clock size={13} /> {days}d</span>
                 <span className="rounded-full bg-gold/12 px-3 py-1 font-semibold text-gold-bright">Join</span>
               </div>
+              {(holderRequirementEnabled || minFollowers > 0 || minViews > 0) && (
+                <div className="space-y-2 border-t border-border pt-3 text-[12px] text-muted">
+                  {holderRequirementEnabled && holderTokenMeta && (
+                    <p>Hold at least <span className="font-medium text-text">{holderMinimumAmount.toLocaleString()} {holderTokenMeta.symbol}</span></p>
+                  )}
+                  {minFollowers > 0 && <p>Minimum X followers: <span className="font-medium text-text">{minFollowers.toLocaleString()}</span></p>}
+                  {minViews > 0 && <p>Minimum views: <span className="font-medium text-text">{minViews.toLocaleString()}</span></p>}
+                </div>
+              )}
             </div>
           </div>
         </aside>

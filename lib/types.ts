@@ -6,6 +6,16 @@ export type Category =
   | "Design"
   | "Research";
 
+export type ProjectCategory =
+  | "Gaming"
+  | "DeFi"
+  | "Meme"
+  | "NFT"
+  | "AI"
+  | "RWA"
+  | "Infrastructure"
+  | "Other";
+
 export type SubmissionType =
   | "X Post"
   | "Thread"
@@ -30,6 +40,8 @@ export interface TokenMetadata {
   symbol: string;
   decimals: number;
   address: string;
+  chain?: string | null;
+  source?: string | null;
 }
 
 export interface Creator {
@@ -42,6 +54,21 @@ export interface Creator {
   xHandle?: string | null;
   website?: string | null;
   ownerWallet?: string | null;
+  telegramUrl?: string | null;
+  projectCategory?: ProjectCategory | null;
+}
+
+export interface HolderRequirement {
+  enabled: boolean;
+  tokenAddress?: string;
+  tokenName?: string;
+  tokenSymbol?: string;
+  minimumAmount?: number;
+}
+
+export interface CreatorRequirements {
+  minFollowers?: number;
+  minViews?: number;
 }
 
 export interface Challenge {
@@ -64,6 +91,8 @@ export interface Challenge {
   rules: string[];
   proof: string[];
   requiredTags?: string[];
+  holderRequirement?: HolderRequirement | null;
+  creatorRequirements?: CreatorRequirements | null;
   official: boolean;
   trending: number; // momentum score for sorting
 }
@@ -91,10 +120,12 @@ export interface ProjectProfile {
   verified: boolean;
   verificationStatus?: ProjectVerificationStatus;
   description: string;
+  category?: ProjectCategory | null;
   website: string;
   contract: string;
   ownerWallet: string;
   xHandle?: string | null;
+  telegramUrl?: string | null;
   totalSponsored: number;
   activeChallenges: number;
   completedChallenges: number;
@@ -110,6 +141,8 @@ export interface UserProfile {
   wallet: string;
   bio: string;
   website?: string;
+  projectCategory?: ProjectCategory | null;
+  telegramUrl?: string | null;
   projectVerified?: boolean;
   projectVerificationStatus?: ProjectVerificationStatus;
   xConnected: boolean;

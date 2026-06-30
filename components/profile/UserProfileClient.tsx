@@ -16,6 +16,7 @@ import { startXConnect, updateMe } from "@/lib/api";
 import { XIcon } from "@/components/landing/social";
 
 const tabs = ["Submissions", "Joined", "Created"] as const;
+const projectCategories = ["Gaming", "DeFi", "Meme", "NFT", "AI", "RWA", "Infrastructure", "Other"] as const;
 
 export function UserProfileClient() {
   const { user, refreshUser } = useAuth();
@@ -30,6 +31,8 @@ export function UserProfileClient() {
   const [avatar, setAvatar] = useState("");
   const [handle, setHandle] = useState("");
   const [website, setWebsite] = useState("");
+  const [projectCategory, setProjectCategory] = useState("");
+  const [telegramUrl, setTelegramUrl] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const profile = user;
   const joined = profile?.joinedCampaigns ?? [];
@@ -65,6 +68,8 @@ export function UserProfileClient() {
     setAvatar(profile.avatar);
     setHandle(profile.handle);
     setWebsite(profile.website || "");
+    setProjectCategory(profile.projectCategory || "");
+    setTelegramUrl(profile.telegramUrl || "");
   }, [profile]);
 
   if (!profile) {
@@ -251,15 +256,39 @@ export function UserProfileClient() {
             />
           </div>
           {profile.accountType === "project" && (
-            <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-muted">Website</label>
-              <input
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://yourproject.org"
-                className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
-              />
-            </div>
+            <>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-muted">Website</label>
+                <input
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://yourproject.org"
+                  className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-muted">Project category</label>
+                <select
+                  value={projectCategory}
+                  onChange={(e) => setProjectCategory(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+                >
+                  <option value="">Select category</option>
+                  {projectCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-muted">Telegram (optional)</label>
+                <input
+                  value={telegramUrl}
+                  onChange={(e) => setTelegramUrl(e.target.value)}
+                  placeholder="https://t.me/yourproject"
+                  className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+                />
+              </div>
+            </>
           )}
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="flex items-center gap-2 text-[13px] text-muted">
@@ -283,19 +312,29 @@ export function UserProfileClient() {
             )}
           </div>
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setWebsite(profile.website || ""); setEditOpen(false); }}>
+            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setWebsite(profile.website || ""); setProjectCategory(profile.projectCategory || ""); setTelegramUrl(profile.telegramUrl || ""); setEditOpen(false); }}>
               Cancel
             </Button>
             <Button
               className="flex-1"
               onClick={async () => {
                 try {
-                  const updated = await updateMe({ name, bio, avatar, handle: handle.replace(/^@+/, ""), website });
+                  const updated = await updateMe({
+                    name,
+                    bio,
+                    avatar,
+                    handle: handle.replace(/^@+/, ""),
+                    website,
+                    projectCategory: projectCategory || undefined,
+                    telegramUrl,
+                  });
                   setName(updated.user.name);
                   setBio(updated.user.bio);
                   setAvatar(updated.user.avatar);
                   setHandle(updated.user.handle);
                   setWebsite(updated.user.website || "");
+                  setProjectCategory(updated.user.projectCategory || "");
+                  setTelegramUrl(updated.user.telegramUrl || "");
                   setEditOpen(false);
                   await refreshUser();
                   setProfileMessage("Profile updated successfully.");

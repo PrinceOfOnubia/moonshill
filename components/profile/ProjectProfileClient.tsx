@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, Globe, FileCode2 } from "lucide-react";
+import { Check, Copy, Globe, FileCode2, MessageCircleMore, Tags } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -45,9 +45,19 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
       <p className="mt-4 max-w-2xl text-[15px] text-muted">{p.description}</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {p.category && (
+          <span className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted">
+            <Tags size={14} className="text-gold-bright" /> {p.category}
+          </span>
+        )}
         {p.website && (
           <a href={p.website.startsWith("http") ? p.website : `https://${p.website}`} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text">
             <Globe size={14} className="text-blue" /> {p.website}
+          </a>
+        )}
+        {p.telegramUrl && (
+          <a href={p.telegramUrl.startsWith("http") ? p.telegramUrl : `https://${p.telegramUrl}`} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text">
+            <MessageCircleMore size={14} className="text-gold-bright" /> Telegram
           </a>
         )}
         <button
