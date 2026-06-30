@@ -4,21 +4,43 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { BadgeCheck, Check, Globe, Loader2, ShieldCheck, Wallet, FileCode2 } from "lucide-react";
+import { BadgeCheck, Check, FileCode2, Globe, Loader2, ShieldCheck, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { startXConnect, submitProjectVerification } from "@/lib/api";
+import { getProjectApplication, startProjectXConnect, startXConnect, submitProjectApplication, updateProjectApplication } from "@/lib/api";
+import type { ProjectApplication } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function VerifyClient() {
+type ProjectFormState = {
+  projectName: string;
+  description: string;
+  chain: string;
+};
+
+function projectFormFromApplication(application: ProjectApplication | null): ProjectFormState {
+  if (!application) {
+    return {
+      projectName: "",
+      description: "",
+      chain: "BNB Chain",
+    };
+  }
+  return {
+    projectName: application.projectName || "",
+    description: application.description || "",
+    chain: application.chain || "BNB Chain",
+  };
+}
+
+export function VerifyClient({ mode = "auto" }: { mode?: "auto" | "project" | "creator" }) {
   const { user } = useAuth();
-  const isProjectAccount = user?.accountType === "project";
+  const isProjectAccount = mode === "project" || (mode === "auto" && user?.accountType === "project");
   const copy = useMemo(() => {
     if (isProjectAccount) {
       return {
         title: "Get verified",
-        body: "Submit your project details for review. Verified projects receive the blue badge once approved.",
+        body: "Submit your project details for review. Approved projects unlock the dashboard and project-only features after admin approval.",
       };
     }
     return {
@@ -113,15 +135,50 @@ function XFlow() {
 
 function ProjectFlow() {
   const searchParams = useSearchParams();
-  const { connected, address, user, openConnect, refreshUser } = useAuth();
+  const { address, connected, openConnect, refreshUser, user } = useAuth();
+  const [application, setApplication] = useState<ProjectApplication | null>(null);
+  const [form, setForm] = useState<ProjectFormState>(projectFormFromApplication(null));
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [phase, setPhase] = useState<"form" | "loading">("form");
   const [error, setError] = useState<string | null>(null);
-  const linked = !!user?.xConnected;
-  const verificationStatus = user?.projectVerificationStatus || "unverified";
+  const [message, setMessage] = useState<string | null>(null);
+  const linked = !!application?.xConnected;
+  const verificationStatus = application?.status || (user?.accountType === "project" ? "approved" : "draft");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getProjectApplication()
+      .then(({ application: next }) => {
+        if (cancelled) return;
+        setApplication(next);
+        setForm(projectFormFromApplication(next));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setApplication(null);
+        setForm(projectFormFromApplication(null));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("x") === "connected") {
-      void refreshUser();
+      void getProjectApplication()
+        .then(({ application: next }) => {
+          setApplication(next);
+          setForm(projectFormFromApplication(next));
+          setMessage("Project X account connected.");
+        })
+        .catch(() => {
+          setError("Could not refresh the project application after X connection.");
+        });
     }
     const reason = searchParams.get("reason");
     const x = searchParams.get("x");
@@ -133,24 +190,80 @@ function ProjectFlow() {
   async function connectX() {
     setError(null);
     try {
-      const response = await startXConnect("/verify");
+      const response = await startProjectXConnect("/build");
       window.location.href = response.redirectUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "X connection failed.");
     }
   }
 
+  async function saveProjectDetails() {
+    if (!application) return;
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { application: next } = await updateProjectApplication({
+        projectName: form.projectName,
+        description: form.description,
+        chain: form.chain,
+      });
+      setApplication(next);
+      setForm(projectFormFromApplication(next));
+      setMessage("Project details saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save project details.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function submit() {
+    if (!application) return;
     setPhase("loading");
     setError(null);
     try {
-      await submitProjectVerification();
-      await refreshUser();
+      await updateProjectApplication({
+        projectName: form.projectName,
+        description: form.description,
+        chain: form.chain,
+      });
+      const { application: next } = await submitProjectApplication();
+      setApplication(next);
+      setForm(projectFormFromApplication(next));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not submit project verification.");
+      setError(err instanceof Error ? err.message : "Could not submit project application.");
     } finally {
       setPhase("form");
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
+        Loading project verification…
+      </div>
+    );
+  }
+
+  if (user?.accountType === "project" && user.projectVerificationStatus === "approved") {
+    return (
+      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-green/25 bg-green/10 p-8 text-center">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green/15 text-green">
+          <BadgeCheck size={26} />
+        </div>
+        <h3 className="mt-4 font-display text-xl font-semibold">Project approved</h3>
+        <p className="mx-auto mt-2 max-w-sm text-muted">This wallet is already linked to an approved project account. You can open the dashboard or launch a campaign now.</p>
+        <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href={`/project/${user.handle}`}>
+            <Button>Project dashboard</Button>
+          </Link>
+          <Link href="/create">
+            <Button variant="outline">Launch campaign</Button>
+          </Link>
+        </div>
+      </motion.div>
+    );
   }
 
   if (verificationStatus === "pending") {
@@ -159,9 +272,10 @@ function ProjectFlow() {
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gold/15 text-gold-bright">
           <Loader2 className="animate-spin" size={26} />
         </div>
-        <h3 className="mt-4 font-display text-xl font-semibold">Submitted for review</h3>
-        <p className="mx-auto mt-2 max-w-sm text-muted">Admins typically approve verified projects within 24 hours. You&apos;ll get the blue badge once approved.</p>
-        <Badge tone="gold" className="mt-4">● Pending admin approval</Badge>
+        <h3 className="mt-4 font-display text-xl font-semibold">Your project application has been submitted.</h3>
+        <p className="mx-auto mt-2 max-w-sm text-muted">Our team is reviewing your project.</p>
+        <p className="mx-auto mt-2 max-w-sm text-muted">Once approved, reconnect this same wallet to access your project dashboard.</p>
+        <Badge tone="gold" className="mt-4">● Pending review</Badge>
       </motion.div>
     );
   }
@@ -171,36 +285,69 @@ function ProjectFlow() {
       <StepCard
         n={1}
         title="Connect your project wallet"
-        body="Your approved wallet becomes the permanent login for this project account."
-        done={connected}
-        action={<Button variant={connected ? "glass" : "primary"} onClick={() => openConnect("/verify")}>{connected ? <><Check size={16} /> {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connected"}</> : <><Wallet size={16} /> Connect</>}</Button>}
+        body="Wallet connection verifies ownership only. It does not create a creator account or an approved project account."
+        done={!!application?.wallet || !!address}
+        action={<Button variant={application?.wallet || address ? "glass" : "primary"} onClick={() => openConnect("/build")}>{application?.wallet || address ? <><Check size={16} /> {application?.wallet ? `${application.wallet.slice(0, 6)}…${application.wallet.slice(-4)}` : `${address?.slice(0, 6)}…${address?.slice(-4)}`}</> : <><Wallet size={16} /> Connect</>}</Button>}
       />
       <StepCard
         n={2}
         title="Connect your official 𝕏 account"
-        body="Admins review the linked X handle alongside your owner wallet before approval."
-        done={linked}
-        disabled={!connected}
-        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || "connected"}</> : "Connect 𝕏"}</Button>}
+        body="Admins review the linked X handle alongside your submitted project information."
+        done={!!linked}
+        disabled={!application?.wallet}
+        action={<Button variant={linked ? "glass" : "primary"} disabled={!application?.wallet} onClick={connectX}>{linked ? <><Check size={16} /> @{application?.xHandle || "connected"}</> : "Connect 𝕏"}</Button>}
       />
-      <Row icon={<Globe size={16} className="text-blue" />} label="Project website" value={user?.website || "Add website in Profile first"} />
-      <Row icon={<FileCode2 size={16} className="text-gold-bright" />} label="Owner wallet" value={address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect wallet first"} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Project name"
+          value={form.projectName}
+          onChange={(value) => setForm((current) => ({ ...current, projectName: value }))}
+          placeholder="Moonshill"
+        />
+        <Field
+          label="Chain"
+          value={form.chain}
+          onChange={(value) => setForm((current) => ({ ...current, chain: value }))}
+          placeholder="BNB Chain"
+        />
+      </div>
+      <TextField
+        label="Project description"
+        value={form.description}
+        onChange={(value) => setForm((current) => ({ ...current, description: value }))}
+        placeholder="Tell the team what the project is, what it is building, and what they should review."
+      />
+      <Row icon={<FileCode2 size={16} className="text-gold-bright" />} label="Connected wallet address" value={application?.wallet || address || "Connect wallet first"} />
+      <Row icon={<Globe size={16} className="text-blue" />} label="Connected X account" value={application?.xHandle ? `@${application.xHandle}` : "Connect X first"} />
       {verificationStatus === "rejected" && (
         <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">
-          This project verification was rejected. Review your profile details, reconnect the correct X account if needed, and submit again.
+          {application?.rejectionReason || "This project application was rejected. Review the submitted information, reconnect the correct X account if needed, and submit again."}
         </p>
       )}
-      <Link href="/profile" className="inline-flex items-center gap-1.5 text-sm text-blue transition-colors hover:text-text">
-        Update project profile details
-      </Link>
-      <Button
-        className="w-full"
-        size="lg"
-        disabled={phase === "loading" || !connected || !linked}
-        onClick={submit}
-      >
-        {phase === "loading" ? <><Loader2 size={18} className="animate-spin" /> Submitting…</> : verificationStatus === "rejected" ? "Resubmit for verification" : "Submit for verification"}
-      </Button>
+      {message && (
+        <p className="rounded-2xl border border-green/25 bg-green/10 p-4 text-sm text-green">{message}</p>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={saving || !application?.wallet}
+          onClick={saveProjectDetails}
+        >
+          {saving ? <><Loader2 size={18} className="animate-spin" /> Saving…</> : "Save details"}
+        </Button>
+        <Button
+          className="w-full"
+          size="lg"
+          disabled={phase === "loading" || !application?.wallet || !linked || !form.projectName.trim() || !form.description.trim() || !form.chain.trim()}
+          onClick={submit}
+        >
+          {phase === "loading" ? <><Loader2 size={18} className="animate-spin" /> Submitting…</> : verificationStatus === "rejected" ? "Resubmit application" : "Submit application"}
+        </Button>
+      </div>
+      <p className="text-[13px] text-faint">
+        After submission, the project remains in review until an admin approves it. No dashboard access is granted before approval.
+      </p>
       {error && (
         <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">{error}</p>
       )}
@@ -229,5 +376,54 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
       <span className="flex items-center gap-2 text-[13px] text-muted">{icon}{label}</span>
       <span className="font-mono text-[13px] text-green">{value}</span>
     </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-text">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-sm text-text outline-none transition-colors placeholder:text-faint focus:border-gold/60"
+      />
+    </label>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-text">{label}</span>
+      <textarea
+        rows={5}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-text outline-none transition-colors placeholder:text-faint focus:border-gold/60"
+      />
+    </label>
   );
 }

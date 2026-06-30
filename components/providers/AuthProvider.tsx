@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { ConnectModal } from "@/components/wallet/ConnectModal";
-import { activateProjectAccount, getMe, logout, walletChallenge, walletVerify } from "@/lib/api";
+import { getMe, logout, verifyProjectWallet, walletChallenge, walletVerify } from "@/lib/api";
 import type { MeResponse } from "@/lib/api";
 import {
   BSC_CHAIN_ID,
@@ -199,20 +199,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "personal_sign",
         params: [challenge.message, nextAddress],
       })) as string;
-      let verified = await walletVerify(nextAddress, signature);
+      let verified: Awaited<ReturnType<typeof walletVerify>> | Awaited<ReturnType<typeof verifyProjectWallet>>;
       if (nextPath.startsWith("/build")) {
-        try {
-          verified = await activateProjectAccount();
-        } catch (error) {
-          const isNotFound = typeof error === "object" && error && "status" in error && Number(error.status) === 404;
-          if (!isNotFound) throw error;
-        }
+        verified = await verifyProjectWallet(nextAddress, signature);
+      } else {
+        verified = await walletVerify(nextAddress, signature);
       }
       setAddress(nextAddress);
       setChainId(BSC_CHAIN_ID);
-      setUser(verified.user);
-      localStorage.setItem(STORAGE_KEY, nextAddress);
-      localStorage.setItem(STORAGE_CHAIN_KEY, BSC_CHAIN_ID);
+      if ("user" in verified && verified.user) {
+        setUser(verified.user);
+        localStorage.setItem(STORAGE_KEY, nextAddress);
+        localStorage.setItem(STORAGE_CHAIN_KEY, BSC_CHAIN_ID);
+      } else {
+        setUser(null);
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_CHAIN_KEY);
+      }
       setConnectModalOpen(false);
     } catch (error) {
       setConnectError(formatWalletError(error));
