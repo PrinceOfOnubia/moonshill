@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(null);
       setConnectModalOpen(false);
-      return { nextPath: "/build", hasSession: false };
+      return { nextPath, hasSession: false };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not verify code.";
       setConnectError(message);
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* ignore */
       }
-      const response = await startXAuth(authTarget, authTarget === "project" ? "/build" : nextPath);
+      const response = await startXAuth(authTarget, nextPath);
       window.location.href = response.redirectUrl;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not continue with X.";

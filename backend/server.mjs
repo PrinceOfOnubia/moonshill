@@ -158,6 +158,22 @@ function redirect(res, location, extraHeaders = {}) {
   res.end();
 }
 
+function resolveClientRedirect(target, fallbackPath = "/home") {
+  const fallback = new URL(fallbackPath, CLIENT_ORIGIN).toString();
+  if (!target) return fallback;
+  try {
+    return new URL(String(target), CLIENT_ORIGIN).toString();
+  } catch {
+    return fallback;
+  }
+}
+
+function withRedirectParam(redirectTo, key, value) {
+  const url = new URL(redirectTo);
+  url.searchParams.set(key, value);
+  return url.toString();
+}
+
 function applyCors(req, res) {
   const origin = req.headers.origin;
   const allowedOrigin = origin && allowedCorsOrigins.has(origin) ? origin : DEFAULT_CORS_ORIGIN;
@@ -1875,7 +1891,7 @@ async function handleProjectXStart(req, res, url) {
   const state = crypto.randomUUID();
   const codeVerifier = crypto.randomBytes(32).toString("base64url");
   const challenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-  const redirectTo = url.searchParams.get("returnTo") || `${CLIENT_ORIGIN}/build?x=connect`;
+  const redirectTo = resolveClientRedirect(url.searchParams.get("returnTo"), "/build?x=connect");
   await query(
     `
     insert into project_x_oauth_states (state, project_application_id, code_verifier, redirect_to, expires_at)
@@ -1923,7 +1939,7 @@ async function handleXStart(req, res, url) {
   const state = crypto.randomUUID();
   const codeVerifier = crypto.randomBytes(32).toString("base64url");
   const challenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-  const redirectTo = url.searchParams.get("returnTo") || `${CLIENT_ORIGIN}/profile?x=connect`;
+  const redirectTo = resolveClientRedirect(url.searchParams.get("returnTo"), "/profile?x=connect");
   await query(
     `
     insert into x_oauth_states (state, user_id, code_verifier, redirect_to, expires_at)
@@ -1956,7 +1972,10 @@ async function handleXLoginStart(req, res, url) {
   const state = crypto.randomUUID();
   const codeVerifier = crypto.randomBytes(32).toString("base64url");
   const challenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-  const redirectTo = url.searchParams.get("returnTo") || (accountType === "project" ? `${CLIENT_ORIGIN}/build` : `${CLIENT_ORIGIN}/home`);
+  const redirectTo = resolveClientRedirect(
+    url.searchParams.get("returnTo"),
+    accountType === "project" ? "/build" : "/home",
+  );
   await query(
     `
     insert into auth_x_oauth_states (state, account_type, code_verifier, redirect_to, expires_at)
@@ -2022,11 +2041,12 @@ async function handleXCallback(req, res, url) {
   if (!stateRow.rows[0]) {
     return redirect(res, `${CLIENT_ORIGIN}/profile?x=invalid-state`);
   }
+  const redirectTo = resolveClientRedirect(stateRow.rows[0].redirect_to, "/profile");
   if (error) {
-    return redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(errorDesc || error)}`);
+    return redirect(res, withRedirectParam(withRedirectParam(redirectTo, "x", "error"), "reason", errorDesc || error));
   }
   if (!code) {
-    return redirect(res, `${stateRow.rows[0].redirect_to}?x=missing-code`);
+    return redirect(res, withRedirectParam(redirectTo, "x", "missing-code"));
   }
   try {
     const token = await exchangeXCode(code, stateRow.rows[0].code_verifier);
@@ -2048,9 +2068,16 @@ async function handleXCallback(req, res, url) {
       [stateRow.rows[0].user_id, xUser.id || null, xUser.username || null],
     );
     await query("delete from x_oauth_states where state = $1", [state]);
-    redirect(res, `${stateRow.rows[0].redirect_to}?x=connected`);
+    redirect(res, withRedirectParam(redirectTo, "x", "connected"));
   } catch (err) {
-    redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(err instanceof Error ? err.message : "x oauth failed")}`);
+    redirect(
+      res,
+      withRedirectParam(
+        withRedirectParam(redirectTo, "x", "error"),
+        "reason",
+        err instanceof Error ? err.message : "x oauth failed",
+      ),
+    );
   }
 }
 
@@ -2059,15 +2086,18 @@ async function handleXLoginCallback(req, res, url, stateRow) {
   const code = String(url.searchParams.get("code") || "");
   const error = url.searchParams.get("error");
   const errorDesc = url.searchParams.get("error_description");
-  const redirectTo = String(stateRow.redirect_to || "");
+  const redirectTo = resolveClientRedirect(
+    stateRow.redirect_to,
+    stateRow.account_type === "project" ? "/build" : "/home",
+  );
   const codeVerifier = String(stateRow.code_verifier || "");
   if (error) {
     await query("delete from auth_x_oauth_states where state = $1", [state]);
-    return redirect(res, `${redirectTo}?x=error&reason=${encodeURIComponent(errorDesc || error)}`);
+    return redirect(res, withRedirectParam(withRedirectParam(redirectTo, "x", "error"), "reason", errorDesc || error));
   }
   if (!code) {
     await query("delete from auth_x_oauth_states where state = $1", [state]);
-    return redirect(res, `${redirectTo}?x=missing-code`);
+    return redirect(res, withRedirectParam(redirectTo, "x", "missing-code"));
   }
   try {
     const token = await exchangeXCode(code, codeVerifier);
@@ -2108,7 +2138,7 @@ async function handleXLoginCallback(req, res, url, stateRow) {
       }
       return redirect(
         res,
-        `${redirectTo}?x=connected`,
+        withRedirectParam(redirectTo, "x", "connected"),
         projectApplication ? projectApplicationSessionHeaders(projectApplication.id) : {},
       );
     }
@@ -2118,9 +2148,16 @@ async function handleXLoginCallback(req, res, url, stateRow) {
       xHandle: xUser.username || null,
     });
     const session = await sessionHeadersForUser(creator);
-    return redirect(res, `${redirectTo}${redirectTo.includes("?") ? "&" : "?"}x=connected`, session.headers);
+    return redirect(res, withRedirectParam(redirectTo, "x", "connected"), session.headers);
   } catch (err) {
-    return redirect(res, `${redirectTo}?x=error&reason=${encodeURIComponent(err instanceof Error ? err.message : "x oauth failed")}`);
+    return redirect(
+      res,
+      withRedirectParam(
+        withRedirectParam(redirectTo, "x", "error"),
+        "reason",
+        err instanceof Error ? err.message : "x oauth failed",
+      ),
+    );
   }
 }
 
@@ -2136,11 +2173,12 @@ async function handleProjectXCallback(req, res, url) {
   if (!stateRow.rows[0]) {
     return redirect(res, `${CLIENT_ORIGIN}/build?x=invalid-state`);
   }
+  const redirectTo = resolveClientRedirect(stateRow.rows[0].redirect_to, "/build");
   if (error) {
-    return redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(errorDesc || error)}`);
+    return redirect(res, withRedirectParam(withRedirectParam(redirectTo, "x", "error"), "reason", errorDesc || error));
   }
   if (!code) {
-    return redirect(res, `${stateRow.rows[0].redirect_to}?x=missing-code`);
+    return redirect(res, withRedirectParam(redirectTo, "x", "missing-code"));
   }
   try {
     const token = await exchangeXCode(code, stateRow.rows[0].code_verifier);
@@ -2158,11 +2196,18 @@ async function handleProjectXCallback(req, res, url) {
     await query("delete from project_x_oauth_states where state = $1", [state]);
     redirect(
       res,
-      `${stateRow.rows[0].redirect_to}?x=connected`,
+      withRedirectParam(redirectTo, "x", "connected"),
       updated ? projectApplicationSessionHeaders(updated.id) : {},
     );
   } catch (err) {
-    redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(err instanceof Error ? err.message : "x oauth failed")}`);
+    redirect(
+      res,
+      withRedirectParam(
+        withRedirectParam(redirectTo, "x", "error"),
+        "reason",
+        err instanceof Error ? err.message : "x oauth failed",
+      ),
+    );
   }
 }
 

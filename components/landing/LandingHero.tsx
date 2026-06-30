@@ -39,7 +39,7 @@ const pathwayContent = {
         <span className="text-gold-grad">Into Growth.</span>
       </>
     ),
-    body: "Launch campaigns, reward creators, grow your community, and drive organic visibility with Moonshill.",
+    body: "Launch campaigns, reward creators, grow your community, and drive organic visibility.",
     primaryLabel: "Login / Signup",
     secondaryLabel: "Launch Campaign",
   },
