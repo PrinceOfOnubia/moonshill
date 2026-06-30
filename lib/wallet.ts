@@ -30,6 +30,7 @@ export interface InjectedProvider {
 declare global {
   interface Window {
     ethereum?: InjectedProvider;
+    __moonshillInjectedProviders__?: InjectedProvider[];
   }
 }
 
@@ -62,7 +63,7 @@ function uniqueProviders(source: InjectedProvider[]) {
   return Array.from(new Set(source.filter(Boolean)));
 }
 
-export function getInjectedProviders() {
+function getWindowInjectedProviders() {
   const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!ethereum) return [];
   const nested = ethereum.providers?.length ? ethereum.providers : [];
@@ -82,6 +83,42 @@ export function getInjectedProviders() {
   return candidates;
 }
 
+async function getEip6963Providers() {
+  if (typeof window === "undefined" || typeof window.addEventListener !== "function" || typeof window.dispatchEvent !== "function") {
+    return [];
+  }
+
+  const announced: InjectedProvider[] = [];
+  const handler = (event: Event) => {
+    const detail = (event as CustomEvent<{ provider?: InjectedProvider }>).detail;
+    const provider = detail?.provider;
+    if (provider) announced.push(provider);
+  };
+
+  window.addEventListener("eip6963:announceProvider", handler as EventListener);
+  try {
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+  } catch {
+    return [];
+  } finally {
+    window.removeEventListener("eip6963:announceProvider", handler as EventListener);
+  }
+
+  return uniqueProviders(announced);
+}
+
+export function getInjectedProviders() {
+  const merged = uniqueProviders([
+    ...getWindowInjectedProviders(),
+    ...(typeof window !== "undefined" ? window.__moonshillInjectedProviders__ || [] : []),
+  ]);
+  if (typeof window !== "undefined") {
+    window.__moonshillInjectedProviders__ = merged;
+  }
+  return merged;
+}
+
 export function getDefaultInjectedProvider() {
   const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!ethereum) return null;
@@ -89,10 +126,30 @@ export function getDefaultInjectedProvider() {
   return candidates[0] || ethereum;
 }
 
-export function pickInjectedProvider(walletId?: WalletFlavor) {
+async function discoverInjectedProviders() {
+  const eip6963 = await getEip6963Providers();
+  const merged = uniqueProviders([
+    ...getWindowInjectedProviders(),
+    ...eip6963,
+    ...(typeof window !== "undefined" ? window.__moonshillInjectedProviders__ || [] : []),
+  ]);
+  if (typeof window !== "undefined") {
+    window.__moonshillInjectedProviders__ = merged;
+  }
+  debugWallet("providers.discovered", {
+    count: merged.length,
+    providers: merged.map((provider) => ({
+      label: getProviderLabel(provider),
+      flags: getProviderFlags(provider),
+    })),
+  });
+  return merged;
+}
+
+export async function pickInjectedProvider(walletId?: WalletFlavor) {
   const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!ethereum) return null;
-  const candidates = getInjectedProviders();
+  const candidates = await discoverInjectedProviders();
   const pickers: Record<WalletFlavor, (provider: InjectedProvider) => boolean> = {
     metamask: (provider) => {
       const label = getProviderLabel(provider);
@@ -155,7 +212,10 @@ export async function ensureBscMainnet(provider: InjectedProvider) {
 }
 
 export async function connectInjectedWallet(walletId?: WalletFlavor) {
-  const provider = pickInjectedProvider(walletId);
+  if (walletId === "walletconnect") {
+    throw new Error("WalletConnect is not configured in this app yet. Use an installed wallet extension/browser instead.");
+  }
+  const provider = await pickInjectedProvider(walletId);
   if (!provider) {
     if (walletId) {
       throw new Error(`The selected wallet (${walletId}) is not available in this browser. Open that wallet extension/app and try again.`);

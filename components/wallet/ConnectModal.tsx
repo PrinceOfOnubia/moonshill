@@ -8,7 +8,6 @@ import { useAuth } from "@/components/providers/AuthProvider";
 
 const wallets = [
   { id: "metamask", name: "MetaMask", tag: "Popular", emoji: "🦊" },
-  { id: "walletconnect", name: "WalletConnect", tag: "Mobile", emoji: "🔗" },
   { id: "coinbase", name: "Coinbase Wallet", tag: "", emoji: "🔵" },
   { id: "okx", name: "OKX Wallet", tag: "", emoji: "⚫" },
   { id: "binance", name: "Binance Web3 Wallet", tag: "BNB Chain", emoji: "🟡" },
