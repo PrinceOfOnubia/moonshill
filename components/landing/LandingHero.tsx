@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DollarSign, Flag, Megaphone, Rocket, Send, Trophy, Users } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
@@ -28,7 +29,7 @@ const pathwayContent = {
       </>
     ),
     body: "Create content, join campaigns, build your reputation, and earn rewards as a top shiller.",
-    primaryLabel: "Launch App",
+    primaryLabel: "Join Campaign",
     secondaryLabel: "Start Shilling",
   },
   project: {
@@ -40,8 +41,8 @@ const pathwayContent = {
       </>
     ),
     body: "Launch campaigns, reward creators, grow your community, and drive organic visibility with Moonshill.",
-    primaryLabel: "Launch App",
-    secondaryLabel: "Start Campaign",
+    primaryLabel: "Login",
+    secondaryLabel: "Launch Campaign",
   },
 } as const;
 
@@ -52,7 +53,8 @@ export function LandingHero({
   pathway: "creator" | "project";
   onPathwayChange: (pathway: "creator" | "project") => void;
 }) {
-  const { openConnect } = useAuth();
+  const { connected, openConnect, user } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<Stat[]>([
     { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
     { icon: Flag, value: 0, label: "Campaigns", tint: "text-violet-400" },
@@ -86,6 +88,42 @@ export function LandingHero({
     };
   }, []);
   const content = pathwayContent[pathway];
+
+  function openCreatorEntry() {
+    if (connected) {
+      router.push("/home");
+      return;
+    }
+    openConnect("/home");
+  }
+
+  function openCreatorDiscovery() {
+    if (connected) {
+      router.push("/explore");
+      return;
+    }
+    openConnect("/explore");
+  }
+
+  function openProjectEntry() {
+    if (connected && user?.accountType === "project") {
+      router.push("/build");
+      return;
+    }
+    openConnect("/build");
+  }
+
+  function openProjectCampaignFlow() {
+    if (connected && user?.accountType === "project" && user.projectVerificationStatus === "approved") {
+      router.push("/create");
+      return;
+    }
+    if (connected) {
+      router.push("/build");
+      return;
+    }
+    openConnect("/build");
+  }
 
   return (
     <section className="relative">
@@ -139,25 +177,26 @@ export function LandingHero({
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={() => openConnect("/home")}
+                onClick={pathway === "creator" ? openCreatorEntry : openProjectEntry}
                 className="flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-b from-gold-bright to-gold px-7 text-[15px] font-semibold text-black transition-shadow hover:shadow-[0_12px_44px_-8px_rgba(240,185,11,0.65)]"
               >
                 {content.primaryLabel} <Send size={18} />
               </button>
               {pathway === "creator" ? (
                 <button
-                  onClick={() => openConnect("/explore")}
+                  onClick={openCreatorDiscovery}
                   className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-black/40 px-7 text-[15px] font-semibold text-text backdrop-blur transition-colors hover:border-gold/50 hover:text-gold-bright"
                 >
                   {content.secondaryLabel} <Megaphone size={18} />
                 </button>
               ) : (
-                <Link
-                  href="/build"
+                <button
+                  type="button"
+                  onClick={openProjectCampaignFlow}
                   className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-border-strong bg-black/40 px-7 text-[15px] font-semibold text-text backdrop-blur transition-colors hover:border-gold/50 hover:text-gold-bright"
                 >
                   {content.secondaryLabel} <Rocket size={18} />
-                </Link>
+                </button>
               )}
             </div>
 

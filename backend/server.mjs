@@ -1279,6 +1279,9 @@ async function handleCampaigns(req, res, url) {
     if (user.accountType !== "project") {
       return json(res, 403, { error: "Only project accounts can create campaigns." });
     }
+    if (user.projectVerificationStatus !== "approved") {
+      return json(res, 403, { error: "Only approved projects can create campaigns." });
+    }
     const body = await readBody(req);
     const title = String(body.title || "").trim();
     const description = String(body.description || "").trim();

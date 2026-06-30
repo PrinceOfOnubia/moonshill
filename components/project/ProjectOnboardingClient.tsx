@@ -14,6 +14,9 @@ export function ProjectOnboardingClient() {
   const [message, setMessage] = useState<string | null>(null);
 
   const isProject = user?.accountType === "project";
+  const isApproved = isProject && user?.projectVerificationStatus === "approved";
+  const isPendingVerification = isProject && user?.projectVerificationStatus === "pending";
+  const isRejected = isProject && user?.projectVerificationStatus === "rejected";
   const projectHandle = user?.handle || "";
 
   async function continueAsProject() {
@@ -54,14 +57,20 @@ export function ProjectOnboardingClient() {
             <>
               <Link href="/verify">
                 <Button size="lg">
-                  <ShieldCheck size={18} /> Get verified
+                  <ShieldCheck size={18} /> {isApproved ? "Verification complete" : "Get verified"}
                 </Button>
               </Link>
-              <Link href="/create">
-                <Button size="lg" variant="outline">
-                  <Rocket size={18} /> Create campaign
+              {isApproved ? (
+                <Link href="/create">
+                  <Button size="lg" variant="outline">
+                    <Rocket size={18} /> Create campaign
+                  </Button>
+                </Link>
+              ) : (
+                <Button size="lg" variant="outline" disabled>
+                  <Rocket size={18} /> {isPendingVerification ? "Verification pending" : isRejected ? "Fix verification first" : "Verify to create"}
                 </Button>
-              </Link>
+              )}
               <Link href={`/project/${projectHandle}`}>
                 <Button size="lg" variant="ghost">
                   <BadgeCheck size={18} /> Project profile
@@ -73,6 +82,16 @@ export function ProjectOnboardingClient() {
 
         {message && (
           <p className="mt-4 text-sm text-green">{message}</p>
+        )}
+        {isPendingVerification && (
+          <p className="mt-4 text-sm text-gold-bright">
+            Your project verification is pending review. Campaign creation stays locked until approval.
+          </p>
+        )}
+        {isRejected && (
+          <p className="mt-4 text-sm text-red">
+            Your project verification was rejected. Update the project profile and resubmit before launching campaigns.
+          </p>
         )}
       </section>
 
@@ -88,8 +107,8 @@ export function ProjectOnboardingClient() {
           icon={<Rocket size={18} className="text-gold-bright" />}
           title="Campaign creation"
           body="Launch verified or community campaigns from the existing create flow."
-          done={!!(isProject && (user?.created || 0) > 0)}
-          href={isProject ? "/create" : undefined}
+          done={!!(isApproved && (user?.created || 0) > 0)}
+          href={isApproved ? "/create" : undefined}
         />
         <Card
           icon={<Building2 size={18} className="text-gold-bright" />}

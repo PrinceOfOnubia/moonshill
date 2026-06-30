@@ -12,15 +12,15 @@ export function LandingPage() {
   const cta = useMemo(() => pathway === "creator"
     ? {
       title: <>Ready to <span className="text-gold-grad">start shilling</span>?</>,
-      body: "Launch App to find live campaigns, submit your best work, and grow into a top Moonshill creator.",
+      body: "Join campaigns, submit your best work, and grow into a top Moonshill creator.",
       action: () => openConnect("/home"),
-      actionLabel: "Launch App",
+      actionLabel: "Join Campaign",
     }
     : {
       title: <>Ready to <span className="text-gold-grad">grow</span>?</>,
       body: "Launch campaigns and reward the creators driving attention for you.",
       action: () => openConnect("/build"),
-      actionLabel: "Start Campaign",
+      actionLabel: "Login",
     }, [openConnect, pathway]);
 
   return (
