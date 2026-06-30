@@ -28,7 +28,8 @@ export function displayRewardToken(token: string): string {
   return token;
 }
 
-export function shortAddr(addr: string): string {
+export function shortAddr(addr?: string | null): string {
+  if (!addr) return "Not set";
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 

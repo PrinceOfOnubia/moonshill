@@ -73,7 +73,7 @@ const sections: DocSection[] = [
     id: "rewards",
     heading: "Rewards & payouts",
     body: [
-      "Rewards are paid in the campaign's token — BNB, USDT, USDC, SHILLINGS ($SHILL), or ETH — directly to your connected wallet when a campaign settles.",
+      "Rewards are paid in the campaign's token — BNB, USDT, USDC, SHILLINGS ($SHILL), or ETH — to the reward wallet you save in your profile for the relevant chain when a campaign settles.",
       "The live reward ticker and leaderboards show recent payouts and the top earners across the platform.",
     ],
   },
@@ -81,7 +81,7 @@ const sections: DocSection[] = [
     id: "verification",
     heading: "Verification",
     body: [
-      "Connecting your X account and verifying your wallet unlocks submitting, creating, and receiving rewards. Projects can apply for project verification to launch official campaigns with a verified badge.",
+      "Connecting your X account unlocks creator submissions, while project teams use the verification flow to submit their brand details for review. Reward wallets are managed later from profile settings.",
       "Verification helps keep entries authentic — submissions must come from the verified account that owns them.",
     ],
   },

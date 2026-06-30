@@ -100,7 +100,7 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
 
   async function join() {
     if (!connected) {
-      openConnect(`/challenge/${c.slug}`);
+      openConnect(`/challenge/${c.slug}`, "user");
       return;
     }
     if (isCreator) return;

@@ -38,7 +38,7 @@ export function LandingHeader() {
             "gated" in n ? (
               <button
                 key={n.label}
-                onClick={() => openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard")}
+                onClick={() => openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard", "user")}
                 className="text-sm font-medium text-muted transition-colors hover:text-text"
               >
                 {n.label}
@@ -66,7 +66,7 @@ export function LandingHeader() {
             <TelegramIcon size={18} />
           </SocialButton>
           <button
-            onClick={() => openConnect("/home")}
+            onClick={() => openConnect("/home", "user")}
             className="ml-1 h-10 rounded-full bg-gradient-to-b from-gold-bright to-gold px-5 text-sm font-semibold text-black transition-shadow hover:shadow-[0_8px_30px_-6px_rgba(240,185,11,0.6)]"
           >
             Launch App
@@ -118,7 +118,7 @@ export function LandingHeader() {
                       key={n.label}
                       onClick={() => {
                         setOpen(false);
-                        openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard");
+                        openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard", "user");
                       }}
                       className="rounded-2xl border border-border bg-surface/60 px-4 py-4 text-left text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                     >
@@ -156,7 +156,7 @@ export function LandingHeader() {
                 <button
                   onClick={() => {
                     setOpen(false);
-                    openConnect("/home");
+                    openConnect("/home", "user");
                   }}
                   className="h-12 w-full rounded-2xl bg-gradient-to-b from-gold-bright to-gold text-[15px] font-semibold text-black"
                 >

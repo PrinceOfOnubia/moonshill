@@ -33,6 +33,7 @@ export type RewardToken = string;
 export type AccountType = "user" | "project";
 export type ProjectVerificationStatus = "unverified" | "pending" | "approved" | "rejected";
 export type ProjectApplicationStatus = "draft" | "pending" | "approved" | "rejected";
+export type RewardWalletChain = "BNB" | "Ethereum/Base" | "Solana" | "TON";
 
 export type SubmissionStatus = "Pending Review" | "Approved" | "Rejected" | "Winner";
 
@@ -128,13 +129,20 @@ export interface ProjectProfile {
   description: string;
   category?: ProjectCategory | null;
   website: string;
-  contract: string;
-  ownerWallet: string;
+  contract?: string | null;
+  ownerWallet?: string | null;
   xHandle?: string | null;
   telegramUrl?: string | null;
   totalSponsored: number;
   activeChallenges: number;
   completedChallenges: number;
+}
+
+export interface RewardWallet {
+  id: string;
+  chain: RewardWalletChain;
+  address: string;
+  isPrimary: boolean;
 }
 
 export interface UserProfile {
@@ -144,7 +152,8 @@ export interface UserProfile {
   handle: string;
   avatar: string;
   banner: string;
-  wallet: string;
+  wallet?: string | null;
+  email?: string | null;
   bio: string;
   website?: string;
   projectCategory?: ProjectCategory | null;
@@ -159,6 +168,7 @@ export interface UserProfile {
   wins: number;
   earned: number;
   isAdmin?: boolean;
+  rewardWallets?: RewardWallet[];
 }
 
 export interface PublicUserProfile extends UserProfile {
@@ -169,7 +179,8 @@ export interface PublicUserProfile extends UserProfile {
 
 export interface ProjectApplication {
   id: string;
-  wallet: string;
+  wallet?: string | null;
+  email?: string | null;
   projectName: string;
   projectHandle: string;
   tokenName: string;

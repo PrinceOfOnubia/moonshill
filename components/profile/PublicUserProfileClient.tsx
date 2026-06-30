@@ -40,7 +40,7 @@ export function PublicUserProfileClient({ profile }: { profile: PublicUserProfil
         </div>
         <div className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono">
           <Wallet size={15} className="text-gold-bright" />
-          {shortAddr(profile.wallet)}
+          {profile.wallet ? shortAddr(profile.wallet) : "No reward wallet"}
         </div>
       </div>
 

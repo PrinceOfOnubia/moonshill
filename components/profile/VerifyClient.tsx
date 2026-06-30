@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { BadgeCheck, Check, FileCode2, Globe, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import { BadgeCheck, Check, FileCode2, Globe, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -45,7 +45,7 @@ export function VerifyClient({ mode = "auto" }: { mode?: "auto" | "project" | "c
     }
     return {
       title: "Get verified",
-      body: "Verification unlocks submissions. Connect your wallet and X account to complete your profile.",
+      body: "Verification unlocks submissions. Connect your X account to complete your creator profile.",
     };
   }, [isProjectAccount]);
 
@@ -74,7 +74,7 @@ export function VerifyClient({ mode = "auto" }: { mode?: "auto" | "project" | "c
 
 function XFlow() {
   const searchParams = useSearchParams();
-  const { connected, address, user, openConnect, refreshUser } = useAuth();
+  const { user, openConnect, refreshUser } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const linked = !!user?.xConnected;
@@ -103,22 +103,27 @@ function XFlow() {
     }
   }
 
+  if (!user) {
+    return (
+      <div className="space-y-3">
+        <StepCard
+          n={1}
+          title="Log in or sign up"
+          body="Use email or X to access the creator app first."
+          action={<Button onClick={() => openConnect("/verify", "user")}>Open auth</Button>}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <StepCard
         n={1}
-        title="Connect your wallet"
-        body="Your wallet is your identity on Moonshill."
-        done={connected}
-        action={<Button variant={connected ? "glass" : "primary"} onClick={() => openConnect("/verify")}>{connected ? <><Check size={16} /> {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connected"}</> : <><Wallet size={16} /> Connect</>}</Button>}
-      />
-      <StepCard
-        n={2}
         title="Connect your 𝕏 account"
         body="We check that submitted links come from this account before approval."
         done={linked}
-        disabled={!connected}
-        action={<Button variant={linked ? "glass" : "primary"} disabled={!connected || pending} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || "connected"}</> : pending ? "Connecting…" : "Connect 𝕏"}</Button>}
+        action={<Button variant={linked ? "glass" : "primary"} disabled={pending} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || "connected"}</> : pending ? "Connecting…" : "Connect 𝕏"}</Button>}
       />
       {linked && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 rounded-2xl border border-green/25 bg-green/10 p-4">
@@ -135,7 +140,7 @@ function XFlow() {
 
 function ProjectFlow() {
   const searchParams = useSearchParams();
-  const { address, connected, openConnect, refreshUser, user } = useAuth();
+  const { openConnect, refreshUser, user } = useAuth();
   const [application, setApplication] = useState<ProjectApplication | null>(null);
   const [form, setForm] = useState<ProjectFormState>(projectFormFromApplication(null));
   const [loading, setLoading] = useState(true);
@@ -197,6 +202,19 @@ function ProjectFlow() {
     }
   }
 
+  if (!application && user?.accountType !== "project") {
+    return (
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/50 p-6">
+        <StepCard
+          n={1}
+          title="Log in or sign up as a project"
+          body="Projects use a separate auth path from creators. Start with email or X, then finish verification here."
+          action={<Button onClick={() => openConnect("/build", "project")}>Login / Signup</Button>}
+        />
+      </div>
+    );
+  }
+
   async function saveProjectDetails() {
     if (!application) return;
     setSaving(true);
@@ -253,7 +271,7 @@ function ProjectFlow() {
           <BadgeCheck size={26} />
         </div>
         <h3 className="mt-4 font-display text-xl font-semibold">Project approved</h3>
-        <p className="mx-auto mt-2 max-w-sm text-muted">This wallet is already linked to an approved project account. You can open the dashboard or launch a campaign now.</p>
+        <p className="mx-auto mt-2 max-w-sm text-muted">This project account is already approved. You can open the dashboard or launch a campaign now.</p>
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href={`/project/${user.handle}`}>
             <Button>Project dashboard</Button>
@@ -274,7 +292,7 @@ function ProjectFlow() {
         </div>
         <h3 className="mt-4 font-display text-xl font-semibold">Your project application has been submitted.</h3>
         <p className="mx-auto mt-2 max-w-sm text-muted">Our team is reviewing your project.</p>
-        <p className="mx-auto mt-2 max-w-sm text-muted">Once approved, reconnect this same wallet to access your project dashboard.</p>
+        <p className="mx-auto mt-2 max-w-sm text-muted">Once approved, log back in with this same email or X account to access your project dashboard.</p>
         <Badge tone="gold" className="mt-4">● Pending review</Badge>
       </motion.div>
     );
@@ -284,18 +302,10 @@ function ProjectFlow() {
     <div className="space-y-4 rounded-2xl border border-border bg-surface/50 p-6">
       <StepCard
         n={1}
-        title="Connect your project wallet"
-        body="Wallet connection verifies ownership only. It does not create a creator account or an approved project account."
-        done={!!application?.wallet || !!address}
-        action={<Button variant={application?.wallet || address ? "glass" : "primary"} onClick={() => openConnect("/build")}>{application?.wallet || address ? <><Check size={16} /> {application?.wallet ? `${application.wallet.slice(0, 6)}…${application.wallet.slice(-4)}` : `${address?.slice(0, 6)}…${address?.slice(-4)}`}</> : <><Wallet size={16} /> Connect</>}</Button>}
-      />
-      <StepCard
-        n={2}
         title="Connect your official 𝕏 account"
         body="Admins review the linked X handle alongside your submitted project information."
         done={!!linked}
-        disabled={!application?.wallet}
-        action={<Button variant={linked ? "glass" : "primary"} disabled={!application?.wallet} onClick={connectX}>{linked ? <><Check size={16} /> @{application?.xHandle || "connected"}</> : "Connect 𝕏"}</Button>}
+        action={<Button variant={linked ? "glass" : "primary"} onClick={connectX}>{linked ? <><Check size={16} /> @{application?.xHandle || "connected"}</> : "Connect 𝕏"}</Button>}
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
@@ -317,7 +327,7 @@ function ProjectFlow() {
         onChange={(value) => setForm((current) => ({ ...current, description: value }))}
         placeholder="Tell the team what the project is, what it is building, and what they should review."
       />
-      <Row icon={<FileCode2 size={16} className="text-gold-bright" />} label="Connected wallet address" value={application?.wallet || address || "Connect wallet first"} />
+      <Row icon={<FileCode2 size={16} className="text-gold-bright" />} label="Project login email" value={application?.email || "Signed in with X"} />
       <Row icon={<Globe size={16} className="text-blue" />} label="Connected X account" value={application?.xHandle ? `@${application.xHandle}` : "Connect X first"} />
       {verificationStatus === "rejected" && (
         <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">
@@ -331,7 +341,7 @@ function ProjectFlow() {
         <Button
           variant="outline"
           size="lg"
-          disabled={saving || !application?.wallet}
+          disabled={saving}
           onClick={saveProjectDetails}
         >
           {saving ? <><Loader2 size={18} className="animate-spin" /> Saving…</> : "Save details"}
@@ -339,7 +349,7 @@ function ProjectFlow() {
         <Button
           className="w-full"
           size="lg"
-          disabled={phase === "loading" || !application?.wallet || !linked || !form.projectName.trim() || !form.description.trim() || !form.chain.trim()}
+          disabled={phase === "loading" || !linked || !form.projectName.trim() || !form.description.trim() || !form.chain.trim()}
           onClick={submit}
         >
           {phase === "loading" ? <><Loader2 size={18} className="animate-spin" /> Submitting…</> : verificationStatus === "rejected" ? "Resubmit application" : "Submit application"}

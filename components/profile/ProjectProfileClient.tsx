@@ -60,13 +60,15 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
             <MessageCircleMore size={14} className="text-gold-bright" /> Telegram
           </a>
         )}
-        <button
-          onClick={() => { navigator.clipboard?.writeText(p.ownerWallet); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-          className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-[13px] text-muted transition-colors hover:text-text"
-        >
-          <FileCode2 size={14} className="text-gold-bright" /> {shortAddr(p.ownerWallet)}
-          {copied ? <Check size={13} className="text-green" /> : <Copy size={13} className="text-faint" />}
-        </button>
+        {p.ownerWallet ? (
+          <button
+            onClick={() => { navigator.clipboard?.writeText(p.ownerWallet || ""); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-[13px] text-muted transition-colors hover:text-text"
+          >
+            <FileCode2 size={14} className="text-gold-bright" /> {shortAddr(p.ownerWallet)}
+            {copied ? <Check size={13} className="text-green" /> : <Copy size={13} className="text-faint" />}
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-6 grid grid-cols-3 gap-3">

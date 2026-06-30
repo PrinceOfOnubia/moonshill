@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -9,21 +8,20 @@ import { LandingHero } from "./LandingHero";
 
 export function LandingPage() {
   const { openConnect } = useAuth();
-  const router = useRouter();
   const [pathway, setPathway] = useState<"creator" | "project">("creator");
   const cta = useMemo(() => pathway === "creator"
     ? {
       title: <>Ready to <span className="text-gold-grad">start shilling</span>?</>,
       body: "Join campaigns, submit your best work, and grow into a top Moonshill creator.",
-      action: () => openConnect("/home"),
-      actionLabel: "Join Campaign",
+      action: () => openConnect("/home", "user"),
+      actionLabel: "Login / Signup",
     }
     : {
       title: <>Ready to <span className="text-gold-grad">grow</span>?</>,
       body: "Launch campaigns and reward the creators driving attention for you.",
-      action: () => router.push("/build?intent=dashboard"),
-      actionLabel: "Login",
-    }, [openConnect, pathway, router]);
+      action: () => openConnect("/build?intent=dashboard", "project"),
+      actionLabel: "Login / Signup",
+    }, [openConnect, pathway]);
 
   return (
     <>

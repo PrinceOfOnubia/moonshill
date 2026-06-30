@@ -42,7 +42,7 @@ export function SubmitEntry({
 
   async function submit() {
     if (!submitter) {
-      setError("Connect your wallet before submitting.");
+      setError("Log in before submitting.");
       return;
     }
     if (isCreator) {
@@ -127,7 +127,7 @@ export function SubmitEntry({
         <div className="space-y-5">
           {!submitter && (
             <p className="rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-[13px] text-gold-bright">
-              Connect your wallet before submitting.
+              Log in before submitting.
             </p>
           )}
           {isCreator && (

@@ -147,7 +147,7 @@ function AccountQueue({
                     {account.projectName}
                   </p>
                   <p className="truncate text-[13px] text-faint">@{account.projectHandle || "pending_handle"}</p>
-                  <p className="mt-1 truncate text-[13px] text-faint">𝕏 {account.xHandle ? `@${account.xHandle}` : "Not connected"} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span></p>
+                  <p className="mt-1 truncate text-[13px] text-faint">𝕏 {account.xHandle ? `@${account.xHandle}` : "Not connected"} · <span className="font-mono">{account.wallet ? `${account.wallet.slice(0, 12)}…` : (account.email || "No reward wallet")}</span></p>
                   <p className="mt-1 truncate text-[13px] text-faint">{account.website || "No website"} · {account.chain || "No chain"}</p>
                   <p className="mt-1 line-clamp-2 text-[13px] text-faint">{account.description || "No description supplied."}</p>
                 </div>
@@ -216,7 +216,7 @@ function AccountQueue({
                 {account.accountType === "project" && account.projectVerified && <Badge tone="gold">Verified</Badge>}
               </p>
               <p className="truncate text-[13px] text-faint">
-                @{account.handle}{account.xHandle ? ` · 𝕏 @${account.xHandle}` : ""} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span>
+                @{account.handle}{account.xHandle ? ` · 𝕏 @${account.xHandle}` : ""} · <span className="font-mono">{account.wallet ? `${account.wallet.slice(0, 12)}…` : (account.email || "No reward wallet")}</span>
               </p>
             </div>
             <Actions

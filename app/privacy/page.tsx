@@ -21,8 +21,8 @@ const sections: DocSection[] = [
       "We collect information needed to run campaigns and pay out rewards:",
       {
         list: [
-          "Account data — your X handle and public profile details when you connect your account.",
-          "Wallet data — your public wallet address, used to verify ownership and send rewards.",
+          "Account data — your email address or X handle, plus your public profile details.",
+          "Reward wallet data — the payout wallet addresses you save for supported chains.",
           "Submissions — the links, posts, and uploads you submit to campaigns, plus their review status.",
           "Usage data — basic analytics such as pages viewed and actions taken, to improve the product.",
           "Device data — browser type, approximate region, and similar technical details.",
@@ -37,7 +37,7 @@ const sections: DocSection[] = [
       {
         list: [
           "To operate campaigns — display entries, run reviews, and rank winners.",
-          "To pay rewards — send tokens to your verified wallet when a campaign settles.",
+          "To pay rewards — send tokens to the reward wallet you saved for the relevant chain when a campaign settles.",
           "To verify authenticity — confirm that submissions come from the account that owns them.",
           "To improve Moonshill — understand what's working and fix what isn't.",
           "To communicate — send essential notices about your entries, rewards, and account.",
@@ -49,7 +49,7 @@ const sections: DocSection[] = [
     id: "on-chain",
     heading: "On-chain & public data",
     body: [
-      "Moonshill is built on public blockchains. Transactions such as reward payouts are recorded on-chain and are permanent and publicly visible. Your wallet address and any associated activity may be viewable by anyone.",
+      "Moonshill is built on public blockchains. Transactions such as reward payouts are recorded on-chain and are permanent and publicly visible. Any reward wallet you provide and the associated payout activity may be viewable by anyone.",
       "Submissions you make public (for example an X post) are visible to other users and are surfaced in campaign galleries and leaderboards.",
     ],
   },
@@ -86,7 +86,7 @@ const sections: DocSection[] = [
     id: "your-rights",
     heading: "Your rights & choices",
     body: [
-      "Depending on your location, you may have rights to access, correct, or delete your personal data, and to disconnect your X account or wallet at any time. To exercise these rights, contact us using the details below.",
+      "Depending on your location, you may have rights to access, correct, or delete your personal data, and to disconnect your X account or remove reward wallets at any time. To exercise these rights, contact us using the details below.",
     ],
   },
   {

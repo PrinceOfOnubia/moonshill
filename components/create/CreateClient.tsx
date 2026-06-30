@@ -146,7 +146,7 @@ export function CreateClient() {
 
   async function publish() {
     if (!connected) {
-      openConnect("/create");
+      openConnect("/create", "project");
       return;
     }
     setPublishing(true);
@@ -199,7 +199,7 @@ export function CreateClient() {
           Only project accounts can create campaigns. Creator accounts can join campaigns and submit entries, but campaign creation stays in the dedicated project flow.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button onClick={() => openConnect("/build")}>Go to project onboarding</Button>
+          <Button onClick={() => openConnect("/build", "project")}>Go to project onboarding</Button>
           <Link href="/explore">
             <Button variant="outline">Explore campaigns</Button>
           </Link>

@@ -16,10 +16,10 @@ const sections: DocSection[] = [
   },
   {
     id: "accounts",
-    heading: "Wallets & accounts",
+    heading: "Accounts & reward wallets",
     body: [
-      "Access to the authenticated app requires connecting a self-custodial wallet. You are solely responsible for your wallet, private keys, and all activity that occurs through it.",
-      "We never take custody of your funds and cannot recover lost keys or reverse on-chain transactions.",
+      "Access to the authenticated app requires an email or X-based account. You are responsible for maintaining access to that account and for any reward wallets you later add to your profile.",
+      "We never take custody of your funds and cannot recover lost keys or reverse on-chain transactions tied to the wallets you provide for payouts.",
     ],
   },
   {

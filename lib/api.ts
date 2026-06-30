@@ -1,4 +1,4 @@
-import type { AppNotification, Challenge, LeaderRow, ProjectApplication, ProjectProfile, PublicUserProfile, Submission, TokenMetadata, UserProfile } from "./types";
+import type { AppNotification, Challenge, LeaderRow, ProjectApplication, ProjectProfile, PublicUserProfile, RewardWallet, Submission, TokenMetadata, UserProfile } from "./types";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 
@@ -47,6 +47,16 @@ export async function getMe() {
   return apiFetch<MeResponse>("/api/me");
 }
 
+export async function authWithEmail(email: string, accountType: "user" | "project") {
+  return apiFetch<{ user?: MeResponse; application?: ProjectApplication; session?: { expiresAt: string } }>(
+    "/api/auth/email",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, accountType }),
+    },
+  );
+}
+
 export async function walletChallenge(address: string) {
   return apiFetch<{ address: string; nonce: string; message: string; expiresAt: string }>(`/api/auth/wallet/challenge?address=${encodeURIComponent(address)}`);
 }
@@ -62,10 +72,17 @@ export async function logout() {
   return apiFetch<{ ok: true }>("/api/auth/logout", { method: "POST" });
 }
 
-export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; website?: string; projectCategory?: string; telegramUrl?: string }) {
+export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; email?: string; website?: string; projectCategory?: string; telegramUrl?: string }) {
   return apiFetch<{ user: MeResponse }>("/api/me", {
     method: "PATCH",
     body: JSON.stringify(patch),
+  });
+}
+
+export async function updateRewardWallets(wallets: Array<Pick<RewardWallet, "chain" | "address" | "isPrimary">>) {
+  return apiFetch<{ wallets: RewardWallet[]; primaryWallet?: string | null }>("/api/me/wallets", {
+    method: "PATCH",
+    body: JSON.stringify({ wallets }),
   });
 }
 
@@ -121,6 +138,13 @@ export async function startProjectXConnect(returnTo?: string) {
 
 export async function startXConnect(returnTo?: string) {
   const url = `/api/auth/x/start?format=json${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`;
+  return apiFetch<{ redirectUrl: string }>(url, {
+    method: "GET",
+  });
+}
+
+export async function startXAuth(accountType: "user" | "project", returnTo?: string) {
+  const url = `/api/auth/x/login/start?accountType=${encodeURIComponent(accountType)}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`;
   return apiFetch<{ redirectUrl: string }>(url, {
     method: "GET",
   });

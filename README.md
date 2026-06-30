@@ -1,13 +1,13 @@
 # Moonshill
 
-Moonshill is a community-first Web3 campaign platform. The frontend is a Next.js app and this repo now also includes the production backend service used for wallet auth, profile persistence, X connect, campaign creation, submissions, and admin data.
+Moonshill is a community-first Web3 campaign platform. The frontend is a Next.js app and this repo now also includes the production backend service used for email/X auth, profile persistence, project verification, campaign creation, submissions, and admin data.
 
 ## Stack
 
 - Next.js 16, React 19, Tailwind CSS 4
 - Native Node HTTP backend in `backend/server.mjs`
 - PostgreSQL via `pg`
-- Wallet signature auth with `ethers`
+- Email/X session auth plus wallet storage for payouts
 - Cookie session/JWT auth
 
 ## Local Setup
@@ -84,10 +84,7 @@ NEXT_PUBLIC_CHAIN_ID=56
 NEXT_PUBLIC_CHAIN_NAME=BNB Smart Chain Mainnet
 NEXT_PUBLIC_BSC_RPC_URL=https://bsc-dataseed.binance.org/
 NEXT_PUBLIC_X_URL=https://x.com/moonshillfun
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 ```
-
-Only set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` if the active wallet stack needs it.
 
 ## Backend API
 
@@ -95,13 +92,19 @@ Implemented endpoints:
 
 - `GET /health`
 - `GET /api/public`
+- `POST /api/auth/email`
+- `GET /api/auth/x/login/start`
 - `GET /api/auth/wallet/challenge?address=0x...`
 - `POST /api/auth/wallet/verify`
 - `POST /api/auth/logout`
 - `GET /api/me`
 - `PATCH /api/me`
+- `PATCH /api/me/wallets`
 - `GET /api/auth/x/start`
 - `GET /api/auth/x/callback`
+- `GET /api/project-application`
+- `PATCH /api/project-application`
+- `POST /api/project-application/submit`
 - `GET /api/leaderboard`
 - `GET /api/notifications`
 - `GET /api/projects/:handle`
@@ -153,3 +156,5 @@ curl http://localhost:8080/api/public
 - The backend only seeds demo data when `SEED_DEMO_DATA=true` in production.
 - `lib/mock.ts` and `backend/seed-data.json` are demo/seed assets only; live app flows are API-backed.
 - X OAuth will report a clean not-configured state until `X_CLIENT_ID`, `X_CLIENT_SECRET`, and `X_CALLBACK_URL` are set.
+- Creators now authenticate with email or X immediately; reward wallets are added later from profile settings.
+- Project accounts authenticate with email or X, then complete the existing verification flow before admin approval unlocks project-only features.

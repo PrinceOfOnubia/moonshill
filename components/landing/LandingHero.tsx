@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DollarSign, Flag, Megaphone, Rocket, Send, Trophy, Users } from "lucide-react";
@@ -29,7 +28,7 @@ const pathwayContent = {
       </>
     ),
     body: "Create content, join campaigns, build your reputation, and earn rewards as a top shiller.",
-    primaryLabel: "Join Campaign",
+    primaryLabel: "Login / Signup",
     secondaryLabel: "Start Shilling",
   },
   project: {
@@ -41,7 +40,7 @@ const pathwayContent = {
       </>
     ),
     body: "Launch campaigns, reward creators, grow your community, and drive organic visibility with Moonshill.",
-    primaryLabel: "Login",
+    primaryLabel: "Login / Signup",
     secondaryLabel: "Launch Campaign",
   },
 } as const;
@@ -94,7 +93,7 @@ export function LandingHero({
       router.push("/home");
       return;
     }
-    openConnect("/home");
+    openConnect("/home", "user");
   }
 
   function openCreatorDiscovery() {
@@ -102,15 +101,15 @@ export function LandingHero({
       router.push("/explore");
       return;
     }
-    openConnect("/explore");
+    openConnect("/explore", "user");
   }
 
   function openProjectEntry() {
-    router.push("/build?intent=dashboard");
+    openConnect("/build?intent=dashboard", "project");
   }
 
   function openProjectCampaignFlow() {
-    router.push("/build?intent=create");
+    openConnect("/build?intent=create", "project");
   }
 
   return (

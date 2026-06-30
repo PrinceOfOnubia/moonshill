@@ -1,73 +1,107 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { XIcon } from "@/components/landing/social";
 
-const wallets = [
-  { id: "metamask", name: "MetaMask", tag: "Popular", emoji: "🦊" },
-  { id: "coinbase", name: "Coinbase Wallet", tag: "", emoji: "🔵" },
-  { id: "okx", name: "OKX Wallet", tag: "", emoji: "⚫" },
-  { id: "binance", name: "Binance Web3 Wallet", tag: "BNB Chain", emoji: "🟡" },
-  { id: "trust", name: "Trust Wallet", tag: "", emoji: "🛡️" },
-];
-const STORAGE_POST_CONNECT_KEY = "mb_post_connect";
+const STORAGE_POST_AUTH_KEY = "mb_post_auth";
 
 export function ConnectModal() {
-  const { connectModalOpen, closeConnect, connect, connectError } = useAuth();
+  const {
+    connectModalOpen,
+    closeConnect,
+    connectError,
+    loginWithEmail,
+    loginWithX,
+    authTarget,
+  } = useAuth();
   const router = useRouter();
-  const [pending, setPending] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [pending, setPending] = useState<"email" | "x" | null>(null);
 
-  async function handle(id: string) {
-    setPending(id);
+  const copy = useMemo(() => authTarget === "project"
+    ? {
+      title: "Log in or sign up",
+      body: "Continue as a project with email or X. After login, you’ll finish verification before project access is approved.",
+    }
+    : {
+      title: "Log in or sign up",
+      body: "Continue as a creator with email or X. Your Moonshill account opens immediately and you can add reward wallets later from your profile.",
+    }, [authTarget]);
+
+  async function handleEmail() {
+    if (!email.trim()) return;
+    setPending("email");
     try {
-      await connect(id);
-      let nextPath = "/home";
+      const result = await loginWithEmail(email.trim());
+      let nextPath = result.nextPath;
       try {
-        nextPath = localStorage.getItem(STORAGE_POST_CONNECT_KEY) || "/home";
-        localStorage.removeItem(STORAGE_POST_CONNECT_KEY);
+        nextPath = localStorage.getItem(STORAGE_POST_AUTH_KEY) || nextPath;
+        localStorage.removeItem(STORAGE_POST_AUTH_KEY);
       } catch {
         /* ignore */
       }
-      router.push(nextPath);
-    } catch {
-      /* AuthProvider surfaces the error inside the modal. */
+      router.push(result.hasSession ? nextPath : "/build");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function handleX() {
+    setPending("x");
+    try {
+      await loginWithX();
     } finally {
       setPending(null);
     }
   }
 
   return (
-    <Modal open={connectModalOpen} onClose={closeConnect} title="Connect your wallet">
+    <Modal open={connectModalOpen} onClose={closeConnect} title={copy.title}>
       <p className="mb-5 text-[13.5px] leading-relaxed text-muted">
-        Connect a wallet to enter Moonshill. New here? An account is created
-        automatically — no email, no password.
+        {copy.body}
       </p>
 
-      <div className="space-y-2.5">
-        {wallets.map((w) => (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface/60 px-4 py-3.5 transition-colors focus-within:border-border-strong">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-2 text-muted">
+            <Mail size={20} />
+          </span>
+          <input
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="your@email.com"
+            className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-faint"
+          />
           <button
-            key={w.id}
-            onClick={() => handle(w.id)}
-            disabled={!!pending}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface/60 px-4 py-3.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2 disabled:opacity-60"
+            type="button"
+            onClick={handleEmail}
+            disabled={pending !== null || !email.trim()}
+            className="rounded-xl bg-surface-2 px-3 py-2 text-[12px] font-medium text-text transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-2 text-xl">
-              {w.emoji}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold text-text">{w.name}</span>
-              {w.tag && <span className="block text-[12px] text-faint">{w.tag}</span>}
-            </span>
-            {pending === w.id ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-gold border-t-transparent" />
-            ) : (
-              <span className="text-[12px] font-medium text-faint">Connect</span>
-            )}
+            {pending === "email" ? "Working…" : "Continue"}
           </button>
-        ))}
+        </div>
+
+        <button
+          onClick={handleX}
+          disabled={pending !== null}
+          className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface/60 px-4 py-3.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2 disabled:opacity-60"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-black text-white">
+            <XIcon size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-text">Twitter / X</span>
+            <span className="block text-[12px] text-faint">Continue with your X account</span>
+          </span>
+          <span className="text-[12px] font-medium text-faint">
+            {pending === "x" ? "Opening…" : "Continue"}
+          </span>
+        </button>
       </div>
 
       {connectError && (
@@ -78,7 +112,7 @@ export function ConnectModal() {
 
       <p className="mt-5 flex items-center justify-center gap-1.5 text-[12px] text-faint">
         <ShieldCheck size={14} className="text-green" />
-        Non-custodial · we never hold your funds
+        Secure session · add reward wallets later from profile
       </p>
     </Modal>
   );

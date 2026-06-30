@@ -12,8 +12,10 @@ import { ChallengeCard } from "@/components/challenge/ChallengeCard";
 import { SubmissionRow } from "./SubmissionRow";
 import { cn, shortAddr } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { startXConnect, updateMe } from "@/lib/api";
+import { startXConnect, updateMe, updateRewardWallets } from "@/lib/api";
 import { XIcon } from "@/components/landing/social";
+
+const rewardWalletChains = ["BNB", "Ethereum/Base", "Solana", "TON"] as const;
 
 const tabs = ["Submissions", "Joined", "Created"] as const;
 const projectCategories = ["Gaming", "DeFi", "Meme", "NFT", "AI", "RWA", "Infrastructure", "Other"] as const;
@@ -30,9 +32,16 @@ export function UserProfileClient() {
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
   const [handle, setHandle] = useState("");
+  const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [projectCategory, setProjectCategory] = useState("");
   const [telegramUrl, setTelegramUrl] = useState("");
+  const [rewardWallets, setRewardWallets] = useState<Record<(typeof rewardWalletChains)[number], string>>({
+    BNB: "",
+    "Ethereum/Base": "",
+    Solana: "",
+    TON: "",
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const profile = user;
   const joined = profile?.joinedCampaigns ?? [];
@@ -55,7 +64,7 @@ export function UserProfileClient() {
   }
 
   function copy() {
-    if (!profile) return;
+    if (!profile?.wallet) return;
     navigator.clipboard?.writeText(profile.wallet);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -67,15 +76,22 @@ export function UserProfileClient() {
     setBio(profile.bio);
     setAvatar(profile.avatar);
     setHandle(profile.handle);
+    setEmail(profile.email || "");
     setWebsite(profile.website || "");
     setProjectCategory(profile.projectCategory || "");
     setTelegramUrl(profile.telegramUrl || "");
+    setRewardWallets({
+      BNB: profile.rewardWallets?.find((wallet) => wallet.chain === "BNB")?.address || "",
+      "Ethereum/Base": profile.rewardWallets?.find((wallet) => wallet.chain === "Ethereum/Base")?.address || "",
+      Solana: profile.rewardWallets?.find((wallet) => wallet.chain === "Solana")?.address || "",
+      TON: profile.rewardWallets?.find((wallet) => wallet.chain === "TON")?.address || "",
+    });
   }, [profile]);
 
   if (!profile) {
     return (
       <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
-        Connect your wallet to load your profile.
+        Log in to load your profile.
       </div>
     );
   }
@@ -120,8 +136,8 @@ export function UserProfileClient() {
         <div className="flex shrink-0 flex-wrap gap-2">
           <button onClick={copy} className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong">
             <Wallet size={15} className="text-gold-bright" />
-            {shortAddr(profile.wallet)}
-            {copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />}
+            {profile.wallet ? shortAddr(profile.wallet) : "Add reward wallet"}
+            {profile.wallet ? (copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />) : null}
           </button>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil size={15} /> Edit profile
@@ -247,6 +263,15 @@ export function UserProfileClient() {
             />
           </div>
           <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-muted">Email</label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@email.com"
+              className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+            />
+          </div>
+          <div>
             <label className="mb-1.5 block text-[13px] font-medium text-muted">Bio</label>
             <textarea
               value={bio}
@@ -292,9 +317,22 @@ export function UserProfileClient() {
           )}
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="flex items-center gap-2 text-[13px] text-muted">
-              <Wallet size={15} className="text-gold-bright" /> Wallet
+              <Wallet size={15} className="text-gold-bright" /> Reward wallet
             </span>
-            <span className="font-mono text-[13px] text-green">{shortAddr(profile.wallet)}</span>
+            <span className="font-mono text-[13px] text-green">{profile.wallet ? shortAddr(profile.wallet) : "Not added yet"}</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {rewardWalletChains.map((chain) => (
+              <div key={chain}>
+                <label className="mb-1.5 block text-[13px] font-medium text-muted">{chain}</label>
+                <input
+                  value={rewardWallets[chain]}
+                  onChange={(e) => setRewardWallets((current) => ({ ...current, [chain]: e.target.value }))}
+                  placeholder={chain === "BNB" ? "0x..." : chain === "Solana" ? "Solana address" : "Wallet address"}
+                  className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+                />
+              </div>
+            ))}
           </div>
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="text-[13px] text-muted">𝕏 account</span>
@@ -312,7 +350,7 @@ export function UserProfileClient() {
             )}
           </div>
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setWebsite(profile.website || ""); setProjectCategory(profile.projectCategory || ""); setTelegramUrl(profile.telegramUrl || ""); setEditOpen(false); }}>
+            <Button variant="ghost" className="flex-1" onClick={() => { setName(profile.name); setBio(profile.bio); setAvatar(profile.avatar); setHandle(profile.handle); setEmail(profile.email || ""); setWebsite(profile.website || ""); setProjectCategory(profile.projectCategory || ""); setTelegramUrl(profile.telegramUrl || ""); setRewardWallets({ BNB: profile.rewardWallets?.find((wallet) => wallet.chain === "BNB")?.address || "", "Ethereum/Base": profile.rewardWallets?.find((wallet) => wallet.chain === "Ethereum/Base")?.address || "", Solana: profile.rewardWallets?.find((wallet) => wallet.chain === "Solana")?.address || "", TON: profile.rewardWallets?.find((wallet) => wallet.chain === "TON")?.address || "" }); setEditOpen(false); }}>
               Cancel
             </Button>
             <Button
@@ -324,14 +362,25 @@ export function UserProfileClient() {
                     bio,
                     avatar,
                     handle: handle.replace(/^@+/, ""),
+                    email,
                     website,
                     projectCategory: projectCategory || undefined,
                     telegramUrl,
                   });
+                  await updateRewardWallets(
+                    rewardWalletChains
+                      .map((chain, index) => ({
+                        chain,
+                        address: rewardWallets[chain].trim(),
+                        isPrimary: index === 0,
+                      }))
+                      .filter((wallet) => wallet.address),
+                  );
                   setName(updated.user.name);
                   setBio(updated.user.bio);
                   setAvatar(updated.user.avatar);
                   setHandle(updated.user.handle);
+                  setEmail(updated.user.email || "");
                   setWebsite(updated.user.website || "");
                   setProjectCategory(updated.user.projectCategory || "");
                   setTelegramUrl(updated.user.telegramUrl || "");
