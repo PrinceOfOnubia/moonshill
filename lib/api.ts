@@ -1,4 +1,4 @@
-import type { AppNotification, Challenge, LeaderRow, ProjectProfile, PublicUserProfile, Submission, TokenMetadata, UserProfile } from "./types";
+import type { AppNotification, Challenge, LeaderRow, ProjectApplication, ProjectProfile, PublicUserProfile, Submission, TokenMetadata, UserProfile } from "./types";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 
@@ -87,6 +87,38 @@ export async function submitProjectVerification() {
   });
 }
 
+export async function verifyProjectWallet(address: string, signature: string) {
+  return apiFetch<{ application?: ProjectApplication; status?: ProjectApplication["status"]; user?: MeResponse; session?: { expiresAt: string } }>(
+    "/api/project-auth/wallet/verify",
+    {
+      method: "POST",
+      body: JSON.stringify({ address, signature }),
+    },
+  );
+}
+
+export async function getProjectApplication() {
+  return apiFetch<{ application: ProjectApplication }>("/api/project-application");
+}
+
+export async function updateProjectApplication(patch: Partial<ProjectApplication>) {
+  return apiFetch<{ application: ProjectApplication }>("/api/project-application", {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function submitProjectApplication() {
+  return apiFetch<{ application: ProjectApplication }>("/api/project-application/submit", {
+    method: "POST",
+  });
+}
+
+export async function startProjectXConnect(returnTo?: string) {
+  const url = `/api/project-auth/x/start${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`;
+  return apiFetch<{ redirectUrl: string }>(url, { method: "GET" });
+}
+
 export async function startXConnect(returnTo?: string) {
   const url = `/api/auth/x/start?format=json${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`;
   return apiFetch<{ redirectUrl: string }>(url, {
@@ -173,7 +205,7 @@ export async function getAdminSummary() {
     counts: { users: number; campaigns: number; submissions: number; joins: number; pendingProjects: number; flagged: number };
     pendingSubmissions: Submission[];
     accounts: UserProfile[];
-    projectVerificationRequests: UserProfile[];
+    projectVerificationRequests: ProjectApplication[];
     featuredCampaigns: Challenge[];
   }>("/api/admin/summary");
 }
@@ -185,9 +217,9 @@ export async function updateSubmissionStatus(submissionId: string, status: "Pend
   });
 }
 
-export async function updateProjectVerificationStatus(userId: string, status: "approved" | "rejected") {
-  return apiFetch<{ user: MeResponse }>(`/api/admin/projects/${encodeURIComponent(userId)}/verification`, {
+export async function updateProjectVerificationStatus(applicationId: string, status: "approved" | "rejected", reason?: string) {
+  return apiFetch<{ application?: ProjectApplication; user?: MeResponse }>(`/api/admin/projects/${encodeURIComponent(applicationId)}/verification`, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, reason }),
   });
 }

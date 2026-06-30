@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -8,6 +9,7 @@ import { LandingHero } from "./LandingHero";
 
 export function LandingPage() {
   const { openConnect } = useAuth();
+  const router = useRouter();
   const [pathway, setPathway] = useState<"creator" | "project">("creator");
   const cta = useMemo(() => pathway === "creator"
     ? {
@@ -19,9 +21,9 @@ export function LandingPage() {
     : {
       title: <>Ready to <span className="text-gold-grad">grow</span>?</>,
       body: "Launch campaigns and reward the creators driving attention for you.",
-      action: () => openConnect("/build"),
+      action: () => router.push("/build?intent=dashboard"),
       actionLabel: "Login",
-    }, [openConnect, pathway]);
+    }, [openConnect, pathway, router]);
 
   return (
     <>

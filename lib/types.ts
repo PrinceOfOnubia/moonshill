@@ -32,6 +32,7 @@ export type RewardTokenOption = PresetRewardToken | "CUSTOM";
 export type RewardToken = string;
 export type AccountType = "user" | "project";
 export type ProjectVerificationStatus = "unverified" | "pending" | "approved" | "rejected";
+export type ProjectApplicationStatus = "draft" | "pending" | "approved" | "rejected";
 
 export type SubmissionStatus = "Pending Review" | "Approved" | "Rejected" | "Winner";
 
@@ -164,6 +165,33 @@ export interface PublicUserProfile extends UserProfile {
   joinedCampaigns: Challenge[];
   createdCampaigns: Challenge[];
   submissions: Submission[];
+}
+
+export interface ProjectApplication {
+  id: string;
+  wallet: string;
+  projectName: string;
+  projectHandle: string;
+  tokenName: string;
+  tokenTicker: string;
+  tokenContract: string;
+  chain: string;
+  website: string;
+  telegramUrl: string;
+  discordUrl: string;
+  description: string;
+  logo: string;
+  banner: string;
+  projectCategory?: ProjectCategory | null;
+  verificationNotes: string;
+  xConnected: boolean;
+  xHandle?: string | null;
+  xUserId?: string | null;
+  status: ProjectApplicationStatus;
+  rejectionReason?: string;
+  approvedProjectId?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type NotificationKind =

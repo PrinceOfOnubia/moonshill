@@ -53,7 +53,7 @@ export function LandingHero({
   pathway: "creator" | "project";
   onPathwayChange: (pathway: "creator" | "project") => void;
 }) {
-  const { connected, openConnect, user } = useAuth();
+  const { connected, openConnect } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<Stat[]>([
     { icon: Users, value: 0, label: "Total Users", tint: "text-gold-bright" },
@@ -106,23 +106,11 @@ export function LandingHero({
   }
 
   function openProjectEntry() {
-    if (connected && user?.accountType === "project") {
-      router.push("/build");
-      return;
-    }
-    openConnect("/build");
+    router.push("/build?intent=dashboard");
   }
 
   function openProjectCampaignFlow() {
-    if (connected && user?.accountType === "project" && user.projectVerificationStatus === "approved") {
-      router.push("/create");
-      return;
-    }
-    if (connected) {
-      router.push("/build");
-      return;
-    }
-    openConnect("/build");
+    router.push("/build?intent=create");
   }
 
   return (

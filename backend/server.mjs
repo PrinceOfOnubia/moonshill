@@ -12,7 +12,9 @@ const DEFAULT_CORS_ORIGIN = CORS_ORIGIN.split(",")[0].trim() || CLIENT_ORIGIN;
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "moonshill-dev-secret";
 const DATABASE_URL = process.env.DATABASE_URL;
 const COOKIE_NAME = "moonshill_session";
+const PROJECT_APP_COOKIE_NAME = "moonshill_project_application";
 const SESSION_DAYS = 30;
+const PROJECT_APPLICATION_DAYS = 14;
 const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_ME_URL = "https://api.x.com/2/users/me?user.fields=profile_image_url,verified,username";
@@ -194,6 +196,17 @@ function sessionCookie(token) {
   return `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure}`;
 }
 
+function projectApplicationCookie(token) {
+  const maxAge = PROJECT_APPLICATION_DAYS * 24 * 60 * 60;
+  const sameSite = isProd ? "None" : "Lax";
+  const secure = isProd ? "; Secure" : "";
+  return `${PROJECT_APP_COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure}`;
+}
+
+function clearCookie(name) {
+  return `${name}=; HttpOnly; Path=/; Max-Age=0; SameSite=${isProd ? "None" : "Lax"}${isProd ? "; Secure" : ""}`;
+}
+
 async function query(textSql, params = []) {
   const client = await pool.connect();
   try {
@@ -269,6 +282,45 @@ async function ensureSchema() {
     create table if not exists x_oauth_states (
       state text primary key,
       user_id text not null references users(id) on delete cascade,
+      code_verifier text not null,
+      redirect_to text not null,
+      expires_at timestamptz not null,
+      created_at timestamptz not null default now()
+    );
+  `);
+  await query(`
+    create table if not exists project_applications (
+      id text primary key,
+      wallet_address text not null,
+      project_name text not null default '',
+      project_handle text not null default '',
+      token_name text not null default '',
+      token_ticker text not null default '',
+      token_contract text not null default '',
+      chain text not null default '',
+      website text not null default '',
+      telegram_url text not null default '',
+      discord_url text not null default '',
+      description text not null default '',
+      logo text not null default '',
+      banner text not null default '',
+      project_category text,
+      verification_notes text not null default '',
+      x_connected boolean not null default false,
+      x_user_id text,
+      x_handle text,
+      status text not null default 'draft',
+      rejection_reason text not null default '',
+      approved_project_id text references users(id) on delete set null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+  `);
+  await query(`create unique index if not exists project_applications_wallet_address_idx on project_applications (lower(wallet_address));`);
+  await query(`
+    create table if not exists project_x_oauth_states (
+      state text primary key,
+      project_application_id text not null references project_applications(id) on delete cascade,
       code_verifier text not null,
       redirect_to text not null,
       expires_at timestamptz not null,
@@ -636,6 +688,36 @@ function projectProfileFromUser(user, campaigns = []) {
   };
 }
 
+function projectApplicationRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    wallet: row.wallet_address,
+    projectName: row.project_name,
+    projectHandle: row.project_handle,
+    tokenName: row.token_name,
+    tokenTicker: row.token_ticker,
+    tokenContract: row.token_contract,
+    chain: row.chain,
+    website: row.website,
+    telegramUrl: row.telegram_url,
+    discordUrl: row.discord_url,
+    description: row.description,
+    logo: row.logo,
+    banner: row.banner,
+    projectCategory: row.project_category || null,
+    verificationNotes: row.verification_notes || "",
+    xConnected: row.x_connected,
+    xUserId: row.x_user_id ?? null,
+    xHandle: row.x_handle ?? null,
+    status: row.status || "draft",
+    rejectionReason: row.rejection_reason || "",
+    approvedProjectId: row.approved_project_id || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function filterSeedUsers(rows) {
   return rows.filter((row) => !seedUserIds.has(row.id));
 }
@@ -870,6 +952,112 @@ async function getUserByWallet(address, accountType = "user") {
   return existing.rows[0] ? userRow(existing.rows[0]) : null;
 }
 
+async function getProjectApplicationById(id) {
+  const result = await query("select * from project_applications where id = $1 limit 1", [id]);
+  return result.rows[0] ? projectApplicationRow(result.rows[0]) : null;
+}
+
+async function getProjectApplicationByWallet(address) {
+  const normalized = normalizeAddress(address);
+  const result = await query("select * from project_applications where lower(wallet_address) = lower($1) limit 1", [normalized]);
+  return result.rows[0] ? projectApplicationRow(result.rows[0]) : null;
+}
+
+async function createDraftProjectApplication(address) {
+  const normalized = normalizeAddress(address);
+  const existing = await getProjectApplicationByWallet(normalized);
+  if (existing) return existing;
+  const inserted = await query(
+    `
+    insert into project_applications (id, wallet_address, chain)
+    values ($1,$2,'BNB Chain')
+    returning *
+    `,
+    [crypto.randomUUID(), normalized],
+  );
+  return projectApplicationRow(inserted.rows[0]);
+}
+
+async function updateProjectApplication(applicationId, patch) {
+  const current = await query("select * from project_applications where id = $1 limit 1", [applicationId]);
+  if (!current.rows[0]) return null;
+  const row = current.rows[0];
+  const next = {
+    projectName: typeof patch.projectName === "string" ? patch.projectName.trim() : row.project_name,
+    projectHandle: typeof patch.projectHandle === "string" ? sanitizeHandle(patch.projectHandle) : row.project_handle,
+    tokenName: typeof patch.tokenName === "string" ? patch.tokenName.trim() : row.token_name,
+    tokenTicker: typeof patch.tokenTicker === "string" ? patch.tokenTicker.trim().toUpperCase() : row.token_ticker,
+    tokenContract: typeof patch.tokenContract === "string" ? patch.tokenContract.trim() : row.token_contract,
+    chain: typeof patch.chain === "string" ? patch.chain.trim() : row.chain,
+    website: typeof patch.website === "string" ? patch.website.trim() : row.website,
+    telegramUrl: typeof patch.telegramUrl === "string" ? patch.telegramUrl.trim() : row.telegram_url,
+    discordUrl: typeof patch.discordUrl === "string" ? patch.discordUrl.trim() : row.discord_url,
+    description: typeof patch.description === "string" ? patch.description.trim() : row.description,
+    logo: typeof patch.logo === "string" ? patch.logo.trim() : row.logo,
+    banner: typeof patch.banner === "string" ? patch.banner.trim() : row.banner,
+    projectCategory: typeof patch.projectCategory === "string" && patch.projectCategory.trim() ? patch.projectCategory.trim() : row.project_category,
+    verificationNotes: typeof patch.verificationNotes === "string" ? patch.verificationNotes.trim() : row.verification_notes,
+    rejectionReason: typeof patch.rejectionReason === "string" ? patch.rejectionReason.trim() : row.rejection_reason,
+    status: typeof patch.status === "string" && patch.status.trim() ? patch.status.trim() : row.status,
+    xConnected: typeof patch.xConnected === "boolean" ? patch.xConnected : row.x_connected,
+    xUserId: typeof patch.xUserId === "string" ? patch.xUserId : row.x_user_id,
+    xHandle: typeof patch.xHandle === "string" ? patch.xHandle : row.x_handle,
+    approvedProjectId: typeof patch.approvedProjectId === "string" ? patch.approvedProjectId : row.approved_project_id,
+  };
+  const updated = await query(
+    `
+    update project_applications
+    set project_name = $2,
+        project_handle = $3,
+        token_name = $4,
+        token_ticker = $5,
+        token_contract = $6,
+        chain = $7,
+        website = $8,
+        telegram_url = $9,
+        discord_url = $10,
+        description = $11,
+        logo = $12,
+        banner = $13,
+        project_category = $14,
+        verification_notes = $15,
+        rejection_reason = $16,
+        status = $17,
+        x_connected = $18,
+        x_user_id = $19,
+        x_handle = $20,
+        approved_project_id = $21,
+        updated_at = now()
+    where id = $1
+    returning *
+    `,
+    [
+      applicationId,
+      next.projectName,
+      next.projectHandle,
+      next.tokenName,
+      next.tokenTicker,
+      next.tokenContract,
+      next.chain,
+      next.website,
+      next.telegramUrl,
+      next.discordUrl,
+      next.description,
+      next.logo,
+      next.banner,
+      next.projectCategory,
+      next.verificationNotes,
+      next.rejectionReason,
+      next.status,
+      next.xConnected,
+      next.xUserId,
+      next.xHandle,
+      next.approvedProjectId,
+    ],
+  );
+  return updated.rows[0] ? projectApplicationRow(updated.rows[0]) : null;
+}
+
 function nextProjectHandle(baseHandle, walletAddress) {
   const suffix = normalizeAddress(walletAddress).slice(-4).toLowerCase();
   return sanitizeHandle(`${baseHandle || "project"}_${suffix}`);
@@ -925,8 +1113,47 @@ async function createSession(res, user) {
     res,
     200,
     { user: await buildMePayload(user.id) ?? user, session: { expiresAt: new Date(exp * 1000).toISOString() } },
-    { "Set-Cookie": sessionCookie(token) },
+    { "Set-Cookie": [sessionCookie(token), clearCookie(PROJECT_APP_COOKIE_NAME)] },
   );
+}
+
+function projectApplicationSessionHeaders(applicationId) {
+  const exp = Math.floor((Date.now() + PROJECT_APPLICATION_DAYS * 24 * 60 * 60 * 1000) / 1000);
+  const token = signJwt({ aid: applicationId, iat: Math.floor(Date.now() / 1000), exp });
+  return { "Set-Cookie": projectApplicationCookie(token) };
+}
+
+async function createProjectApplicationFromLegacyProjectUser(user) {
+  const existing = await getProjectApplicationByWallet(user.wallet);
+  if (existing) return existing;
+  const inserted = await query(
+    `
+    insert into project_applications (
+      id, wallet_address, project_name, project_handle, website, telegram_url, description, logo, banner,
+      project_category, x_connected, x_user_id, x_handle, status, rejection_reason, approved_project_id, chain
+    )
+    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'',$15,'BNB Chain')
+    returning *
+    `,
+    [
+      crypto.randomUUID(),
+      normalizeAddress(user.wallet),
+      user.name,
+      user.handle,
+      user.website || "",
+      user.telegramUrl || "",
+      user.bio || "",
+      user.avatar || "",
+      user.banner || "",
+      user.projectCategory || null,
+      !!user.xConnected,
+      user.xUserId || null,
+      user.xHandle || null,
+      user.projectVerificationStatus === "approved" ? "approved" : user.projectVerificationStatus || "draft",
+      user.projectVerificationStatus === "approved" ? user.id : null,
+    ],
+  );
+  return projectApplicationRow(inserted.rows[0]);
 }
 
 async function upsertWalletUser(address) {
@@ -965,6 +1192,15 @@ async function authUserFromRequest(req) {
   return user;
 }
 
+async function authProjectApplicationFromRequest(req) {
+  const cookies = parseCookies(req);
+  const token = cookies[PROJECT_APP_COOKIE_NAME];
+  if (!token) return null;
+  const payload = verifyJwt(token);
+  if (!payload?.aid) return null;
+  return getProjectApplicationById(payload.aid);
+}
+
 async function requireUser(req, res) {
   const user = await authUserFromRequest(req);
   if (!user) {
@@ -972,6 +1208,15 @@ async function requireUser(req, res) {
     return null;
   }
   return user;
+}
+
+async function requireProjectApplication(req, res) {
+  const application = await authProjectApplicationFromRequest(req);
+  if (!application) {
+    json(res, 401, { error: "Project application session required." });
+    return null;
+  }
+  return application;
 }
 
 async function revokeSessionsByUser(userId) {
@@ -1076,49 +1321,162 @@ async function handleMePatch(req, res) {
 }
 
 async function handleProjectAccountStart(req, res) {
-  const user = await requireUser(req, res);
-  if (!user) return;
-  const projectUser = user.accountType === "project" ? user : await createProjectAccountFromUser(user);
-  return createSession(res, projectUser);
+  return json(res, 410, { error: "Project onboarding now uses project applications. Start from /build instead of upgrading a creator account." });
 }
 
 async function handleProjectAccountActivate(req, res) {
-  const user = await requireUser(req, res);
-  if (!user) return;
-  if (user.accountType === "project") {
-    return createSession(res, user);
-  }
-  const projectUser = await getUserByWallet(user.wallet, "project");
-  if (!projectUser) {
-    return json(res, 404, { error: "Project account not found for this wallet." });
-  }
-  return createSession(res, projectUser);
+  return json(res, 410, { error: "Project account activation now happens only after admin approval of a project application." });
 }
 
 async function handleProjectVerificationRequest(req, res) {
-  const user = await requireUser(req, res);
-  if (!user) return;
-  if (user.accountType !== "project") {
-    return json(res, 400, { error: "Only project accounts can request project verification." });
+  return json(res, 410, { error: "Project verification now happens through project application submission on /build." });
+}
+
+async function handleProjectWalletVerify(req, res) {
+  const body = await readBody(req);
+  const address = normalizeAddress(body.address);
+  const signature = String(body.signature || "");
+  if (!address || !signature) {
+    return json(res, 400, { error: "Address and signature are required." });
   }
-  if (!user.xConnected || !user.xHandle) {
-    return json(res, 400, { error: "Connect your X account before requesting project verification." });
+  const challenge = await query("select * from wallet_challenges where lower(address) = lower($1) and expires_at > now() limit 1", [address]);
+  if (!challenge.rows[0]) {
+    return json(res, 400, { error: "Request a fresh login message and try again." });
   }
-  if (!user.website) {
-    return json(res, 400, { error: "Add your project website in Profile before requesting verification." });
+  let recovered;
+  try {
+    recovered = normalizeAddress(verifyMessage(challenge.rows[0].message, signature));
+  } catch {
+    return json(res, 400, { error: "Signature verification failed." });
   }
-  const updated = await query(
-    `
-    update users
-    set project_verified = false,
-        project_verification_status = 'pending',
-        updated_at = now()
-    where id = $1
-    returning *
-    `,
-    [user.id],
+  if (recovered !== address) {
+    return json(res, 401, { error: "Signature does not match the requested wallet." });
+  }
+  await query("delete from wallet_challenges where lower(address) = lower($1)", [address]);
+
+  const approvedProject = await getUserByWallet(address, "project");
+  if (approvedProject?.projectVerificationStatus === "approved") {
+    return createSession(res, approvedProject);
+  }
+
+  let application = await getProjectApplicationByWallet(address);
+  if (!application) {
+    const legacyProject = await getUserByWallet(address, "project");
+    if (legacyProject && legacyProject.projectVerificationStatus !== "approved") {
+      application = await createProjectApplicationFromLegacyProjectUser(legacyProject);
+    }
+  }
+  if (!application) {
+    application = await createDraftProjectApplication(address);
+  }
+  return json(
+    res,
+    200,
+    { application, status: application.status },
+    projectApplicationSessionHeaders(application.id),
   );
-  return json(res, 200, { user: userRow(updated.rows[0]) });
+}
+
+async function handleProjectApplicationGet(req, res) {
+  const application = await requireProjectApplication(req, res);
+  if (!application) return;
+  return json(res, 200, { application });
+}
+
+async function handleProjectApplicationPatch(req, res) {
+  const application = await requireProjectApplication(req, res);
+  if (!application) return;
+  if (application.status === "pending") {
+    return json(res, 400, { error: "Pending applications cannot be edited until review is complete." });
+  }
+  const body = await readBody(req);
+  const updated = await updateProjectApplication(application.id, {
+    projectName: body.projectName,
+    projectHandle: body.projectHandle,
+    tokenName: body.tokenName,
+    tokenTicker: body.tokenTicker,
+    tokenContract: body.tokenContract,
+    chain: body.chain,
+    website: body.website,
+    telegramUrl: body.telegramUrl,
+    discordUrl: body.discordUrl,
+    description: body.description,
+    logo: body.logo,
+    banner: body.banner,
+    projectCategory: body.projectCategory,
+    verificationNotes: body.verificationNotes,
+    status: application.status === "rejected" ? "draft" : application.status,
+  });
+  return json(res, 200, { application: updated }, projectApplicationSessionHeaders(application.id));
+}
+
+async function handleProjectApplicationSubmit(req, res) {
+  const application = await requireProjectApplication(req, res);
+  if (!application) return;
+  const latest = await getProjectApplicationById(application.id);
+  if (!latest) return json(res, 404, { error: "Project application not found." });
+
+  const requiredFields = [
+    ["project name", latest.projectName],
+    ["token name", latest.tokenName],
+    ["token ticker", latest.tokenTicker],
+    ["chain", latest.chain],
+    ["website", latest.website],
+    ["telegram", latest.telegramUrl],
+    ["description", latest.description],
+    ["logo", latest.logo],
+    ["banner", latest.banner],
+  ];
+  const missing = requiredFields.filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
+  if (missing.length) {
+    return json(res, 400, { error: `Complete all required project fields before submitting: ${missing.join(", ")}.` });
+  }
+  if (!latest.xConnected || !latest.xHandle) {
+    return json(res, 400, { error: "Connect your X account before submitting your project application." });
+  }
+
+  const preferredHandle = sanitizeHandle(latest.projectHandle || latest.projectName);
+  if (!preferredHandle) {
+    return json(res, 400, { error: "A valid project handle could not be generated from the project name." });
+  }
+
+  const updated = await updateProjectApplication(application.id, {
+    projectHandle: preferredHandle,
+    status: "pending",
+    rejectionReason: "",
+  });
+  return json(res, 200, { application: updated }, projectApplicationSessionHeaders(application.id));
+}
+
+async function handleProjectXStart(req, res, url) {
+  const application = await requireProjectApplication(req, res);
+  if (!application) return;
+  if (xConfigMissing()) {
+    return json(res, 501, { error: "X connection not configured yet." });
+  }
+  const state = crypto.randomUUID();
+  const codeVerifier = crypto.randomBytes(32).toString("base64url");
+  const challenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
+  const redirectTo = url.searchParams.get("returnTo") || `${CLIENT_ORIGIN}/build?x=connect`;
+  await query(
+    `
+    insert into project_x_oauth_states (state, project_application_id, code_verifier, redirect_to, expires_at)
+    values ($1,$2,$3,$4, now() + interval '15 minutes')
+    on conflict (state) do update set project_application_id = excluded.project_application_id, code_verifier = excluded.code_verifier, redirect_to = excluded.redirect_to, expires_at = excluded.expires_at
+    `,
+    [state, application.id, codeVerifier, redirectTo],
+  );
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: process.env.X_CLIENT_ID,
+    redirect_uri: process.env.X_CALLBACK_URL,
+    scope: "tweet.read users.read offline.access",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+  });
+  const redirectUrl = `${X_AUTHORIZE_URL}?${params.toString()}`;
+  return json(res, 200, { redirectUrl });
 }
 
 async function handleLogout(req, res) {
@@ -1204,6 +1562,12 @@ async function handleXCallback(req, res, url) {
   const errorDesc = url.searchParams.get("error_description");
   const stateRow = await query("select * from x_oauth_states where state = $1 and expires_at > now() limit 1", [state]);
   if (!stateRow.rows[0]) {
+    const projectState = await query("select * from project_x_oauth_states where state = $1 and expires_at > now() limit 1", [state]);
+    if (projectState.rows[0]) {
+      return handleProjectXCallback(req, res, url);
+    }
+  }
+  if (!stateRow.rows[0]) {
     return redirect(res, `${CLIENT_ORIGIN}/profile?x=invalid-state`);
   }
   if (error) {
@@ -1233,6 +1597,48 @@ async function handleXCallback(req, res, url) {
     );
     await query("delete from x_oauth_states where state = $1", [state]);
     redirect(res, `${stateRow.rows[0].redirect_to}?x=connected`);
+  } catch (err) {
+    redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(err instanceof Error ? err.message : "x oauth failed")}`);
+  }
+}
+
+async function handleProjectXCallback(req, res, url) {
+  if (xConfigMissing()) {
+    return redirect(res, `${CLIENT_ORIGIN}/build?x=not-configured`);
+  }
+  const state = String(url.searchParams.get("state") || "");
+  const code = String(url.searchParams.get("code") || "");
+  const error = url.searchParams.get("error");
+  const errorDesc = url.searchParams.get("error_description");
+  const stateRow = await query("select * from project_x_oauth_states where state = $1 and expires_at > now() limit 1", [state]);
+  if (!stateRow.rows[0]) {
+    return redirect(res, `${CLIENT_ORIGIN}/build?x=invalid-state`);
+  }
+  if (error) {
+    return redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(errorDesc || error)}`);
+  }
+  if (!code) {
+    return redirect(res, `${stateRow.rows[0].redirect_to}?x=missing-code`);
+  }
+  try {
+    const token = await exchangeXCode(code, stateRow.rows[0].code_verifier);
+    const meRes = await fetch(X_ME_URL, {
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    });
+    if (!meRes.ok) throw new Error(`X profile lookup failed with ${meRes.status}`);
+    const meJson = await meRes.json();
+    const xUser = meJson?.data || {};
+    const updated = await updateProjectApplication(stateRow.rows[0].project_application_id, {
+      xConnected: true,
+      xUserId: xUser.id || null,
+      xHandle: xUser.username || null,
+    });
+    await query("delete from project_x_oauth_states where state = $1", [state]);
+    redirect(
+      res,
+      `${stateRow.rows[0].redirect_to}?x=connected`,
+      updated ? projectApplicationSessionHeaders(updated.id) : {},
+    );
   } catch (err) {
     redirect(res, `${stateRow.rows[0].redirect_to}?x=error&reason=${encodeURIComponent(err instanceof Error ? err.message : "x oauth failed")}`);
   }
@@ -1509,11 +1915,11 @@ async function handleAdminSummary(req, res) {
   ]);
   const pendingSubmissions = await query("select * from submissions where status = 'Pending Review' order by submitted_at desc limit 20");
   const accountRows = await query("select * from users order by updated_at desc limit 50");
-  const verificationRows = await query(
-    "select * from users where account_type = 'project' and project_verification_status in ('pending', 'rejected') order by updated_at desc limit 50",
+  const applicationRows = await query(
+    "select * from project_applications where status in ('pending', 'rejected') order by updated_at desc limit 50",
   );
   const featuredRows = await query("select * from campaigns where official = true order by trending desc, created_at desc limit 12");
-  const pendingProjects = verificationRows.rows.filter((row) => row.project_verification_status === "pending").length;
+  const pendingProjects = applicationRows.rows.filter((row) => row.status === "pending").length;
   json(res, 200, {
     counts: {
       users: usersCount.rows[0].count,
@@ -1536,12 +1942,12 @@ async function handleAdminSummary(req, res) {
       reward: s.reward == null ? undefined : Number(s.reward),
     })),
     accounts: accountRows.rows.map((u) => userRow(u)),
-    projectVerificationRequests: verificationRows.rows.map((u) => userRow(u)),
+    projectVerificationRequests: applicationRows.rows.map((row) => projectApplicationRow(row)),
     featuredCampaigns: featuredRows.rows.map(campaignRow),
   });
 }
 
-async function handleAdminProjectVerification(req, res, userId) {
+async function handleAdminProjectVerification(req, res, applicationId) {
   const user = await requireUser(req, res);
   if (!user) return;
   if (!user.isAdmin) {
@@ -1552,21 +1958,100 @@ async function handleAdminProjectVerification(req, res, userId) {
   if (status !== "approved" && status !== "rejected") {
     return json(res, 400, { error: "Valid project verification status is required." });
   }
-  const updated = await query(
-    `
-    update users
-    set project_verification_status = $2,
-        project_verified = $2 = 'approved',
-        updated_at = now()
-    where id = $1 and account_type = 'project'
-    returning *
-    `,
-    [userId, status],
-  );
-  if (!updated.rows[0]) {
-    return json(res, 404, { error: "Project account not found." });
+  const application = await query("select * from project_applications where id = $1 limit 1", [applicationId]);
+  if (!application.rows[0]) {
+    return json(res, 404, { error: "Project application not found." });
   }
-  return json(res, 200, { user: userRow(updated.rows[0]) });
+  const row = application.rows[0];
+  if (status === "approved") {
+    const existing = await getUserByWallet(row.wallet_address, "project");
+    let projectUser = existing;
+    if (!projectUser) {
+      let baseHandle = sanitizeHandle(row.project_handle || row.project_name || "project");
+      if (!baseHandle) baseHandle = `project_${normalizeAddress(row.wallet_address).slice(-4)}`;
+      let nextHandle = baseHandle;
+      let suffix = 1;
+      while (true) {
+        const taken = await query("select id from users where lower(handle) = lower($1) and account_type = 'project' limit 1", [nextHandle]);
+        if (!taken.rows[0]) break;
+        nextHandle = sanitizeHandle(`${baseHandle}${suffix}`);
+        suffix += 1;
+      }
+      const inserted = await query(
+        `
+        insert into users (
+          id, wallet_address, display_name, handle, account_type, avatar, banner, bio, website,
+          project_category, telegram_url, project_verified, project_verification_status,
+          x_connected, x_user_id, x_handle, joined, created, wins, earned, is_admin
+        )
+        values ($1,$2,$3,$4,'project',$5,$6,$7,$8,$9,$10,true,'approved',$11,$12,$13,0,0,0,0,false)
+        returning *
+        `,
+        [
+          crypto.randomUUID(),
+          normalizeAddress(row.wallet_address),
+          row.project_name,
+          nextHandle,
+          row.logo || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(row.wallet_address)}&backgroundType=gradientLinear`,
+          row.banner || "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1400&q=80",
+          row.description || "Verified Moonshill project.",
+          row.website || "",
+          row.project_category || null,
+          row.telegram_url || "",
+          !!row.x_connected,
+          row.x_user_id || null,
+          row.x_handle || null,
+        ],
+      );
+      projectUser = userRow(inserted.rows[0]);
+    } else if (projectUser.projectVerificationStatus !== "approved") {
+      const updatedUser = await query(
+        `
+        update users
+        set display_name = $2,
+            avatar = $3,
+            banner = $4,
+            bio = $5,
+            website = $6,
+            project_category = $7,
+            telegram_url = $8,
+            project_verified = true,
+            project_verification_status = 'approved',
+            x_connected = $9,
+            x_user_id = $10,
+            x_handle = $11,
+            updated_at = now()
+        where id = $1
+        returning *
+        `,
+        [
+          projectUser.id,
+          row.project_name || projectUser.name,
+          row.logo || projectUser.avatar,
+          row.banner || projectUser.banner,
+          row.description || projectUser.bio,
+          row.website || projectUser.website || "",
+          row.project_category || projectUser.projectCategory || null,
+          row.telegram_url || projectUser.telegramUrl || "",
+          !!row.x_connected,
+          row.x_user_id || null,
+          row.x_handle || null,
+        ],
+      );
+      projectUser = userRow(updatedUser.rows[0]);
+    }
+    const updated = await updateProjectApplication(applicationId, {
+      status: "approved",
+      rejectionReason: "",
+      approvedProjectId: projectUser.id,
+    });
+    return json(res, 200, { application: updated, user: projectUser });
+  }
+  const updated = await updateProjectApplication(applicationId, {
+    status: "rejected",
+    rejectionReason: typeof body.reason === "string" ? body.reason.trim() : "",
+  });
+  return json(res, 200, { application: updated });
 }
 
 async function handleAdminSubmissionStatus(req, res, submissionId) {
@@ -1932,6 +2417,12 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/auth/logout" && req.method === "POST") return handleLogout(req, res);
     if (url.pathname === "/api/auth/x/start" && req.method === "GET") return handleXStart(req, res, url);
     if (url.pathname === "/api/auth/x/callback" && req.method === "GET") return handleXCallback(req, res, url);
+    if (url.pathname === "/api/project-auth/wallet/verify" && req.method === "POST") return handleProjectWalletVerify(req, res);
+    if (url.pathname === "/api/project-application" && req.method === "GET") return handleProjectApplicationGet(req, res);
+    if (url.pathname === "/api/project-application" && req.method === "PATCH") return handleProjectApplicationPatch(req, res);
+    if (url.pathname === "/api/project-application/submit" && req.method === "POST") return handleProjectApplicationSubmit(req, res);
+    if (url.pathname === "/api/project-auth/x/start" && req.method === "GET") return handleProjectXStart(req, res, url);
+    if (url.pathname === "/api/project-auth/x/callback" && req.method === "GET") return handleProjectXCallback(req, res, url);
     if (url.pathname === "/api/me" && req.method === "GET") return handleMeGet(req, res);
     if (url.pathname === "/api/me" && req.method === "PATCH") return handleMePatch(req, res);
     if (url.pathname === "/api/me/project-account" && req.method === "POST") return handleProjectAccountStart(req, res);

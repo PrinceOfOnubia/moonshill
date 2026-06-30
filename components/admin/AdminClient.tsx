@@ -9,7 +9,7 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { cn, timeAgo } from "@/lib/utils";
 import { getAdminSummary, updateProjectVerificationStatus, updateSubmissionStatus } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
-import type { Challenge, Submission, UserProfile } from "@/lib/types";
+import type { Challenge, ProjectApplication, Submission, UserProfile } from "@/lib/types";
 
 const sections = ["Accounts", "Submissions", "Featured"] as const;
 type Section = (typeof sections)[number];
@@ -25,7 +25,7 @@ export function AdminClient() {
   });
   const [pendingSubmissions, setPendingSubmissions] = useState<Submission[]>([]);
   const [accounts, setAccounts] = useState<UserProfile[]>([]);
-  const [projectRequests, setProjectRequests] = useState<UserProfile[]>([]);
+  const [projectRequests, setProjectRequests] = useState<ProjectApplication[]>([]);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Challenge[]>([]);
 
   useEffect(() => {
@@ -121,8 +121,8 @@ function AccountQueue({
   onProjectStatusChange,
 }: {
   accounts: UserProfile[];
-  projectRequests: UserProfile[];
-  onProjectStatusChange: React.Dispatch<React.SetStateAction<UserProfile[]>>;
+  projectRequests: ProjectApplication[];
+  onProjectStatusChange: React.Dispatch<React.SetStateAction<ProjectApplication[]>>;
 }) {
   const [state, setState] = useState<Record<string, Verdict>>({});
   const [pendingProject, setPendingProject] = useState<string | null>(null);
@@ -138,18 +138,18 @@ function AccountQueue({
         </div>
         {projectRequests.length ? (
           projectRequests.map((account) => {
-            const status = account.projectVerificationStatus || "pending";
+            const status = account.status || "pending";
             return (
               <div key={account.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-surface/50 p-4">
-                <Avatar src={account.avatar} alt={account.name} size={48} className="rounded-xl" />
+                <Avatar src={account.logo} alt={account.projectName} size={48} className="rounded-xl" />
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-1.5 font-semibold">
-                    {account.name}
-                    {account.projectVerified && <VerifiedBadge size={14} />}
-                    {account.projectVerified && <Badge tone="gold">Verified</Badge>}
+                    {account.projectName}
                   </p>
-                  <p className="truncate text-[13px] text-faint">@{account.handle}</p>
+                  <p className="truncate text-[13px] text-faint">@{account.projectHandle || "pending_handle"}</p>
                   <p className="mt-1 truncate text-[13px] text-faint">𝕏 {account.xHandle ? `@${account.xHandle}` : "Not connected"} · <span className="font-mono">{account.wallet.slice(0, 12)}…</span></p>
+                  <p className="mt-1 truncate text-[13px] text-faint">{account.website || "No website"} · {account.chain || "No chain"}</p>
+                  <p className="mt-1 line-clamp-2 text-[13px] text-faint">{account.description || "No description supplied."}</p>
                 </div>
                 {status === "pending" ? (
                   <div className="flex items-center gap-2">
@@ -158,8 +158,8 @@ function AccountQueue({
                       onClick={async () => {
                         setPendingProject(account.id);
                         try {
-                          await updateProjectVerificationStatus(account.id, "rejected");
-                          onProjectStatusChange((current) => current.filter((entry) => entry.id !== account.id));
+                          const result = await updateProjectVerificationStatus(account.id, "rejected", "Rejected by admin review.");
+                          onProjectStatusChange((current) => current.map((entry) => entry.id === account.id ? (result.application || entry) : entry));
                         } finally {
                           setPendingProject(null);
                         }
