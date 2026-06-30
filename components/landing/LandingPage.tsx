@@ -17,8 +17,8 @@ export function LandingPage() {
       actionLabel: "Launch App",
     }
     : {
-      title: <>Ready to <span className="text-gold-grad">launch growth</span>?</>,
-      body: "Jump into the project path to verify your brand, create campaigns, and reward the creators driving attention for you.",
+      title: <>Ready to <span className="text-gold-grad">grow</span>?</>,
+      body: "Launch campaigns and reward the creators driving attention for you.",
       action: () => openConnect("/build"),
       actionLabel: "Start Campaign",
     }, [openConnect, pathway]);

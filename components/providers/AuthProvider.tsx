@@ -5,12 +5,19 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { ConnectModal } from "@/components/wallet/ConnectModal";
 import { activateProjectAccount, getMe, logout, walletChallenge, walletVerify } from "@/lib/api";
 import type { MeResponse } from "@/lib/api";
-import { BSC_CHAIN_ID, connectInjectedWallet, formatWalletError } from "@/lib/wallet";
+import {
+  BSC_CHAIN_ID,
+  connectInjectedWallet,
+  formatWalletError,
+  getDefaultInjectedProvider,
+} from "@/lib/wallet";
+import type { InjectedProvider } from "@/lib/wallet";
 
 const STORAGE_KEY = "mb_wallet";
 const STORAGE_CHAIN_KEY = "mb_wallet_chain";
@@ -50,6 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = useState<InjectedProvider | null>(null);
+  const providerRef = useRef<InjectedProvider | null>(null);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -75,7 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setAddress(saved);
@@ -85,8 +93,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
 
-    const ethereum = window.ethereum;
-    if (ethereum?.on) {
+    providerRef.current = getDefaultInjectedProvider();
+    setActiveProvider(providerRef.current);
+
+    void (async () => {
+      try {
+        const provider = providerRef.current;
+        if (provider) {
+          const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+          const currentChain = (await provider.request({ method: "eth_chainId" })) as string;
+          if (accounts?.[0]) setAddress(accounts[0]);
+          if (currentChain) setChainId(currentChain);
+        }
+        await refreshUser();
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, [refreshUser]);
+
+  useEffect(() => {
+    const provider = activeProvider || providerRef.current || getDefaultInjectedProvider();
+    if (!provider?.on) return;
+
+    const subscribedProvider = provider;
+    providerRef.current = subscribedProvider;
+
       const handleAccountsChanged = (...args: unknown[]) => {
         const accounts = args[0];
         const next = Array.isArray(accounts) ? (accounts[0] as string | undefined) : undefined;
@@ -122,30 +154,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      ethereum.on("accountsChanged", handleAccountsChanged);
-      ethereum.on("chainChanged", handleChainChanged);
-      cleanup = () => {
-        ethereum.removeListener?.("accountsChanged", handleAccountsChanged);
-        ethereum.removeListener?.("chainChanged", handleChainChanged);
-      };
-    }
-
-    void (async () => {
-      try {
-        if (ethereum) {
-          const accounts = (await ethereum.request({ method: "eth_accounts" })) as string[];
-          const currentChain = (await ethereum.request({ method: "eth_chainId" })) as string;
-          if (accounts?.[0]) setAddress(accounts[0]);
-          if (currentChain) setChainId(currentChain);
-        }
-        await refreshUser();
-      } finally {
-        setReady(true);
-      }
-    })();
-
-    return () => cleanup?.();
-  }, [refreshUser]);
+    subscribedProvider.on?.("accountsChanged", handleAccountsChanged);
+    subscribedProvider.on?.("chainChanged", handleChainChanged);
+    return () => {
+      subscribedProvider.removeListener?.("accountsChanged", handleAccountsChanged);
+      subscribedProvider.removeListener?.("chainChanged", handleChainChanged);
+    };
+  }, [activeProvider]);
 
   const openConnectWithPath = useCallback((nextPath = "/home") => {
     try {
@@ -174,7 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAddress(null);
       setChainId(null);
+      providerRef.current = null;
+      setActiveProvider(null);
       const { address: nextAddress, provider } = await connectInjectedWallet(walletId as Parameters<typeof connectInjectedWallet>[0]);
+      providerRef.current = provider;
+      setActiveProvider(provider);
       const challenge = await walletChallenge(nextAddress);
       const signature = (await provider.request({
         method: "personal_sign",
@@ -206,6 +225,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setChainId(null);
     setUser(null);
     setConnectError(null);
+    providerRef.current = null;
+    setActiveProvider(null);
     try {
       void logout();
       localStorage.removeItem(STORAGE_KEY);

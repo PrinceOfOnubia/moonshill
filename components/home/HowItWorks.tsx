@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Megaphone, PenLine, Rocket, Search, Send, Trophy, Users } from "lucide-react";
+import { Megaphone, PenLine, Rocket, Search, Trophy, Users } from "lucide-react";
 
 const steps = {
   creator: [
@@ -11,9 +11,9 @@ const steps = {
     { icon: Trophy, title: "Earn rewards and reputation", body: "Climb the board, stack wins, and build a track record as a shiller worth noticing.", n: "03" },
   ],
   project: [
-    { icon: Rocket, title: "Create campaign", body: "Launch a campaign from your project profile and frame the exact kind of attention you want to drive.", n: "01" },
-    { icon: Users, title: "Set rewards and requirements", body: "Choose your reward token, define the rules, and set creator or holder requirements when needed.", n: "02" },
-    { icon: Megaphone, title: "Review submissions and grow", body: "Reward the best creators, surface winning content, and turn the campaign into community momentum.", n: "03" },
+    { icon: Rocket, title: "Launch", body: "Create and fund campaigns that define your goals, rewards, and requirements.", n: "01" },
+    { icon: Users, title: "Review", body: "Curate and review creator submissions to ensure quality and alignment.", n: "02" },
+    { icon: Megaphone, title: "Reward", body: "Reward the best creators, surface winning content, and turn the campaign into community momentum.", n: "03" },
   ],
 } as const;
 
@@ -24,7 +24,10 @@ export function HowItWorks({ pathway = "creator" }: { pathway?: "creator" | "pro
   const activeSteps = steps[pathway];
   const intro = pathway === "creator"
     ? "Moonshill keeps creators in motion: find a campaign, post where your audience already lives, and turn attention into on-chain rewards."
-    : "Moonshill gives projects a clean path to fund attention: launch a campaign, set the rules, and review submissions without leaving the platform.";
+    : "Launch a campaign, set the rules, and review submissions without leaving the platform";
+  const title = pathway === "creator"
+    ? <>Create. Submit. <span className="text-gold-grad">Earn.</span></>
+    : <>Launch. Review. <span className="text-gold-grad">Reward.</span></>;
 
   return (
     <section ref={ref} className="mt-20">
@@ -33,7 +36,7 @@ export function HowItWorks({ pathway = "creator" }: { pathway?: "creator" | "pro
         <div className="lg:sticky lg:top-28 lg:self-start">
           <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-gold-bright">How it works</p>
           <h2 className="mt-2 font-display text-4xl font-bold leading-[1.05] text-balance sm:text-5xl">
-            Create. Submit. <span className="text-gold-grad">Earn.</span>
+            {title}
           </h2>
           <p className="mt-4 max-w-sm text-muted">
             {intro}

@@ -10,8 +10,10 @@ const wallets = [
   { id: "metamask", name: "MetaMask", tag: "Popular", emoji: "🦊" },
   { id: "walletconnect", name: "WalletConnect", tag: "Mobile", emoji: "🔗" },
   { id: "coinbase", name: "Coinbase Wallet", tag: "", emoji: "🔵" },
+  { id: "okx", name: "OKX Wallet", tag: "", emoji: "⚫" },
   { id: "binance", name: "Binance Web3 Wallet", tag: "BNB Chain", emoji: "🟡" },
   { id: "trust", name: "Trust Wallet", tag: "", emoji: "🛡️" },
+  { id: "injected", name: "Browser Wallet", tag: "Fallback", emoji: "🧩" },
 ];
 const STORAGE_POST_CONNECT_KEY = "mb_post_connect";
 

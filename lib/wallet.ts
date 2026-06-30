@@ -8,7 +8,7 @@ const BSC_PARAMS = {
   blockExplorerUrls: ["https://bscscan.com"],
 };
 
-export type WalletFlavor = "metamask" | "walletconnect" | "coinbase" | "binance" | "trust";
+export type WalletFlavor = "metamask" | "walletconnect" | "coinbase" | "binance" | "trust" | "okx" | "injected";
 
 export interface InjectedProvider {
   isMetaMask?: boolean;
@@ -17,6 +17,8 @@ export interface InjectedProvider {
   isBinanceChain?: boolean;
   isTrustWallet?: boolean;
   isTrust?: boolean;
+  isOkxWallet?: boolean;
+  isOKExWallet?: boolean;
   providerInfo?: { name?: string; rdns?: string; uuid?: string };
   selectedProvider?: InjectedProvider;
   providers?: InjectedProvider[];
@@ -31,25 +33,96 @@ declare global {
   }
 }
 
-function pickProvider(walletId?: WalletFlavor) {
+function isDev() {
+  return process.env.NODE_ENV !== "production";
+}
+
+function debugWallet(event: string, payload: Record<string, unknown>) {
+  if (!isDev()) return;
+  console.info(`[wallet] ${event}`, payload);
+}
+
+function getProviderLabel(provider: InjectedProvider) {
+  return `${provider.providerInfo?.name || ""} ${provider.providerInfo?.rdns || ""}`.toLowerCase();
+}
+
+function getProviderFlags(provider: InjectedProvider) {
+  return {
+    isMetaMask: !!provider.isMetaMask,
+    isCoinbaseWallet: !!provider.isCoinbaseWallet,
+    isBinance: !!provider.isBinance,
+    isBinanceChain: !!provider.isBinanceChain,
+    isTrust: !!provider.isTrust,
+    isTrustWallet: !!provider.isTrustWallet,
+    isOkxWallet: !!provider.isOkxWallet || !!provider.isOKExWallet,
+  };
+}
+
+function uniqueProviders(source: InjectedProvider[]) {
+  return Array.from(new Set(source.filter(Boolean)));
+}
+
+export function getInjectedProviders() {
+  const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
+  if (!ethereum) return [];
+  const nested = ethereum.providers?.length ? ethereum.providers : [];
+  const source = nested.length
+    ? [...nested, ethereum.selectedProvider, ethereum]
+    : ethereum.selectedProvider
+      ? [ethereum.selectedProvider, ethereum]
+      : [ethereum];
+  const candidates = uniqueProviders(source.filter(Boolean) as InjectedProvider[]);
+  debugWallet("providers.detected", {
+    count: candidates.length,
+    providers: candidates.map((provider) => ({
+      label: getProviderLabel(provider),
+      flags: getProviderFlags(provider),
+    })),
+  });
+  return candidates;
+}
+
+export function getDefaultInjectedProvider() {
   const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!ethereum) return null;
-  const source = ethereum.providers?.length ? ethereum.providers : ethereum.selectedProvider ? [ethereum.selectedProvider, ethereum] : [ethereum];
-  const candidates = Array.from(new Set(source.filter(Boolean)));
-  const getProviderLabel = (provider: InjectedProvider) =>
-    `${provider.providerInfo?.name || ""} ${provider.providerInfo?.rdns || ""}`.toLowerCase();
+  const candidates = getInjectedProviders();
+  return candidates[0] || ethereum;
+}
+
+export function pickInjectedProvider(walletId?: WalletFlavor) {
+  const ethereum = typeof window !== "undefined" ? window.ethereum : undefined;
+  if (!ethereum) return null;
+  const candidates = getInjectedProviders();
   const pickers: Record<WalletFlavor, (provider: InjectedProvider) => boolean> = {
     metamask: (provider) => {
       const label = getProviderLabel(provider);
-      return (!!provider.isMetaMask || label.includes("metamask")) && !provider.isTrust && !provider.isTrustWallet && !label.includes("trust");
+      return (!!provider.isMetaMask || label.includes("metamask"))
+        && !provider.isTrust
+        && !provider.isTrustWallet
+        && !provider.isCoinbaseWallet
+        && !provider.isBinance
+        && !provider.isBinanceChain
+        && !provider.isOkxWallet
+        && !provider.isOKExWallet
+        && !label.includes("trust")
+        && !label.includes("coinbase")
+        && !label.includes("binance")
+        && !label.includes("okx")
+        && !label.includes("okex");
     },
     walletconnect: (provider) => getProviderLabel(provider).includes("walletconnect"),
     coinbase: (provider) => !!provider.isCoinbaseWallet || getProviderLabel(provider).includes("coinbase"),
     binance: (provider) => !!provider.isBinance || !!provider.isBinanceChain || getProviderLabel(provider).includes("binance"),
     trust: (provider) => !!provider.isTrust || !!provider.isTrustWallet || getProviderLabel(provider).includes("trust"),
+    okx: (provider) => !!provider.isOkxWallet || !!provider.isOKExWallet || getProviderLabel(provider).includes("okx") || getProviderLabel(provider).includes("okex"),
+    injected: () => true,
   };
-  if (!walletId) return candidates[0] || ethereum;
-  return candidates.find(pickers[walletId]) || null;
+  const matched = !walletId ? (candidates[0] || ethereum) : (candidates.find(pickers[walletId]) || null);
+  debugWallet("provider.selected", {
+    selectedWallet: walletId || "default",
+    matched: matched ? { label: getProviderLabel(matched), flags: getProviderFlags(matched) } : null,
+  });
+  return matched;
 }
 
 export async function ensureBscMainnet(provider: InjectedProvider) {
@@ -82,7 +155,7 @@ export async function ensureBscMainnet(provider: InjectedProvider) {
 }
 
 export async function connectInjectedWallet(walletId?: WalletFlavor) {
-  const provider = pickProvider(walletId);
+  const provider = pickInjectedProvider(walletId);
   if (!provider) {
     if (walletId) {
       throw new Error(`The selected wallet (${walletId}) is not available in this browser. Open that wallet extension/app and try again.`);

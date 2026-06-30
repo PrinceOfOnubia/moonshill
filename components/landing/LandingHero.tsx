@@ -20,7 +20,6 @@ type Stat = {
 
 const pathwayContent = {
   creator: {
-    badge: "Creators",
     title: (
       <>
         Your Web3
@@ -33,12 +32,11 @@ const pathwayContent = {
     secondaryLabel: "Start Shilling",
   },
   project: {
-    badge: "Projects",
     title: (
       <>
-        Turn community
+        Turn Attention
         <br />
-        <span className="text-gold-grad">attention into growth</span>
+        <span className="text-gold-grad">Into Growth.</span>
       </>
     ),
     body: "Launch campaigns, reward creators, grow your community, and drive organic visibility with Moonshill.",
@@ -130,10 +128,6 @@ export function LandingHero({
                 Projects
               </button>
             </div>
-
-            <span className="inline-flex items-center rounded-full border border-gold/40 bg-gold/5 px-4 py-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gold-bright">
-              {content.badge}
-            </span>
 
             <h1 className="mt-6 font-display text-[44px] font-bold leading-[1.02] tracking-tight sm:text-[62px]">
               {content.title}
