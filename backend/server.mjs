@@ -15,11 +15,17 @@ const COOKIE_NAME = "moonshill_session";
 const PROJECT_APP_COOKIE_NAME = "moonshill_project_application";
 const SESSION_DAYS = 30;
 const PROJECT_APPLICATION_DAYS = 14;
+const OTP_LENGTH = 6;
+const OTP_EXPIRY_MINUTES = 10;
+const OTP_RESEND_COOLDOWN_SECONDS = 60;
+const OTP_MAX_ATTEMPTS = 5;
 const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_ME_URL = "https://api.x.com/2/users/me?user.fields=profile_image_url,verified,username";
 const X_HANDLE = process.env.X_HANDLE || "moonshillfun";
 const REQUIRED_X_RULE = `Must follow @${X_HANDLE} on X`;
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const EMAIL_FROM = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || "";
 const BNB_PRICE_TTL_MS = 60_000;
 const BNB_RPC_URL = process.env.BNB_RPC_URL || "https://bsc-dataseed1.bnbchain.org/";
 const BNB_RPC_URLS = Array.from(
@@ -105,6 +111,17 @@ function seedWalletAddress(id = "") {
 
 function base64url(input) {
   return Buffer.from(input).toString("base64url");
+}
+
+function otpHash(email, accountType, code) {
+  return crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update(`${normalizeEmail(email)}:${accountType}:${String(code).trim()}`)
+    .digest("hex");
+}
+
+function generateOtpCode() {
+  return crypto.randomInt(0, 10 ** OTP_LENGTH).toString().padStart(OTP_LENGTH, "0");
 }
 
 function json(res, status, body, extraHeaders = {}) {
@@ -292,6 +309,21 @@ async function ensureSchema() {
       created_at timestamptz not null default now()
     );
   `);
+  await query(`
+    create table if not exists email_auth_codes (
+      id text primary key,
+      email text not null,
+      account_type text not null,
+      code_hash text not null,
+      expires_at timestamptz not null,
+      used_at timestamptz,
+      attempt_count integer not null default 0,
+      send_count integer not null default 1,
+      last_sent_at timestamptz not null default now(),
+      created_at timestamptz not null default now()
+    );
+  `);
+  await query(`create index if not exists email_auth_codes_lookup_idx on email_auth_codes (lower(email), account_type, created_at desc);`);
   await query(`
     create table if not exists x_oauth_states (
       state text primary key,
@@ -1145,6 +1177,137 @@ async function updateProjectApplication(applicationId, patch) {
   return updated.rows[0] ? projectApplicationRow(updated.rows[0]) : null;
 }
 
+async function sendEmailOtp(email, code, accountType) {
+  if (!RESEND_API_KEY || !EMAIL_FROM) {
+    throw new Error("Email authentication is not configured yet.");
+  }
+
+  const audience = accountType === "project" ? "project" : "creator";
+  const subject = `${APP_NAME} verification code`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111827">
+      <h2 style="margin:0 0 12px;font-size:22px;">Your ${APP_NAME} verification code</h2>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+        Use the code below to continue as a ${audience}. This code expires in ${OTP_EXPIRY_MINUTES} minutes.
+      </p>
+      <div style="margin:0 0 20px;padding:16px 20px;border-radius:16px;background:#0b0b12;color:#facc15;font-size:32px;font-weight:700;letter-spacing:8px;text-align:center;">
+        ${code}
+      </div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">
+        If you did not request this code, you can ignore this email.
+      </p>
+    </div>
+  `;
+  const textBody = `Your ${APP_NAME} verification code is ${code}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      to: [email],
+      subject,
+      html,
+      text: textBody,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Email provider failed: ${message || response.statusText}`);
+  }
+}
+
+async function createEmailOtp(email, accountType) {
+  const normalizedEmail = normalizeEmail(email);
+  const latest = await query(
+    `
+    select * from email_auth_codes
+    where lower(email) = lower($1)
+      and account_type = $2
+      and used_at is null
+    order by created_at desc
+    limit 1
+    `,
+    [normalizedEmail, accountType],
+  );
+  const current = latest.rows[0];
+  if (current?.last_sent_at && (Date.now() - new Date(current.last_sent_at).getTime()) < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
+    const secondsLeft = Math.max(1, OTP_RESEND_COOLDOWN_SECONDS - Math.floor((Date.now() - new Date(current.last_sent_at).getTime()) / 1000));
+    throw new Error(`Please wait ${secondsLeft}s before requesting another code.`);
+  }
+
+  const code = generateOtpCode();
+  const codeHash = otpHash(normalizedEmail, accountType, code);
+  await query(
+    `
+    update email_auth_codes
+    set used_at = now()
+    where lower(email) = lower($1)
+      and account_type = $2
+      and used_at is null
+    `,
+    [normalizedEmail, accountType],
+  );
+  const inserted = await query(
+    `
+    insert into email_auth_codes (
+      id, email, account_type, code_hash, expires_at, used_at, attempt_count, send_count, last_sent_at
+    )
+    values ($1,$2,$3,$4, now() + interval '${OTP_EXPIRY_MINUTES} minutes', null, 0, 1, now())
+    returning *
+    `,
+    [crypto.randomUUID(), normalizedEmail, accountType, codeHash],
+  );
+  await sendEmailOtp(normalizedEmail, code, accountType);
+  return inserted.rows[0];
+}
+
+async function verifyEmailOtp(email, accountType, code) {
+  const normalizedEmail = normalizeEmail(email);
+  const current = await query(
+    `
+    select * from email_auth_codes
+    where lower(email) = lower($1)
+      and account_type = $2
+      and used_at is null
+    order by created_at desc
+    limit 1
+    `,
+    [normalizedEmail, accountType],
+  );
+  const row = current.rows[0];
+  if (!row) {
+    throw new Error("Request a new verification code and try again.");
+  }
+  if (new Date(row.expires_at).getTime() < Date.now()) {
+    await query("update email_auth_codes set used_at = now() where id = $1", [row.id]);
+    throw new Error("That verification code has expired. Request a new one.");
+  }
+  if (Number(row.attempt_count || 0) >= OTP_MAX_ATTEMPTS) {
+    await query("update email_auth_codes set used_at = now() where id = $1", [row.id]);
+    throw new Error("Too many incorrect attempts. Request a new code.");
+  }
+  const expectedHash = otpHash(normalizedEmail, accountType, code);
+  if (expectedHash !== row.code_hash) {
+    await query(
+      `
+      update email_auth_codes
+      set attempt_count = attempt_count + 1,
+          used_at = case when attempt_count + 1 >= $2 then now() else used_at end
+      where id = $1
+      `,
+      [row.id, OTP_MAX_ATTEMPTS],
+    );
+    throw new Error("That verification code is incorrect.");
+  }
+  await query("update email_auth_codes set used_at = now() where id = $1", [row.id]);
+  return row;
+}
+
 async function sessionHeadersForUser(user) {
   const sessionId = crypto.randomUUID();
   const exp = Math.floor((Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000) / 1000);
@@ -1378,14 +1541,30 @@ async function handleWalletVerify(req, res) {
   return createSession(res, user);
 }
 
-async function handleEmailAuth(req, res) {
+async function handleEmailAuthStart(req, res) {
   const body = await readBody(req);
   const email = normalizeEmail(body.email);
   const accountType = String(body.accountType || "user").trim() === "project" ? "project" : "user";
   if (!isValidEmail(email)) {
     return json(res, 400, { error: "Enter a valid email address." });
   }
+  try {
+    const otp = await createEmailOtp(email, accountType);
+    return json(res, 200, {
+      ok: true,
+      email,
+      accountType,
+      expiresAt: otp.expires_at,
+      resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not send verification code.";
+    const status = /wait \d+s/i.test(message) ? 429 : /not configured/i.test(message) ? 501 : 502;
+    return json(res, status, { error: message });
+  }
+}
 
+async function completeEmailAuth(res, email, accountType) {
   if (accountType === "project") {
     const approvedProject = await getUserByEmail(email, "project");
     if (approvedProject?.projectVerificationStatus === "approved") {
@@ -1405,6 +1584,49 @@ async function handleEmailAuth(req, res) {
 
   const user = await upsertEmailUser(email);
   return createSession(res, user);
+}
+
+async function handleEmailAuthVerify(req, res) {
+  const body = await readBody(req);
+  const email = normalizeEmail(body.email);
+  const code = String(body.code || "").trim();
+  const accountType = String(body.accountType || "user").trim() === "project" ? "project" : "user";
+  if (!isValidEmail(email)) {
+    return json(res, 400, { error: "Enter a valid email address." });
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return json(res, 400, { error: "Enter the 6-digit verification code." });
+  }
+  try {
+    await verifyEmailOtp(email, accountType, code);
+    return completeEmailAuth(res, email, accountType);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not verify code.";
+    return json(res, 400, { error: message });
+  }
+}
+
+async function handleEmailAuthResend(req, res) {
+  const body = await readBody(req);
+  const email = normalizeEmail(body.email);
+  const accountType = String(body.accountType || "user").trim() === "project" ? "project" : "user";
+  if (!isValidEmail(email)) {
+    return json(res, 400, { error: "Enter a valid email address." });
+  }
+  try {
+    const otp = await createEmailOtp(email, accountType);
+    return json(res, 200, {
+      ok: true,
+      email,
+      accountType,
+      expiresAt: otp.expires_at,
+      resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not resend verification code.";
+    const status = /wait \d+s/i.test(message) ? 429 : /not configured/i.test(message) ? 501 : 502;
+    return json(res, status, { error: message });
+  }
 }
 
 async function handleMeGet(req, res) {
@@ -2722,7 +2944,10 @@ const server = http.createServer(async (req, res) => {
     if (/^\/api\/users\/[^/]+$/.test(url.pathname) && req.method === "GET") {
       return handlePublicUser(req, res, decodeURIComponent(url.pathname.split("/").pop()));
     }
-    if (url.pathname === "/api/auth/email" && req.method === "POST") return handleEmailAuth(req, res);
+    if (url.pathname === "/api/auth/email" && req.method === "POST") return handleEmailAuthStart(req, res);
+    if (url.pathname === "/api/auth/email/start" && req.method === "POST") return handleEmailAuthStart(req, res);
+    if (url.pathname === "/api/auth/email/verify" && req.method === "POST") return handleEmailAuthVerify(req, res);
+    if (url.pathname === "/api/auth/email/resend" && req.method === "POST") return handleEmailAuthResend(req, res);
     if (url.pathname === "/api/auth/wallet/challenge" && req.method === "GET") return handleWalletChallenge(req, res, url);
     if (url.pathname === "/api/auth/wallet/verify" && req.method === "POST") return handleWalletVerify(req, res);
     if (url.pathname === "/api/auth/logout" && req.method === "POST") return handleLogout(req, res);

@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { ConnectModal } from "@/components/wallet/ConnectModal";
-import { authWithEmail, getMe, logout, startXAuth } from "@/lib/api";
+import { getMe, logout, resendEmailAuth, startEmailAuth, startXAuth, verifyEmailAuth } from "@/lib/api";
 import type { MeResponse } from "@/lib/api";
 
 const STORAGE_POST_AUTH_KEY = "mb_post_auth";
@@ -26,7 +26,9 @@ interface AuthState {
   authTarget: "user" | "project";
   openConnect: (nextPath?: string, accountType?: "user" | "project") => void;
   closeConnect: () => void;
-  loginWithEmail: (email: string) => Promise<{ nextPath: string; hasSession: boolean }>;
+  startEmailLogin: (email: string) => Promise<{ email: string; resendAfterSeconds: number; expiresAt: string }>;
+  verifyEmailLogin: (email: string, code: string) => Promise<{ nextPath: string; hasSession: boolean }>;
+  resendEmailLogin: (email: string) => Promise<{ resendAfterSeconds: number; expiresAt: string }>;
   loginWithX: () => Promise<void>;
   disconnect: () => void;
   refreshUser: () => Promise<void>;
@@ -88,7 +90,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setConnectError(null);
   }, []);
 
-  const loginWithEmail = useCallback(async (email: string) => {
+  const startEmailLogin = useCallback(async (email: string) => {
+    setConnectError(null);
+    try {
+      const result = await startEmailAuth(email, authTarget);
+      return {
+        email: result.email,
+        resendAfterSeconds: result.resendAfterSeconds,
+        expiresAt: result.expiresAt,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not send verification code.";
+      setConnectError(message);
+      throw error;
+    }
+  }, [authTarget]);
+
+  const verifyEmailLogin = useCallback(async (email: string, code: string) => {
     setConnectError(null);
     const nextPath = typeof window !== "undefined"
       ? (localStorage.getItem(STORAGE_POST_AUTH_KEY) || (authTarget === "project" ? "/build" : "/home"))
@@ -100,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* ignore */
       }
-      const result = await authWithEmail(email, authTarget);
+      const result = await verifyEmailAuth(email, code, authTarget);
       if (result.user) {
         setUser(result.user);
         setConnectModalOpen(false);
@@ -110,7 +128,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setConnectModalOpen(false);
       return { nextPath: "/build", hasSession: false };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not log in with email.";
+      const message = error instanceof Error ? error.message : "Could not verify code.";
+      setConnectError(message);
+      throw error;
+    }
+  }, [authTarget]);
+
+  const resendEmailLogin = useCallback(async (email: string) => {
+    setConnectError(null);
+    try {
+      const result = await resendEmailAuth(email, authTarget);
+      return {
+        resendAfterSeconds: result.resendAfterSeconds,
+        expiresAt: result.expiresAt,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not resend verification code.";
       setConnectError(message);
       throw error;
     }
@@ -159,7 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authTarget,
     openConnect,
     closeConnect,
-    loginWithEmail,
+    startEmailLogin,
+    verifyEmailLogin,
+    resendEmailLogin,
     loginWithX,
     disconnect,
     refreshUser,
@@ -171,7 +206,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authTarget,
     openConnect,
     closeConnect,
-    loginWithEmail,
+    startEmailLogin,
+    verifyEmailLogin,
+    resendEmailLogin,
     loginWithX,
     disconnect,
     refreshUser,

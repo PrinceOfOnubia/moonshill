@@ -58,6 +58,8 @@ JWT_SECRET=
 SESSION_SECRET=
 CLIENT_ORIGIN=https://moonshill.vercel.app
 CORS_ORIGIN=https://moonshill.vercel.app
+RESEND_API_KEY=
+EMAIL_FROM=Moonshill <auth@yourdomain.com>
 CHAIN_ID=56
 BNB_RPC_URL=https://bsc-dataseed.binance.org/
 ADMIN_WALLET=
@@ -93,6 +95,9 @@ Implemented endpoints:
 - `GET /health`
 - `GET /api/public`
 - `POST /api/auth/email`
+- `POST /api/auth/email/start`
+- `POST /api/auth/email/verify`
+- `POST /api/auth/email/resend`
 - `GET /api/auth/x/login/start`
 - `GET /api/auth/wallet/challenge?address=0x...`
 - `POST /api/auth/wallet/verify`

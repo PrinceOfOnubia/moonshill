@@ -47,9 +47,29 @@ export async function getMe() {
   return apiFetch<MeResponse>("/api/me");
 }
 
-export async function authWithEmail(email: string, accountType: "user" | "project") {
-  return apiFetch<{ user?: MeResponse; application?: ProjectApplication; session?: { expiresAt: string } }>(
-    "/api/auth/email",
+export async function startEmailAuth(email: string, accountType: "user" | "project") {
+  return apiFetch<{ ok: true; email: string; accountType: "user" | "project"; expiresAt: string; resendAfterSeconds: number }>(
+    "/api/auth/email/start",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, accountType }),
+    },
+  );
+}
+
+export async function verifyEmailAuth(email: string, code: string, accountType: "user" | "project") {
+  return apiFetch<{ user?: MeResponse; application?: ProjectApplication; session?: { expiresAt: string }; status?: ProjectApplication["status"] }>(
+    "/api/auth/email/verify",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, code, accountType }),
+    },
+  );
+}
+
+export async function resendEmailAuth(email: string, accountType: "user" | "project") {
+  return apiFetch<{ ok: true; email: string; accountType: "user" | "project"; expiresAt: string; resendAfterSeconds: number }>(
+    "/api/auth/email/resend",
     {
       method: "POST",
       body: JSON.stringify({ email, accountType }),
