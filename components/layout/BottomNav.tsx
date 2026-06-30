@@ -4,6 +4,7 @@ import { Link } from "next-view-transitions";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Compass, Home, Plus, Trophy, User } from "lucide-react";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -16,19 +17,22 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const createHref = user?.accountType === "user" ? "/profile" : "/create";
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 md:hidden">
       <div className="mx-auto mb-3 max-w-md px-4">
         <div className="glass-strong glow-soft flex items-center justify-around rounded-[22px] px-2 py-2">
           {items.map(({ href, label, icon: Icon, primary }) => {
-            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            const resolvedHref = primary ? createHref : href;
+            const active = resolvedHref === "/" ? pathname === "/" : pathname.startsWith(resolvedHref);
 
             if (primary) {
               return (
                 <Link
                   key={href}
-                  href={href}
+                  href={resolvedHref}
                   aria-label={label}
                   className="relative -mt-7 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-b from-gold-bright to-gold text-black glow-gold"
                 >
@@ -40,7 +44,7 @@ export function BottomNav() {
             return (
               <Link
                 key={href}
-                href={href}
+                href={resolvedHref}
                 aria-label={label}
                 className="relative flex w-14 flex-col items-center gap-1 py-1.5"
               >
