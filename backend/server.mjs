@@ -272,17 +272,17 @@ async function ensureSchema() {
     );
   `);
   await query(`alter table users alter column wallet_address drop not null;`);
+  await query(`alter table users add column if not exists account_type text not null default 'user';`);
   await query(`alter table users add column if not exists email text not null default '';`);
   await query(`alter table users add column if not exists auth_provider text not null default 'email';`);
-  await query(`alter table users drop constraint if exists users_wallet_address_key;`);
-  await query(`create unique index if not exists users_wallet_address_account_type_idx on users (lower(wallet_address), account_type);`);
-  await query(`create unique index if not exists users_email_account_type_idx on users (lower(email), account_type) where trim(email) <> '';`);
-  await query(`alter table users add column if not exists account_type text not null default 'user';`);
   await query(`alter table users add column if not exists website text not null default '';`);
   await query(`alter table users add column if not exists project_category text;`);
   await query(`alter table users add column if not exists telegram_url text not null default '';`);
   await query(`alter table users add column if not exists project_verified boolean not null default false;`);
   await query(`alter table users add column if not exists project_verification_status text not null default 'unverified';`);
+  await query(`alter table users drop constraint if exists users_wallet_address_key;`);
+  await query(`create unique index if not exists users_wallet_address_account_type_idx on users (lower(wallet_address), account_type);`);
+  await query(`create unique index if not exists users_email_account_type_idx on users (lower(email), account_type) where trim(email) <> '';`);
   await query(`
     update users
     set project_verification_status = case
