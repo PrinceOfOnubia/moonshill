@@ -3,7 +3,7 @@ import { Logo } from "./Logo";
 
 const cols = [
   { title: "Platform", links: [["Explore", "/explore"], ["Create", "/create"], ["Leaderboard", "/leaderboard"]] },
-  { title: "Get started", links: [["Docs", "/docs"], ["How it Works", "/docs#how-it-works"], ["BNB Chain", "/project/BNBCHAIN"]] },
+  { title: "Get started", links: [["Docs", "/docs"], ["How it Works", "/docs#how-it-works"], ["Multi Chain", "/project/BNBCHAIN"]] },
   { title: "Resources", links: [["Token", "/token"], ["Privacy", "/privacy"], ["Terms", "/terms"]] },
 ];
 
@@ -16,7 +16,7 @@ export function Footer() {
           <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-faint">
             The community-first crypto arena. Create on X, submit your link, compete for funded rewards.
           </p>
-          <p className="mt-4 text-[12px] text-faint">Powered by BNB Chain</p>
+          <p className="mt-4 text-[12px] text-faint">Powered by Multi Chain</p>
         </div>
         {cols.map((c) => (
           <div key={c.title}>

@@ -11,7 +11,7 @@ const sections: DocSection[] = [
     heading: "What is Moonshill",
     body: [
       "Moonshill is a community-first crypto arena. Projects and creators post campaigns with funded reward pools; anyone can join, submit their work, and compete for a share of the rewards.",
-      "Everything is mobile-first and dark by default, powered by BNB Chain. Each campaign card is a direct invitation to participate.",
+      "Everything is mobile-first and dark by default, powered by a Multi Chain setup. Each campaign card is a direct invitation to participate.",
     ],
   },
   {
@@ -106,7 +106,7 @@ export default function DocsPage() {
     <LegalLayout
       eyebrow="Documentation"
       title="How Moonshill works"
-      intro="Everything you need to discover campaigns, submit your best work, and earn funded crypto rewards on BNB Chain."
+      intro="Everything you need to discover campaigns, submit your best work, and earn funded crypto rewards in a Multi Chain ecosystem."
       updated="June 26, 2026"
       sections={sections}
     />

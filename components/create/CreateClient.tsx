@@ -327,7 +327,7 @@ export function CreateClient() {
                     <p className="mt-2 text-[12px] text-faint">PNG / JPG / GIF · 16:9 looks best</p>
                   </Field>
                   <Field label="Title">
-                    <Input value={title} onChange={setTitle} placeholder="e.g. BNB Chain Meme Mania" />
+                    <Input value={title} onChange={setTitle} placeholder="e.g. Multi Chain Meme Mania" />
                   </Field>
                   <Field label="Description">
                     <textarea

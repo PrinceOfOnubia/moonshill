@@ -23,13 +23,13 @@ function projectFormFromApplication(application: ProjectApplication | null): Pro
     return {
       projectName: "",
       description: "",
-      chain: "BNB Chain",
+      chain: "Multi Chain",
     };
   }
   return {
     projectName: application.projectName || "",
     description: application.description || "",
-    chain: application.chain || "BNB Chain",
+    chain: application.chain || "Multi Chain",
   };
 }
 
@@ -318,7 +318,7 @@ function ProjectFlow() {
           label="Chain"
           value={form.chain}
           onChange={(value) => setForm((current) => ({ ...current, chain: value }))}
-          placeholder="BNB Chain"
+          placeholder="Multi Chain"
         />
       </div>
       <TextField

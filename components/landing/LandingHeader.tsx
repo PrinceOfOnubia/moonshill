@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
@@ -18,6 +19,7 @@ const navItems = [
 
 export function LandingHeader() {
   const { openConnect } = useAuth();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -25,6 +27,19 @@ export function LandingHeader() {
     return () => {
       document.body.style.overflow = "";
     };
+  }, [open]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   return (
@@ -38,6 +53,7 @@ export function LandingHeader() {
             "gated" in n ? (
               <button
                 key={n.label}
+                type="button"
                 onClick={() => openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard", "user")}
                 className="text-sm font-medium text-muted transition-colors hover:text-text"
               >
@@ -66,6 +82,7 @@ export function LandingHeader() {
             <TelegramIcon size={18} />
           </SocialButton>
           <button
+            type="button"
             onClick={() => openConnect("/home", "user")}
             className="ml-1 h-10 rounded-full bg-gradient-to-b from-gold-bright to-gold px-5 text-sm font-semibold text-black transition-shadow hover:shadow-[0_8px_30px_-6px_rgba(240,185,11,0.6)]"
           >
@@ -75,7 +92,9 @@ export function LandingHeader() {
 
         {/* Mobile hamburger */}
         <button
+          type="button"
           aria-label="Menu"
+          aria-controls="landing-mobile-menu"
           onClick={() => setOpen(true)}
           className="ml-auto grid h-10 w-10 place-items-center rounded-full border border-border text-muted transition-colors hover:text-text md:hidden"
         >
@@ -87,22 +106,26 @@ export function LandingHeader() {
       <AnimatePresence>
         {open && (
           <motion.div
-            className="fixed inset-0 z-[60] md:hidden"
+            className="fixed inset-0 z-[90] md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
             <motion.div
+              id="landing-mobile-menu"
+              role="dialog"
+              aria-modal="true"
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="absolute inset-0 flex flex-col overflow-y-auto bg-[#060606]"
+              className="absolute inset-0 flex min-h-dvh flex-col overflow-y-auto overscroll-contain bg-[#060606] pointer-events-auto"
             >
               <div className="sticky top-0 z-10 flex min-h-16 items-center justify-between border-b border-border bg-[#060606] px-5 pt-[max(0px,env(safe-area-inset-top))]">
                 <Logo />
                 <button
+                  type="button"
                   aria-label="Close menu"
                   onClick={() => setOpen(false)}
                   className="grid h-10 w-10 place-items-center rounded-full border border-border text-faint transition-colors hover:bg-surface-2 hover:text-text"
@@ -116,6 +139,7 @@ export function LandingHeader() {
                   "gated" in n ? (
                     <button
                       key={n.label}
+                      type="button"
                       onClick={() => {
                         setOpen(false);
                         openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard", "user");
@@ -154,6 +178,7 @@ export function LandingHeader() {
                   </SocialButton>
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setOpen(false);
                     openConnect("/home", "user");
