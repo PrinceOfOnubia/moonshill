@@ -98,9 +98,9 @@ export function LandingHeader() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="absolute inset-0 flex flex-col bg-black/95"
+              className="absolute inset-0 flex flex-col overflow-y-auto bg-[#060606]"
             >
-              <div className="flex h-16 items-center justify-between border-b border-border px-5 pt-[max(0px,env(safe-area-inset-top))]">
+              <div className="sticky top-0 z-10 flex min-h-16 items-center justify-between border-b border-border bg-[#060606] px-5 pt-[max(0px,env(safe-area-inset-top))]">
                 <Logo />
                 <button
                   aria-label="Close menu"
@@ -111,7 +111,7 @@ export function LandingHeader() {
                 </button>
               </div>
 
-              <nav className="flex flex-col gap-2 px-5 py-6">
+              <nav className="flex flex-col gap-3 px-5 py-6">
                 {navItems.map((n) =>
                   "gated" in n ? (
                     <button
@@ -120,7 +120,7 @@ export function LandingHeader() {
                         setOpen(false);
                         openConnect(n.label === "Campaigns" ? "/explore" : "/leaderboard");
                       }}
-                      className="rounded-2xl border border-transparent bg-surface/40 px-4 py-3.5 text-left text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
+                      className="rounded-2xl border border-border bg-surface/60 px-4 py-4 text-left text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                     >
                       {n.label}
                     </button>
@@ -129,7 +129,7 @@ export function LandingHeader() {
                       key={n.label}
                       href={n.href}
                       onClick={() => setOpen(false)}
-                      className="rounded-2xl border border-transparent bg-surface/40 px-4 py-3.5 text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
+                      className="rounded-2xl border border-border bg-surface/60 px-4 py-4 text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                     >
                       {n.label}
                     </Link>
@@ -138,7 +138,7 @@ export function LandingHeader() {
                 <Link
                   href="/token"
                   onClick={() => setOpen(false)}
-                  className="rounded-2xl border border-transparent bg-surface/40 px-4 py-3.5 text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
+                  className="rounded-2xl border border-border bg-surface/60 px-4 py-4 text-[17px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-2"
                 >
                   Token
                 </Link>

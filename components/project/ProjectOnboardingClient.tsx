@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, BadgeCheck, Building2, Check, Rocket, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { updateMe } from "@/lib/api";
+import { startProjectAccount } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -20,7 +20,7 @@ export function ProjectOnboardingClient() {
     setPending(true);
     setMessage(null);
     try {
-      await updateMe({ accountType: "project" });
+      await startProjectAccount();
       await refreshUser();
       setMessage("Project onboarding unlocked.");
     } catch (error) {

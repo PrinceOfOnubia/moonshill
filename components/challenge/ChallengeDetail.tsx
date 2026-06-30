@@ -28,9 +28,10 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
   const [related, setRelated] = useState<Challenge[]>([]);
   const t = useTimeLeft(c.endsAt);
   const isCreator = user?.id === c.creator.id;
+  const hasSubmitted = !!user?.submissions?.some((submission) => submission.challengeId === c.id);
   const creatorHref = c.creator.type === "project"
-    ? `/project/${c.creator.id || c.creator.handle}`
-    : `/u/${c.creator.id || c.creator.handle}`;
+    ? `/project/${c.creator.handle || c.creator.id}`
+    : `/u/${c.creator.handle || c.creator.id}`;
   const rewardTicker = displayRewardToken(c.rewardToken);
 
   useEffect(() => {
@@ -137,6 +138,10 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                 <Button className="flex-1" size="lg" onClick={join} disabled={joining}>
                   {joining ? "Joining…" : "Join campaign"}
                 </Button>
+              ) : hasSubmitted ? (
+                <div className="flex-1 rounded-2xl border border-blue/25 bg-blue/10 px-4 py-3 text-center text-sm text-blue">
+                  You already submitted an entry to this campaign.
+                </div>
               ) : (
                 <Button className="flex-1" size="lg" variant="green" onClick={() => setSubmitOpen(true)}>
                   Submit entry
@@ -240,6 +245,10 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                 <Button className="w-full" size="lg" magnetic onClick={join} disabled={joining}>
                   {joining ? "Joining…" : "Join campaign"}
                 </Button>
+              ) : hasSubmitted ? (
+                <div className="rounded-2xl border border-blue/25 bg-blue/10 px-4 py-3 text-center text-sm text-blue">
+                  You already submitted an entry to this campaign.
+                </div>
               ) : (
                 <>
                   <div className="flex items-center justify-center gap-2 rounded-2xl border border-green/25 bg-green/10 py-2.5 text-sm font-medium text-green">

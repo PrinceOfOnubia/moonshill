@@ -62,10 +62,22 @@ export async function logout() {
   return apiFetch<{ ok: true }>("/api/auth/logout", { method: "POST" });
 }
 
-export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; accountType?: "user" | "project"; website?: string }) {
+export async function updateMe(patch: { name?: string; bio?: string; avatar?: string; banner?: string; handle?: string; website?: string }) {
   return apiFetch<{ user: MeResponse }>("/api/me", {
     method: "PATCH",
     body: JSON.stringify(patch),
+  });
+}
+
+export async function startProjectAccount() {
+  return apiFetch<{ user: MeResponse; session: { expiresAt: string } }>("/api/me/project-account", {
+    method: "POST",
+  });
+}
+
+export async function activateProjectAccount() {
+  return apiFetch<{ user: MeResponse; session: { expiresAt: string } }>("/api/me/project-account/activate", {
+    method: "POST",
   });
 }
 

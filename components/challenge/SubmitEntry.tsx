@@ -26,8 +26,9 @@ export function SubmitEntry({
   open: boolean;
   onClose: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const isCreator = user?.id === challenge.creator.id;
+  const alreadySubmitted = !!user?.submissions?.some((submission) => submission.challengeId === challenge.id);
   const isMulti = challenge.submissionType === "Multiple Links";
   const isUpload = challenge.submissionType === "Image Upload";
   const [links, setLinks] = useState<string[]>([""]);
@@ -37,7 +38,7 @@ export function SubmitEntry({
   const submitter = user;
 
   const cleanLinks = links.map((l) => l.trim()).filter(Boolean);
-  const valid = !!submitter && !isCreator && (isUpload ? !!upload : cleanLinks.some(isLikelyUrl));
+  const valid = !!submitter && !isCreator && !alreadySubmitted && (isUpload ? !!upload : cleanLinks.some(isLikelyUrl));
 
   async function submit() {
     if (!submitter) {
@@ -46,6 +47,10 @@ export function SubmitEntry({
     }
     if (isCreator) {
       setError("You created this campaign. Creators cannot submit entries to their own campaigns.");
+      return;
+    }
+    if (alreadySubmitted) {
+      setError("You have already submitted an entry to this campaign.");
       return;
     }
     if (!isUpload && !cleanLinks.some(isLikelyUrl)) {
@@ -60,6 +65,7 @@ export function SubmitEntry({
         links: cleanLinks.filter(isLikelyUrl),
         type: challenge.submissionType,
       });
+      await refreshUser();
       setPhase("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit entry.");
@@ -127,6 +133,11 @@ export function SubmitEntry({
           {isCreator && (
             <p className="rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-[13px] text-gold-bright">
               You created this campaign. Creators cannot submit entries to their own campaigns.
+            </p>
+          )}
+          {alreadySubmitted && (
+            <p className="rounded-xl border border-blue/25 bg-blue/10 px-3 py-2 text-[13px] text-blue">
+              You already submitted an entry to this campaign.
             </p>
           )}
           {/* verified X account notice */}

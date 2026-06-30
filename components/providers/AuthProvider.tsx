@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { ConnectModal } from "@/components/wallet/ConnectModal";
-import { getMe, logout, walletChallenge, walletVerify } from "@/lib/api";
+import { activateProjectAccount, getMe, logout, walletChallenge, walletVerify } from "@/lib/api";
 import type { MeResponse } from "@/lib/api";
 import { BSC_CHAIN_ID, connectInjectedWallet, formatWalletError } from "@/lib/wallet";
 
@@ -163,6 +163,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const connect = useCallback(async (walletId: string) => {
     setConnectError(null);
     try {
+      const nextPath = typeof window !== "undefined"
+        ? (localStorage.getItem(STORAGE_POST_CONNECT_KEY) || "/home")
+        : "/home";
       try {
         await logout();
       } catch {
@@ -177,7 +180,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "personal_sign",
         params: [challenge.message, nextAddress],
       })) as string;
-      const verified = await walletVerify(nextAddress, signature);
+      let verified = await walletVerify(nextAddress, signature);
+      if (nextPath.startsWith("/build")) {
+        try {
+          verified = await activateProjectAccount();
+        } catch (error) {
+          const isNotFound = typeof error === "object" && error && "status" in error && Number(error.status) === 404;
+          if (!isNotFound) throw error;
+        }
+      }
       setAddress(nextAddress);
       setChainId(BSC_CHAIN_ID);
       setUser(verified.user);

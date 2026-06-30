@@ -207,7 +207,7 @@ async function ensureSchema() {
   await query(`
     create table if not exists users (
       id text primary key,
-      wallet_address text unique not null,
+      wallet_address text not null,
       display_name text not null,
       handle text not null,
       account_type text not null default 'user',
@@ -229,6 +229,8 @@ async function ensureSchema() {
       updated_at timestamptz not null default now()
     );
   `);
+  await query(`alter table users drop constraint if exists users_wallet_address_key;`);
+  await query(`create unique index if not exists users_wallet_address_account_type_idx on users (lower(wallet_address), account_type);`);
   await query(`alter table users add column if not exists account_type text not null default 'user';`);
   await query(`alter table users add column if not exists website text not null default '';`);
   await query(`alter table users add column if not exists project_verified boolean not null default false;`);
@@ -322,6 +324,14 @@ async function ensureSchema() {
     );
   `);
   await query(`alter table if exists submissions drop constraint if exists submissions_user_id_fkey;`);
+  await query(`
+    delete from submissions s
+    using submissions dupe
+    where s.id < dupe.id
+      and s.campaign_id = dupe.campaign_id
+      and s.user_id = dupe.user_id
+  `);
+  await query(`create unique index if not exists submissions_campaign_user_idx on submissions (campaign_id, user_id);`);
 }
 
 async function ensureSeed() {
@@ -780,10 +790,75 @@ async function buildMePayload(userId) {
   };
 }
 
+async function getUserByWallet(address, accountType = "user") {
+  const normalized = normalizeAddress(address);
+  const existing = await query(
+    "select * from users where lower(wallet_address) = lower($1) and account_type = $2 limit 1",
+    [normalized, accountType],
+  );
+  return existing.rows[0] ? userRow(existing.rows[0]) : null;
+}
+
+function nextProjectHandle(baseHandle, walletAddress) {
+  const suffix = normalizeAddress(walletAddress).slice(-4).toLowerCase();
+  return sanitizeHandle(`${baseHandle || "project"}_${suffix}`);
+}
+
+async function createProjectAccountFromUser(user) {
+  const existing = await getUserByWallet(user.wallet, "project");
+  if (existing) return existing;
+
+  const handleBase = nextProjectHandle(user.handle, user.wallet);
+  let nextHandle = handleBase;
+  let suffix = 1;
+  while (true) {
+    const taken = await query("select id from users where lower(handle) = lower($1) limit 1", [nextHandle]);
+    if (!taken.rows[0]) break;
+    nextHandle = sanitizeHandle(`${handleBase}${suffix}`);
+    suffix += 1;
+  }
+
+  const inserted = await query(
+    `
+    insert into users (
+      id, wallet_address, display_name, handle, account_type, avatar, banner, bio, website,
+      project_verified, project_verification_status, x_connected, x_user_id, x_handle, joined,
+      created, wins, earned, is_admin
+    )
+    values ($1,$2,$3,$4,'project',$5,$6,$7,$8,false,'unverified',false,null,null,0,0,0,0,false)
+    returning *
+    `,
+    [
+      crypto.randomUUID(),
+      normalizeAddress(user.wallet),
+      `${user.name} Project`,
+      nextHandle,
+      user.avatar,
+      user.banner,
+      "Project account. Update your profile before requesting verification.",
+      user.website || "",
+    ],
+  );
+  return userRow(inserted.rows[0]);
+}
+
+async function createSession(res, user) {
+  const sessionId = crypto.randomUUID();
+  const exp = Math.floor((Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000) / 1000);
+  const token = signJwt({ sub: user.id, sid: sessionId, iat: Math.floor(Date.now() / 1000), exp });
+  await query("insert into sessions (id, user_id, expires_at) values ($1,$2,to_timestamp($3))", [sessionId, user.id, exp]);
+  return json(
+    res,
+    200,
+    { user: await buildMePayload(user.id) ?? user, session: { expiresAt: new Date(exp * 1000).toISOString() } },
+    { "Set-Cookie": sessionCookie(token) },
+  );
+}
+
 async function upsertWalletUser(address) {
   const normalized = normalizeAddress(address);
-  const existing = await query("select * from users where lower(wallet_address) = lower($1) limit 1", [normalized]);
-  if (existing.rows[0]) return userRow(existing.rows[0]);
+  const existing = await getUserByWallet(normalized, "user");
+  if (existing) return existing;
   const suffix = normalized.slice(-6);
   const id = crypto.randomUUID();
   const handle = sanitizeHandle(`user${suffix}`);
@@ -867,19 +942,8 @@ async function handleWalletVerify(req, res) {
   }
 
   const user = await upsertWalletUser(address);
-  const sessionId = crypto.randomUUID();
-  const exp = Math.floor((Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000) / 1000);
-  const token = signJwt({ sub: user.id, sid: sessionId, iat: Math.floor(Date.now() / 1000), exp });
-  await query("insert into sessions (id, user_id, expires_at) values ($1,$2,to_timestamp($3))", [sessionId, user.id, exp]);
   await query("delete from wallet_challenges where lower(address) = lower($1)", [address]);
-  const profile = await buildMePayload(user.id);
-
-  json(
-    res,
-    200,
-    { user: profile ?? user, session: { expiresAt: new Date(exp * 1000).toISOString() } },
-    { "Set-Cookie": sessionCookie(token) },
-  );
+  return createSession(res, user);
 }
 
 async function handleMeGet(req, res) {
@@ -896,7 +960,6 @@ async function handleMePatch(req, res) {
   const bio = typeof body.bio === "string" ? body.bio.trim() : user.bio;
   const avatar = typeof body.avatar === "string" && body.avatar.trim() ? body.avatar.trim() : user.avatar;
   const banner = typeof body.banner === "string" && body.banner.trim() ? body.banner.trim() : user.banner;
-  const accountType = body.accountType === "project" ? "project" : body.accountType === "user" ? "user" : user.accountType;
   const nextHandle = typeof body.handle === "string" && body.handle.trim()
     ? sanitizeHandle(body.handle)
     : user.handle;
@@ -921,22 +984,35 @@ async function handleMePatch(req, res) {
         bio = $3,
         avatar = $4,
         banner = $5,
-        account_type = $6,
-        handle = $7,
-        website = $8,
-        project_verified = case when $6 = 'project' and project_verification_status = 'approved' then true else false end,
-        project_verification_status = case
-          when $6 = 'project' and account_type <> 'project' then 'unverified'
-          when $6 = 'user' then 'unverified'
-          else project_verification_status
-        end,
+        handle = $6,
+        website = $7,
         updated_at = now()
     where id = $1
     returning *
     `,
-    [user.id, displayName, bio, avatar, banner, accountType, nextHandle, website],
+    [user.id, displayName, bio, avatar, banner, nextHandle, website],
   );
   json(res, 200, { user: userRow(updated.rows[0]) });
+}
+
+async function handleProjectAccountStart(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const projectUser = user.accountType === "project" ? user : await createProjectAccountFromUser(user);
+  return createSession(res, projectUser);
+}
+
+async function handleProjectAccountActivate(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  if (user.accountType === "project") {
+    return createSession(res, user);
+  }
+  const projectUser = await getUserByWallet(user.wallet, "project");
+  if (!projectUser) {
+    return json(res, 404, { error: "Project account not found for this wallet." });
+  }
+  return createSession(res, projectUser);
 }
 
 async function handleProjectVerificationRequest(req, res) {
@@ -1246,6 +1322,13 @@ async function handleSubmitCampaign(req, res, campaignId) {
   if (creator.id === user.id) {
     return json(res, 403, { error: "You created this campaign. Creators cannot submit entries to their own campaigns." });
   }
+  const existing = await query(
+    "select id from submissions where campaign_id = $1 and user_id = $2 limit 1",
+    [campaignId, user.id],
+  );
+  if (existing.rows[0]) {
+    return json(res, 409, { error: "You have already submitted an entry to this campaign." });
+  }
   const body = await readBody(req);
   const link = String(body.link || body.links?.[0] || body.url || "").trim();
   if (!link) return json(res, 400, { error: "A submission link is required." });
@@ -1554,13 +1637,17 @@ async function handleNotifications(req, res) {
   });
 }
 
-async function handleProject(req, res, handle) {
-  const userResult = await query(
-    "select * from users where account_type = 'project' and (id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1)) limit 1",
+async function findAccountByLookup(handle) {
+  const result = await query(
+    "select * from users where id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1) limit 1",
     [handle],
   );
-  if (!userResult.rows[0]) return json(res, 404, { error: "Project not found." });
-  const user = userRow(userResult.rows[0]);
+  return result.rows[0] ? userRow(result.rows[0]) : null;
+}
+
+async function handleProject(req, res, handle) {
+  const user = await findAccountByLookup(handle);
+  if (!user || user.accountType !== "project") return json(res, 404, { error: "Project not found." });
   const campaigns = await query("select * from campaigns where creator->>'id' = $1 order by created_at desc limit 12", [user.id]);
   json(res, 200, {
     project: projectProfileFromUser(user, campaigns.rows.map(campaignRow)),
@@ -1569,12 +1656,8 @@ async function handleProject(req, res, handle) {
 }
 
 async function handlePublicUser(req, res, handle) {
-  const userResult = await query(
-    "select * from users where account_type = 'user' and (id = $1 or lower(handle) = lower($1) or lower(coalesce(x_handle, '')) = lower($1)) limit 1",
-    [handle],
-  );
-  if (!userResult.rows[0]) return json(res, 404, { error: "User not found." });
-  const account = userRow(userResult.rows[0]);
+  const account = await findAccountByLookup(handle);
+  if (!account || account.accountType !== "user") return json(res, 404, { error: "User not found." });
   const joined = await query(
     `
     select c.* from campaigns c
@@ -1649,6 +1732,8 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/auth/x/callback" && req.method === "GET") return handleXCallback(req, res, url);
     if (url.pathname === "/api/me" && req.method === "GET") return handleMeGet(req, res);
     if (url.pathname === "/api/me" && req.method === "PATCH") return handleMePatch(req, res);
+    if (url.pathname === "/api/me/project-account" && req.method === "POST") return handleProjectAccountStart(req, res);
+    if (url.pathname === "/api/me/project-account/activate" && req.method === "POST") return handleProjectAccountActivate(req, res);
     if (url.pathname === "/api/me/project-verification" && req.method === "POST") return handleProjectVerificationRequest(req, res);
     if (url.pathname === "/api/campaigns" && (req.method === "GET" || req.method === "POST")) return handleCampaigns(req, res, url);
     if (/^\/api\/campaigns\/[^/]+$/.test(url.pathname) && req.method === "GET") {
