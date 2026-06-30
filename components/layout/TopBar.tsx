@@ -193,13 +193,15 @@ export function TopBar() {
             <Search size={18} />
           </button>
           <NotificationsMenu />
-          <Link
-            href="/create"
-            className="hidden h-10 items-center gap-1.5 rounded-full bg-gradient-to-b from-gold-bright to-gold px-4 text-sm font-semibold text-black transition-shadow hover:shadow-[0_8px_30px_-6px_rgba(240,185,11,0.6)] md:flex"
-          >
-            <Plus size={16} strokeWidth={2.6} />
-            Create
-          </Link>
+          {(user?.accountType === "project" || user?.isAdmin) && (
+            <Link
+              href="/create"
+              className="hidden h-10 items-center gap-1.5 rounded-full bg-gradient-to-b from-gold-bright to-gold px-4 text-sm font-semibold text-black transition-shadow hover:shadow-[0_8px_30px_-6px_rgba(240,185,11,0.6)] md:flex"
+            >
+              <Plus size={16} strokeWidth={2.6} />
+              Create
+            </Link>
+          )}
           <button className="hidden h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:border-gold/50 sm:flex">
             <Wallet size={16} className="text-gold-bright" />
             <span className="font-mono">{balance || "0 BNB"}</span>

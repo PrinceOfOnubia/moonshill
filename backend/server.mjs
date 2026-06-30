@@ -774,24 +774,44 @@ async function fetchTokenMetadataFromDexscreener(address) {
     throw new Error("Enter a valid BNB Chain token contract address.");
   }
 
-  const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+  const normalized = normalizeAddress(address);
+  const response = await fetch(`https://api.dexscreener.com/token-pairs/v1/bsc/${normalized}`);
   if (!response.ok) {
     throw new Error(`Dexscreener lookup failed with ${response.status}.`);
   }
   const body = await response.json();
-  const pairs = Array.isArray(body?.pairs) ? body.pairs : [];
-  const pair = pairs.find((entry) => String(entry?.chainId || "").toLowerCase() === "bsc") || pairs[0];
-  const baseToken = pair?.baseToken;
-  if (!baseToken?.name || !baseToken?.symbol || !baseToken?.address) {
+  const pairs = Array.isArray(body) ? body : Array.isArray(body?.pairs) ? body.pairs : [];
+  const bscPairs = pairs.filter((entry) => String(entry?.chainId || "").toLowerCase() === "bsc");
+  const rankedPairs = (bscPairs.length ? bscPairs : pairs)
+    .filter((entry) => {
+      const baseAddress = normalizeAddress(entry?.baseToken?.address || "");
+      const quoteAddress = normalizeAddress(entry?.quoteToken?.address || "");
+      return baseAddress === normalized || quoteAddress === normalized;
+    })
+    .sort((a, b) => Number(b?.liquidity?.usd || 0) - Number(a?.liquidity?.usd || 0));
+  const pair = rankedPairs[0];
+  const matchedToken = normalizeAddress(pair?.baseToken?.address || "") === normalized
+    ? pair?.baseToken
+    : normalizeAddress(pair?.quoteToken?.address || "") === normalized
+      ? pair?.quoteToken
+      : null;
+  if (!matchedToken?.name || !matchedToken?.symbol || !matchedToken?.address) {
     throw new Error("Token not found on Dexscreener.");
   }
+  const priceUsd = Number(pair?.priceUsd || 0);
+  const liquidityUsd = Number(pair?.liquidity?.usd || 0);
   return {
-    name: String(baseToken.name),
-    symbol: String(baseToken.symbol),
+    name: String(matchedToken.name),
+    symbol: String(matchedToken.symbol),
     decimals: 18,
-    address: String(baseToken.address),
-    chain: pair?.chainId ? String(pair.chainId) : "bsc",
+    address: normalizeAddress(String(matchedToken.address)),
+    chain: "BNB Smart Chain",
     source: "Dexscreener",
+    priceUsd: Number.isFinite(priceUsd) && priceUsd > 0 ? priceUsd : null,
+    liquidityUsd: Number.isFinite(liquidityUsd) && liquidityUsd > 0 ? liquidityUsd : null,
+    logoUrl: pair?.info?.imageUrl || pair?.info?.openGraph || null,
+    pairAddress: pair?.pairAddress || null,
+    dexUrl: pair?.url || null,
   };
 }
 
@@ -1256,6 +1276,9 @@ async function handleCampaigns(req, res, url) {
   if (req.method === "POST") {
     const user = await requireUser(req, res);
     if (!user) return;
+    if (user.accountType !== "project") {
+      return json(res, 403, { error: "Only project accounts can create campaigns." });
+    }
     const body = await readBody(req);
     const title = String(body.title || "").trim();
     const description = String(body.description || "").trim();
@@ -1291,6 +1314,9 @@ async function handleCampaigns(req, res, url) {
     if (!title || !description || !category || !cover || !requestedRewardToken || !rewardAmount || !winners) {
       return json(res, 400, { error: "Title, description, cover, reward, and winners are required." });
     }
+    if (holderRequirement?.enabled && !holderRequirement.tokenAddress) {
+      return json(res, 400, { error: "A valid holder requirement token is required." });
+    }
     const slugBase = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const slug = `${slugBase || "campaign"}-${crypto.randomUUID().slice(0, 8)}`;
     const creator = creatorFromUser(user);
@@ -1325,6 +1351,22 @@ async function handleCampaigns(req, res, url) {
       );
     }
 
+    let normalizedHolderRequirement = null;
+    if (holderRequirement?.enabled) {
+      try {
+        const holderTokenMeta = await fetchTokenMetadataFromDexscreener(String(holderRequirement.tokenAddress || "").trim());
+        normalizedHolderRequirement = {
+          enabled: true,
+          tokenAddress: holderTokenMeta.address,
+          tokenName: holderTokenMeta.name,
+          tokenSymbol: holderTokenMeta.symbol,
+          minimumAmount: holderRequirement.minimumAmount,
+        };
+      } catch (error) {
+        return json(res, 400, { error: error instanceof Error ? error.message : "Could not fetch holder token metadata." });
+      }
+    }
+
     const inserted = await query(
       `
       insert into campaigns
@@ -1345,7 +1387,7 @@ async function handleCampaigns(req, res, url) {
         rewardAmount,
         winners,
         JSON.stringify(creator),
-        holderRequirement?.enabled ? JSON.stringify(holderRequirement) : null,
+        normalizedHolderRequirement ? JSON.stringify(normalizedHolderRequirement) : null,
         creatorRequirements && (creatorRequirements.minFollowers || creatorRequirements.minViews)
           ? JSON.stringify(creatorRequirements)
           : null,
@@ -1544,6 +1586,81 @@ async function handleAdminSubmissionStatus(req, res, submissionId) {
     returning *
     `,
     [submissionId, status],
+  );
+  if (!updated.rows[0]) return json(res, 404, { error: "Submission not found." });
+  const s = updated.rows[0];
+  return json(res, 200, {
+    submission: {
+      id: s.id,
+      challengeId: s.campaign_id,
+      challengeTitle: s.challenge_title,
+      cover: s.cover,
+      user: s.user,
+      link: s.link,
+      type: s.type,
+      status: s.status,
+      submittedAt: s.submitted_at,
+      reward: s.reward == null ? undefined : Number(s.reward),
+    },
+  });
+}
+
+async function canManageCampaignSubmissions(user, campaignId) {
+  if (user?.isAdmin) return true;
+  if (!user || user.accountType !== "project") return false;
+  const campaign = await query("select creator from campaigns where id = $1 limit 1", [campaignId]);
+  const creator = campaign.rows[0]?.creator || {};
+  return creator.id === user.id;
+}
+
+async function handleCampaignSubmissions(req, res, campaignId) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const canManage = await canManageCampaignSubmissions(user, campaignId);
+  if (!canManage) {
+    return json(res, 403, { error: "Project owner or admin access required." });
+  }
+  const submissions = await query(
+    "select * from submissions where campaign_id = $1 order by submitted_at desc limit 100",
+    [campaignId],
+  );
+  return json(res, 200, {
+    submissions: submissions.rows.map((s) => ({
+      id: s.id,
+      challengeId: s.campaign_id,
+      challengeTitle: s.challenge_title,
+      cover: s.cover,
+      user: s.user,
+      link: s.link,
+      type: s.type,
+      status: s.status,
+      submittedAt: s.submitted_at,
+      reward: s.reward == null ? undefined : Number(s.reward),
+    })),
+  });
+}
+
+async function handleCampaignSubmissionStatus(req, res, campaignId, submissionId) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const canManage = await canManageCampaignSubmissions(user, campaignId);
+  if (!canManage) {
+    return json(res, 403, { error: "Project owner or admin access required." });
+  }
+  const body = await readBody(req);
+  const status = String(body.status || "").trim();
+  const allowed = new Set(["Pending Review", "Approved", "Rejected", "Winner"]);
+  if (!allowed.has(status)) {
+    return json(res, 400, { error: "Valid submission status is required." });
+  }
+  const updated = await query(
+    `
+    update submissions
+    set status = $3
+    where id = $1 and campaign_id = $2
+    returning *
+    `,
+    [submissionId, campaignId, status],
   );
   if (!updated.rows[0]) return json(res, 404, { error: "Submission not found." });
   const s = updated.rows[0];
@@ -1821,11 +1938,22 @@ const server = http.createServer(async (req, res) => {
     if (/^\/api\/campaigns\/[^/]+$/.test(url.pathname) && req.method === "GET") {
       return handleCampaignBySlug(req, res, decodeURIComponent(url.pathname.split("/").pop()));
     }
+    if (/^\/api\/campaigns\/[^/]+\/submissions$/.test(url.pathname) && req.method === "GET") {
+      return handleCampaignSubmissions(req, res, decodeURIComponent(url.pathname.split("/")[3]));
+    }
     if (/^\/api\/campaigns\/[^/]+\/join$/.test(url.pathname) && req.method === "POST") {
       return handleJoinCampaign(req, res, decodeURIComponent(url.pathname.split("/")[3]));
     }
     if (/^\/api\/campaigns\/[^/]+\/submissions$/.test(url.pathname) && req.method === "POST") {
       return handleSubmitCampaign(req, res, decodeURIComponent(url.pathname.split("/")[3]));
+    }
+    if (/^\/api\/campaigns\/[^/]+\/submissions\/[^/]+$/.test(url.pathname) && req.method === "PATCH") {
+      return handleCampaignSubmissionStatus(
+        req,
+        res,
+        decodeURIComponent(url.pathname.split("/")[3]),
+        decodeURIComponent(url.pathname.split("/")[5]),
+      );
     }
     if (url.pathname === "/api/admin/summary" && req.method === "GET") return handleAdminSummary(req, res);
     if (/^\/api\/admin\/projects\/[^/]+\/verification$/.test(url.pathname) && req.method === "PATCH") {

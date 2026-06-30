@@ -191,6 +191,23 @@ export function CreateClient() {
     }
   }
 
+  if (connected && user && user.accountType !== "project") {
+    return (
+      <div className="rounded-[24px] border border-gold/20 bg-surface/50 p-8">
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Project account required</h1>
+        <p className="mt-3 max-w-2xl text-[15px] text-muted">
+          Only project accounts can create campaigns. Creator accounts can join campaigns and submit entries, but campaign creation stays in the dedicated project flow.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button onClick={() => openConnect("/build")}>Go to project onboarding</Button>
+          <Link href="/explore">
+            <Button variant="outline">Explore campaigns</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (published) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
@@ -367,7 +384,16 @@ export function CreateClient() {
                       </div>
                       {customTokenMeta && (
                         <div className="mt-4 rounded-xl border border-green/20 bg-green/8 p-3.5 text-sm">
-                          <p className="font-medium text-text">{customTokenMeta.name} ({customTokenMeta.symbol})</p>
+                          <div className="flex items-center gap-3">
+                            {customTokenMeta.logoUrl ? (
+                              <img src={customTokenMeta.logoUrl} alt={customTokenMeta.symbol} className="h-10 w-10 rounded-full object-cover" />
+                            ) : null}
+                            <div>
+                              <p className="font-medium text-text">{customTokenMeta.name} ({customTokenMeta.symbol})</p>
+                              {customTokenMeta.priceUsd ? <p className="mt-1 text-muted">Price: ${customTokenMeta.priceUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}</p> : null}
+                              {customTokenMeta.liquidityUsd ? <p className="mt-1 text-muted">Liquidity: ${customTokenMeta.liquidityUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p> : null}
+                            </div>
+                          </div>
                           <p className="mt-1 text-muted">Decimals: {customTokenMeta.decimals}</p>
                           {customTokenMeta.chain && <p className="mt-1 text-muted">Network: {customTokenMeta.chain}</p>}
                           <p className="mt-1 font-mono text-[12px] text-green">{customTokenMeta.address}</p>
@@ -454,7 +480,16 @@ export function CreateClient() {
                         </div>
                         {holderTokenMeta && (
                           <div className="rounded-xl border border-green/20 bg-green/8 p-3.5 text-sm">
-                            <p className="font-medium text-text">{holderTokenMeta.name} ({holderTokenMeta.symbol})</p>
+                            <div className="flex items-center gap-3">
+                              {holderTokenMeta.logoUrl ? (
+                                <img src={holderTokenMeta.logoUrl} alt={holderTokenMeta.symbol} className="h-10 w-10 rounded-full object-cover" />
+                              ) : null}
+                              <div>
+                                <p className="font-medium text-text">{holderTokenMeta.name} ({holderTokenMeta.symbol})</p>
+                                {holderTokenMeta.priceUsd ? <p className="mt-1 text-muted">Price: ${holderTokenMeta.priceUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}</p> : null}
+                                {holderTokenMeta.liquidityUsd ? <p className="mt-1 text-muted">Liquidity: ${holderTokenMeta.liquidityUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p> : null}
+                              </div>
+                            </div>
                             {holderTokenMeta.chain && <p className="mt-1 text-muted">Network: {holderTokenMeta.chain}</p>}
                             <p className="mt-1 font-mono text-[12px] text-green">{holderTokenMeta.address}</p>
                           </div>

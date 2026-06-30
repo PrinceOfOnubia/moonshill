@@ -42,6 +42,11 @@ export interface TokenMetadata {
   address: string;
   chain?: string | null;
   source?: string | null;
+  priceUsd?: number | null;
+  liquidityUsd?: number | null;
+  logoUrl?: string | null;
+  pairAddress?: string | null;
+  dexUrl?: string | null;
 }
 
 export interface Creator {

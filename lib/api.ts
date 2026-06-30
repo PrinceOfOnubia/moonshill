@@ -157,6 +157,17 @@ export async function submitCampaign(campaignId: string, payload: Record<string,
   });
 }
 
+export async function getCampaignSubmissions(campaignId: string) {
+  return apiFetch<{ submissions: Submission[] }>(`/api/campaigns/${campaignId}/submissions`);
+}
+
+export async function updateCampaignSubmissionStatus(campaignId: string, submissionId: string, status: "Pending Review" | "Approved" | "Rejected" | "Winner") {
+  return apiFetch<{ submission: Submission }>(`/api/campaigns/${campaignId}/submissions/${encodeURIComponent(submissionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function getAdminSummary() {
   return apiFetch<{
     counts: { users: number; campaigns: number; submissions: number; joins: number; pendingProjects: number; flagged: number };

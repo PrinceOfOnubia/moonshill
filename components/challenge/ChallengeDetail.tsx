@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "next-view-transitions";
 import { motion } from "framer-motion";
 import {
-  Check, CheckCircle2, ClipboardCheck, Clock, FileCheck2, Globe, MessageCircleMore, Share2, Tag, Trophy, Users,
+  Check, CheckCircle2, ClipboardCheck, Clock, Crown, FileCheck2, Globe, MessageCircleMore, Share2, Tag, Trophy, Users, X,
 } from "lucide-react";
 import type { Challenge } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -16,7 +16,8 @@ import { ChallengeCard } from "./ChallengeCard";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
 import { compact, displayRewardToken, fmtToken, fmtUsd } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getCampaigns, joinCampaign } from "@/lib/api";
+import { getCampaignSubmissions, getCampaigns, joinCampaign, updateCampaignSubmissionStatus } from "@/lib/api";
+import type { Submission } from "@/lib/types";
 
 export function ChallengeDetail({ c }: { c: Challenge }) {
   const { connected, openConnect, user } = useAuth();
@@ -26,13 +27,17 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [related, setRelated] = useState<Challenge[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionAction, setSubmissionAction] = useState<string | null>(null);
   const t = useTimeLeft(c.endsAt);
   const isCreator = user?.id === c.creator.id;
   const hasSubmitted = !!user?.submissions?.some((submission) => submission.challengeId === c.id);
   const creatorHref = c.creator.type === "project"
-    ? `/project/${c.creator.handle || c.creator.id}`
-    : `/u/${c.creator.handle || c.creator.id}`;
+    ? `/project/${c.creator.id}`
+    : `/u/${c.creator.id}`;
   const rewardTicker = displayRewardToken(c.rewardToken);
+  const canReview = !!user && (user.isAdmin || (user.accountType === "project" && isCreator));
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +56,28 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
   useEffect(() => {
     setJoined(!!user?.joinedCampaigns?.some((campaign) => campaign.id === c.id));
   }, [c.id, user]);
+
+  useEffect(() => {
+    if (!canReview) {
+      setSubmissions([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingSubmissions(true);
+    getCampaignSubmissions(c.id)
+      .then(({ submissions: next }) => {
+        if (!cancelled) setSubmissions(next);
+      })
+      .catch(() => {
+        if (!cancelled) setSubmissions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSubmissions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [c.id, canReview]);
 
   async function share() {
     const shareUrl = typeof window !== "undefined" ? window.location.href : "";
@@ -86,6 +113,16 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
       setJoinError(error instanceof Error ? error.message : "Could not join campaign.");
     } finally {
       setJoining(false);
+    }
+  }
+
+  async function setSubmissionVerdict(submissionId: string, status: "Approved" | "Rejected" | "Winner") {
+    setSubmissionAction(submissionId);
+    try {
+      const { submission } = await updateCampaignSubmissionStatus(c.id, submissionId, status);
+      setSubmissions((current) => current.map((entry) => entry.id === submissionId ? submission : entry));
+    } finally {
+      setSubmissionAction(null);
     }
   }
 
@@ -254,9 +291,22 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                 {c.rewardTokenMeta && (
                   <div className="rounded-2xl border border-border bg-bg-2 px-4 py-3">
                     <p className="text-[12px] uppercase tracking-wide text-faint">Reward token</p>
-                    <p className="mt-1 font-medium text-text">
-                      {c.rewardTokenMeta.name} ({c.rewardTokenMeta.symbol})
-                    </p>
+                    <div className="mt-1 flex items-center gap-3">
+                      {c.rewardTokenMeta.logoUrl ? (
+                        <img src={c.rewardTokenMeta.logoUrl} alt={c.rewardTokenMeta.symbol} className="h-10 w-10 rounded-full object-cover" />
+                      ) : null}
+                      <div>
+                        <p className="font-medium text-text">
+                          {c.rewardTokenMeta.name} ({c.rewardTokenMeta.symbol})
+                        </p>
+                        {c.rewardTokenMeta.priceUsd ? (
+                          <p className="mt-1 text-[13px] text-muted">Price: ${c.rewardTokenMeta.priceUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+                        ) : null}
+                        {c.rewardTokenMeta.liquidityUsd ? (
+                          <p className="mt-1 text-[13px] text-muted">Liquidity: ${c.rewardTokenMeta.liquidityUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                        ) : null}
+                      </div>
+                    </div>
                     {c.rewardTokenMeta.chain && (
                       <p className="mt-1 text-[13px] text-muted">{c.rewardTokenMeta.chain}</p>
                     )}
@@ -283,6 +333,38 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                   </div>
                 )}
               </div>
+            </Section>
+          )}
+
+          {canReview && (
+            <Section title="Submission review" icon={ClipboardCheck}>
+              {loadingSubmissions ? (
+                <p className="text-sm text-muted">Loading submissions...</p>
+              ) : submissions.length ? (
+                <div className="space-y-3">
+                  {submissions.map((submission) => (
+                    <div key={submission.id} className="rounded-2xl border border-border bg-bg-2 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-text">{submission.user.name}</p>
+                          <p className="text-[13px] text-faint">@{submission.user.handle}</p>
+                          <a href={submission.link} target="_blank" rel="noreferrer" className="mt-2 block truncate text-[13px] text-blue hover:text-text">
+                            {submission.link}
+                          </a>
+                          <p className="mt-2 text-[12px] text-faint">{submission.status}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button disabled={submissionAction === submission.id} onClick={() => setSubmissionVerdict(submission.id, "Approved")} className="grid h-9 w-9 place-items-center rounded-full border border-green/30 bg-green/10 text-green hover:bg-green/20 disabled:opacity-60"><Check size={16} /></button>
+                          <button disabled={submissionAction === submission.id} onClick={() => setSubmissionVerdict(submission.id, "Rejected")} className="grid h-9 w-9 place-items-center rounded-full border border-red/30 bg-red/10 text-red hover:bg-red/20 disabled:opacity-60"><X size={16} /></button>
+                          <button disabled={submissionAction === submission.id} onClick={() => setSubmissionVerdict(submission.id, "Winner")} className="flex h-9 items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 text-[12px] font-medium text-gold-bright hover:bg-gold/20 disabled:opacity-60"><Crown size={14} /> Winner</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">No submissions yet.</p>
+              )}
             </Section>
           )}
 
