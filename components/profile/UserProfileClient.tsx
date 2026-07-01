@@ -149,9 +149,9 @@ export function UserProfileClient() {
           {!isProjectAccount && (
             <button
               onClick={() => setWalletOpen(true)}
-              className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong"
+              className="group flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition-all hover:-translate-y-0.5 hover:border-gold/35 hover:bg-surface-2 hover:shadow-[0_10px_30px_-18px_rgba(255,199,0,0.45)]"
             >
-              <Wallet size={15} className="text-gold-bright" />
+              <Wallet size={15} className="text-gold-bright transition-transform group-hover:scale-105" />
               {profile.wallet ? "Manage reward wallet" : "Add reward wallet"}
             </button>
           )}

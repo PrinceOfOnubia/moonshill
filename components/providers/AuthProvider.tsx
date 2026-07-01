@@ -9,7 +9,18 @@ import {
   useState,
 } from "react";
 import { ConnectModal } from "@/components/wallet/ConnectModal";
-import { getMe, logout, resendEmailAuth, startEmailAuth, startXAuth, verifyEmailAuth } from "@/lib/api";
+import {
+  clearStoredAuthState,
+  getMe,
+  hydrateAuthStateFromUrl,
+  logout,
+  resendEmailAuth,
+  startEmailAuth,
+  startXAuth,
+  storeAuthToken,
+  storeProjectApplicationToken,
+  verifyEmailAuth,
+} from "@/lib/api";
 import type { MeResponse } from "@/lib/api";
 
 const STORAGE_POST_AUTH_KEY = "mb_post_auth";
@@ -63,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void (async () => {
       try {
+        hydrateAuthStateFromUrl();
         const storedTarget = localStorage.getItem(STORAGE_AUTH_ACCOUNT_TYPE_KEY);
         if (storedTarget === "project") {
           setAuthTarget("project");
@@ -77,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    hydrateAuthStateFromUrl();
     const params = new URLSearchParams(window.location.search);
     if (params.get("x") !== "connected") return;
 
@@ -121,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const startEmailLogin = useCallback(async (email: string) => {
     setConnectError(null);
     try {
+      clearStoredAuthState();
       const result = await startEmailAuth(email, authTarget);
       return {
         email: result.email,
@@ -141,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       : authTarget === "project" ? "/build" : "/home";
 
     try {
+      clearStoredAuthState();
       try {
         await logout();
       } catch {
@@ -148,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const result = await verifyEmailAuth(email, code, authTarget);
       if (result.user) {
+        storeAuthToken(result.session?.token || null);
         setUser(result.user);
         setConnectModalOpen(false);
         const resolvedNextPath = authTarget === "project"
@@ -158,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : nextPath;
         return { nextPath: resolvedNextPath, hasSession: true };
       }
+      storeProjectApplicationToken(result.projectApplicationToken || null);
       setUser(null);
       setConnectModalOpen(false);
       return { nextPath, hasSession: false };
@@ -171,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resendEmailLogin = useCallback(async (email: string) => {
     setConnectError(null);
     try {
+      clearStoredAuthState();
       const result = await resendEmailAuth(email, authTarget);
       return {
         resendAfterSeconds: result.resendAfterSeconds,
@@ -189,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? (localStorage.getItem(STORAGE_POST_AUTH_KEY) || (authTarget === "project" ? "/build" : "/home"))
       : authTarget === "project" ? "/build" : "/home";
     try {
+      clearStoredAuthState();
       try {
         await logout();
       } catch {
@@ -208,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setConnectError(null);
     try {
       void logout();
+      clearStoredAuthState();
       localStorage.removeItem(STORAGE_POST_AUTH_KEY);
       localStorage.removeItem(STORAGE_AUTH_ACCOUNT_TYPE_KEY);
     } catch {

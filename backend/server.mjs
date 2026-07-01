@@ -129,7 +129,7 @@ function json(res, status, body, extraHeaders = {}) {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": res.getHeader("Access-Control-Allow-Origin") || DEFAULT_CORS_ORIGIN,
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Project-Application",
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     ...extraHeaders,
   });
@@ -141,7 +141,7 @@ function text(res, status, body, extraHeaders = {}) {
     "Content-Type": "text/plain; charset=utf-8",
     "Access-Control-Allow-Origin": res.getHeader("Access-Control-Allow-Origin") || DEFAULT_CORS_ORIGIN,
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Project-Application",
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     ...extraHeaders,
   });
@@ -174,6 +174,14 @@ function withRedirectParam(redirectTo, key, value) {
   return url.toString();
 }
 
+function withRedirectHashParam(redirectTo, key, value) {
+  const url = new URL(redirectTo);
+  const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
+  hashParams.set(key, value);
+  url.hash = hashParams.toString();
+  return url.toString();
+}
+
 function normalizeApprovedProjectRedirect(redirectTo) {
   try {
     const url = new URL(redirectTo);
@@ -191,7 +199,7 @@ function applyCors(req, res) {
   const allowedOrigin = origin && allowedCorsOrigins.has(origin) ? origin : DEFAULT_CORS_ORIGIN;
   res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Project-Application");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
 }
 
@@ -1434,6 +1442,7 @@ async function sessionHeadersForUser(user) {
   return {
     headers: { "Set-Cookie": [sessionCookie(token), clearCookie(PROJECT_APP_COOKIE_NAME)] },
     expiresAt: new Date(exp * 1000).toISOString(),
+    token,
   };
 }
 
@@ -1442,7 +1451,7 @@ async function createSession(res, user) {
   return json(
     res,
     200,
-    { user: await buildMePayload(user.id) ?? user, session: { expiresAt: session.expiresAt } },
+    { user: await buildMePayload(user.id) ?? user, session: { expiresAt: session.expiresAt, token: session.token } },
     session.headers,
   );
 }
@@ -1450,7 +1459,7 @@ async function createSession(res, user) {
 function projectApplicationSessionHeaders(applicationId) {
   const exp = Math.floor((Date.now() + PROJECT_APPLICATION_DAYS * 24 * 60 * 60 * 1000) / 1000);
   const token = signJwt({ aid: applicationId, iat: Math.floor(Date.now() / 1000), exp });
-  return { "Set-Cookie": projectApplicationCookie(token) };
+  return { headers: { "Set-Cookie": projectApplicationCookie(token) }, token };
 }
 
 async function createProjectApplicationFromLegacyProjectUser(user) {
@@ -1590,7 +1599,7 @@ async function authUserFromRequest(req) {
 
 async function authProjectApplicationFromRequest(req) {
   const cookies = parseCookies(req);
-  const token = cookies[PROJECT_APP_COOKIE_NAME];
+  const token = cookies[PROJECT_APP_COOKIE_NAME] || String(req.headers["x-project-application"] || "");
   if (!token) return null;
   const payload = verifyJwt(token);
   if (!payload?.aid) return null;
@@ -1696,11 +1705,12 @@ async function completeEmailAuth(res, email, accountType) {
     if (!application) {
       application = await createDraftProjectApplication({ email });
     }
+    const projectSession = projectApplicationSessionHeaders(application.id);
     return json(
       res,
       200,
-      { application, status: application.status },
-      projectApplicationSessionHeaders(application.id),
+      { application, status: application.status, projectApplicationToken: projectSession.token },
+      projectSession.headers,
     );
   }
 
@@ -1924,7 +1934,7 @@ async function handleProjectWalletVerify(req, res) {
     res,
     200,
     { application, status: application.status },
-    projectApplicationSessionHeaders(application.id),
+    projectApplicationSessionHeaders(application.id).headers,
   );
 }
 
@@ -1958,7 +1968,7 @@ async function handleProjectApplicationPatch(req, res) {
     verificationNotes: body.verificationNotes,
     status: application.status === "rejected" ? "draft" : application.status,
   });
-  return json(res, 200, { application: updated }, projectApplicationSessionHeaders(application.id));
+  return json(res, 200, { application: updated }, projectApplicationSessionHeaders(application.id).headers);
 }
 
 async function handleProjectApplicationSubmit(req, res) {
@@ -1990,7 +2000,7 @@ async function handleProjectApplicationSubmit(req, res) {
     status: "pending",
     rejectionReason: "",
   });
-  return json(res, 200, { application: updated }, projectApplicationSessionHeaders(application.id));
+  return json(res, 200, { application: updated }, projectApplicationSessionHeaders(application.id).headers);
 }
 
 async function handleProjectXStart(req, res, url) {
@@ -2234,7 +2244,11 @@ async function handleXLoginCallback(req, res, url, stateRow) {
       );
       if (approved.rows[0] && approved.rows[0].project_verification_status === "approved") {
         const session = await sessionHeadersForUser(userRow(approved.rows[0]));
-        return redirect(res, normalizeApprovedProjectRedirect(redirectTo), session.headers);
+        return redirect(
+          res,
+          withRedirectHashParam(normalizeApprovedProjectRedirect(redirectTo), "session", session.token),
+          session.headers,
+        );
       }
       let application = await query(
         "select * from project_applications where x_user_id = $1 limit 1",
@@ -2254,10 +2268,13 @@ async function handleXLoginCallback(req, res, url, stateRow) {
           xHandle: xUser.username || null,
         });
       }
+      const projectSession = projectApplication ? projectApplicationSessionHeaders(projectApplication.id) : null;
       return redirect(
         res,
-        withRedirectParam(redirectTo, "x", "connected"),
-        projectApplication ? projectApplicationSessionHeaders(projectApplication.id) : {},
+        projectSession
+          ? withRedirectHashParam(withRedirectParam(redirectTo, "x", "connected"), "projectApplication", projectSession.token)
+          : withRedirectParam(redirectTo, "x", "connected"),
+        projectSession?.headers || {},
       );
     }
 
@@ -2267,7 +2284,11 @@ async function handleXLoginCallback(req, res, url, stateRow) {
       xHandle: xUser.username || null,
     });
     const session = await sessionHeadersForUser(creator);
-    return redirect(res, withRedirectParam(redirectTo, "x", "connected"), session.headers);
+    return redirect(
+      res,
+      withRedirectHashParam(withRedirectParam(redirectTo, "x", "connected"), "session", session.token),
+      session.headers,
+    );
   } catch (err) {
     return redirect(
       res,
@@ -2314,10 +2335,13 @@ async function handleProjectXCallback(req, res, url) {
       xHandle: xUser.username || null,
     });
     await query("delete from project_x_oauth_states where state = $1", [state]);
+    const projectSession = updated ? projectApplicationSessionHeaders(updated.id) : null;
     redirect(
       res,
-      withRedirectParam(redirectTo, "x", "connected"),
-      updated ? projectApplicationSessionHeaders(updated.id) : {},
+      projectSession
+        ? withRedirectHashParam(withRedirectParam(redirectTo, "x", "connected"), "projectApplication", projectSession.token)
+        : withRedirectParam(redirectTo, "x", "connected"),
+      projectSession?.headers || {},
     );
   } catch (err) {
     redirect(
@@ -3090,7 +3114,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": res.getHeader("Access-Control-Allow-Origin") || DEFAULT_CORS_ORIGIN,
       "Access-Control-Allow-Credentials": "true",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Project-Application",
       "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     });
     return res.end();

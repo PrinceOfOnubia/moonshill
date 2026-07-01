@@ -1,6 +1,8 @@
 import type { AppNotification, Challenge, LeaderRow, ProjectApplication, ProjectProfile, PublicUserProfile, RewardWallet, Submission, TokenMetadata, UserProfile } from "./types";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
+const AUTH_TOKEN_STORAGE_KEY = "mb_session_token";
+const PROJECT_APPLICATION_TOKEN_STORAGE_KEY = "mb_project_application_token";
 
 export class ApiError extends Error {
   status: number;
@@ -15,6 +17,96 @@ function baseUrl() {
   return (process.env.NEXT_PUBLIC_API_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 }
 
+function getStoredAuthToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getStoredProjectApplicationToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(PROJECT_APPLICATION_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function storeAuthToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!token) {
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    localStorage.removeItem(PROJECT_APPLICATION_TOKEN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function storeProjectApplicationToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!token) {
+      localStorage.removeItem(PROJECT_APPLICATION_TOKEN_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(PROJECT_APPLICATION_TOKEN_STORAGE_KEY, token);
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearStoredAuthState() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(PROJECT_APPLICATION_TOKEN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hydrateAuthStateFromUrl() {
+  if (typeof window === "undefined") return { session: false, projectApplication: false };
+  try {
+    const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+    if (!hash) return { session: false, projectApplication: false };
+    const params = new URLSearchParams(hash);
+    const sessionToken = params.get("session");
+    const projectApplicationToken = params.get("projectApplication");
+    let changed = false;
+
+    if (sessionToken) {
+      storeAuthToken(sessionToken);
+      changed = true;
+    }
+    if (projectApplicationToken) {
+      storeProjectApplicationToken(projectApplicationToken);
+      changed = true;
+    }
+
+    if (changed) {
+      const url = new URL(window.location.href);
+      url.hash = "";
+      window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    }
+
+    return {
+      session: !!sessionToken,
+      projectApplication: !!projectApplicationToken,
+    };
+  } catch {
+    return { session: false, projectApplication: false };
+  }
+}
+
 async function parseResponse<T>(res: Response): Promise<T> {
   const contentType = res.headers.get("content-type") || "";
   const body = contentType.includes("application/json") ? await res.json() : { error: await res.text() };
@@ -25,12 +117,18 @@ async function parseResponse<T>(res: Response): Promise<T> {
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}) {
+  const authToken = getStoredAuthToken();
+  const projectApplicationToken = getStoredProjectApplicationToken();
   const res = await fetch(`${baseUrl()}${path}`, {
     ...init,
     cache: "no-store",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(authToken && !((init.headers || {}) as Record<string, string>).Authorization
+        ? { Authorization: `Bearer ${authToken}` }
+        : {}),
+      ...(projectApplicationToken ? { "X-Project-Application": projectApplicationToken } : {}),
       ...(init.headers || {}),
     },
   });
@@ -59,7 +157,7 @@ export async function startEmailAuth(email: string, accountType: "user" | "proje
 }
 
 export async function verifyEmailAuth(email: string, code: string, accountType: "user" | "project") {
-  return apiFetch<{ user?: MeResponse; application?: ProjectApplication; session?: { expiresAt: string }; status?: ProjectApplication["status"] }>(
+  return apiFetch<{ user?: MeResponse; application?: ProjectApplication; session?: { expiresAt: string; token?: string }; status?: ProjectApplication["status"]; projectApplicationToken?: string }>(
     "/api/auth/email/verify",
     {
       method: "POST",
