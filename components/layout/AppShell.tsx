@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { TopBar } from "./TopBar";
 import { BottomNav } from "./BottomNav";
@@ -14,11 +15,48 @@ import { useAuth } from "@/components/providers/AuthProvider";
 const PUBLIC_ROUTES = ["/docs", "/privacy", "/terms", "/token", "/build", "/explore", "/challenge", "/project", "/u", "/leaderboard"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { connected, ready } = useAuth();
+  const { connected, ready, refreshUser } = useAuth();
   const pathname = usePathname();
+  const [recoveringAuth, setRecoveringAuth] = useState(false);
+
+  useEffect(() => {
+    const isXConnected = typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("x") === "connected";
+
+    if (!isXConnected || connected) {
+      setRecoveringAuth(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      setRecoveringAuth(true);
+      const delays = [0, 250, 500, 1000, 1500];
+
+      for (const delay of delays) {
+        if (cancelled) return;
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          if (cancelled) return;
+        }
+        const nextUser = await refreshUser();
+        if (nextUser) {
+          if (!cancelled) setRecoveringAuth(false);
+          return;
+        }
+      }
+
+      if (!cancelled) setRecoveringAuth(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connected, refreshUser, pathname]);
 
   // Avoid a landing/app flash before localStorage is read.
-  if (!ready) return null;
+  if (!ready || recoveringAuth) return null;
 
   if (!connected) {
     const isPublic = PUBLIC_ROUTES.some((p) => pathname.startsWith(p));

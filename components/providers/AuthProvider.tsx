@@ -31,7 +31,7 @@ interface AuthState {
   resendEmailLogin: (email: string) => Promise<{ resendAfterSeconds: number; expiresAt: string }>;
   loginWithX: () => Promise<void>;
   disconnect: () => void;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<MeResponse | null>;
 }
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -53,8 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const next = await getMe();
       setUser(next);
+      return next;
     } catch {
       setUser(null);
+      return null;
     }
   }, []);
 

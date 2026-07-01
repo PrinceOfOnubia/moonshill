@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -151,11 +151,27 @@ function ProjectFlow() {
   const linked = !!application?.xConnected;
   const verificationStatus = application?.status || (user?.accountType === "project" ? "approved" : "draft");
 
+  const loadProjectApplication = useCallback(async (retries = 1) => {
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      try {
+        const { application: next } = await getProjectApplication();
+        return next;
+      } catch (error) {
+        lastError = error;
+        if (attempt < retries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getProjectApplication()
-      .then(({ application: next }) => {
+    loadProjectApplication(searchParams.get("x") === "connected" ? 5 : 1)
+      .then((next) => {
         if (cancelled) return;
         setApplication(next);
         setForm(projectFormFromApplication(next));
@@ -171,12 +187,12 @@ function ProjectFlow() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadProjectApplication, searchParams]);
 
   useEffect(() => {
     if (searchParams.get("x") === "connected") {
-      void getProjectApplication()
-        .then(({ application: next }) => {
+      void loadProjectApplication(5)
+        .then((next) => {
           setApplication(next);
           setForm(projectFormFromApplication(next));
           setMessage("Project X account connected.");
@@ -190,7 +206,7 @@ function ProjectFlow() {
     if (x && x !== "connected") {
       setError(reason || (x === "not-configured" ? "X connection not configured yet." : "X connection failed."));
     }
-  }, [refreshUser, searchParams]);
+  }, [loadProjectApplication, refreshUser, searchParams]);
 
   async function connectX() {
     setError(null);
