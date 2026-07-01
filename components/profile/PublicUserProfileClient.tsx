@@ -1,20 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { Link } from "next-view-transitions";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Wallet } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge, VerifiedBadge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
 import { SubmissionRow } from "./SubmissionRow";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { XIcon } from "@/components/landing/social";
 import type { PublicUserProfile } from "@/lib/types";
 import { cn, shortAddr } from "@/lib/utils";
 
 const tabs = ["Submissions", "Joined", "Created"] as const;
 
 export function PublicUserProfileClient({ profile }: { profile: PublicUserProfile }) {
+  const { user } = useAuth();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Submissions");
+  const isOwnProfile = user?.id === profile.id;
+  const xProfileUrl = profile.xHandle ? `https://x.com/${profile.xHandle}` : null;
 
   return (
     <div className="-mt-6">
@@ -32,15 +39,38 @@ export function PublicUserProfileClient({ profile }: { profile: PublicUserProfil
             <h1 className="flex items-center gap-1.5 font-display text-2xl font-bold text-text drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] sm:text-3xl">
               <span className="truncate">{profile.name}</span>
               {profile.xConnected && <VerifiedBadge size={20} className="shrink-0" />}
+              {xProfileUrl && (
+                <a
+                  href={xProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open @${profile.xHandle} on X`}
+                  className="grid h-7 w-7 place-items-center rounded-full text-faint transition-colors hover:text-text"
+                >
+                  <XIcon size={14} />
+                </a>
+              )}
             </h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-faint">@{profile.handle}</p>
             </div>
           </div>
         </div>
-        <div className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono">
-          <Wallet size={15} className="text-gold-bright" />
-          {profile.wallet ? shortAddr(profile.wallet) : "No reward wallet"}
+        <div className="flex flex-wrap items-center gap-2">
+          {xProfileUrl && !isOwnProfile && (
+            <a href={xProfileUrl} target="_blank" rel="noreferrer">
+              <Button>Follow on 𝕏</Button>
+            </a>
+          )}
+          {isOwnProfile && (
+            <Link href="/profile">
+              <Button variant="outline">Manage profile</Button>
+            </Link>
+          )}
+          <div className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono">
+            <Wallet size={15} className="text-gold-bright" />
+            {profile.wallet ? shortAddr(profile.wallet) : "No reward wallet"}
+          </div>
         </div>
       </div>
 

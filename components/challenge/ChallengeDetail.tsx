@@ -33,9 +33,10 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
   const t = useTimeLeft(c.endsAt);
   const isCreator = user?.id === c.creator.id;
   const hasSubmitted = !!user?.submissions?.some((submission) => submission.challengeId === c.id);
+  const creatorLookup = c.creator.id || c.creator.handle;
   const creatorHref = c.creator.type === "project"
-    ? `/project/${encodeURIComponent(c.creator.handle)}`
-    : `/u/${encodeURIComponent(c.creator.handle)}`;
+    ? `/project/${encodeURIComponent(creatorLookup)}`
+    : `/u/${encodeURIComponent(creatorLookup)}`;
   const rewardTicker = displayRewardToken(c.rewardToken);
   const canReview = !!user && (user.isAdmin || (user.accountType === "project" && isCreator));
 

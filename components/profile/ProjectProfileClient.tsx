@@ -1,22 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import { Link } from "next-view-transitions";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Copy, Globe, FileCode2, MessageCircleMore, Tags } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { VerifiedBadge } from "@/components/ui/Badge";
+import { Badge, VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { XIcon } from "@/components/landing/social";
 import type { Challenge, ProjectProfile } from "@/lib/types";
 import { cn, shortAddr } from "@/lib/utils";
 
-const tabs = ["Active", "Completed"] as const;
+const tabs = ["Created", "Active", "Completed"] as const;
 
 export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; campaigns: Challenge[] }) {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("Active");
+  const { user } = useAuth();
+  const [tab, setTab] = useState<(typeof tabs)[number]>("Created");
   const [copied, setCopied] = useState(false);
-  const active = campaigns;
+  const isOwnProfile = user?.id === p.id;
+  const xProfileUrl = p.xHandle ? `https://x.com/${p.xHandle}` : null;
+  const now = Date.now();
+  const createdCampaigns = campaigns;
+  const activeCampaigns = campaigns.filter((campaign) => new Date(campaign.endsAt).getTime() >= now);
+  const completedCampaigns = campaigns.filter((campaign) => new Date(campaign.endsAt).getTime() < now);
+  const visibleCampaigns = tab === "Created"
+    ? createdCampaigns
+    : tab === "Active"
+      ? activeCampaigns
+      : completedCampaigns;
 
   return (
     <div className="-mt-6">
@@ -25,24 +39,46 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" />
       </div>
 
-      <div className="-mt-14 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative z-10 -mt-14 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-end gap-4">
-          <Avatar src={p.avatar} alt={p.name} size={104} verified={p.verified} className="rounded-2xl bg-bg p-1" />
-          <div className="pb-1">
+          <span className="shrink-0 rounded-[28px] bg-bg p-1.5">
+            <Avatar src={p.avatar} alt={p.name} size={104} verified={p.verified} className="rounded-2xl" />
+          </span>
+          <div className="min-w-0 pb-1">
             <h1 className="flex items-center gap-1.5 font-display text-2xl font-bold sm:text-3xl">
-              {p.name} {p.verified && <VerifiedBadge size={22} />}
+              <span className="truncate">{p.name}</span>
+              {p.verified && <VerifiedBadge size={22} className="shrink-0" />}
+              {xProfileUrl && (
+                <a
+                  href={xProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open @${p.xHandle} on X`}
+                  className="grid h-7 w-7 place-items-center rounded-full text-faint transition-colors hover:text-text"
+                >
+                  <XIcon size={14} />
+                </a>
+              )}
             </h1>
-            <p className="text-sm text-faint">@{p.handle}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-faint">@{p.handle}</p>
+              {p.verified && <Badge tone="gold">Verified</Badge>}
+            </div>
           </div>
         </div>
-        {p.xHandle ? (
-          <a href={`https://x.com/${p.xHandle}`} target="_blank" rel="noreferrer">
+        {xProfileUrl && !isOwnProfile ? (
+          <a href={xProfileUrl} target="_blank" rel="noreferrer">
             <Button>Follow on 𝕏</Button>
           </a>
+        ) : isOwnProfile ? (
+          <Link href="/profile">
+            <Button variant="outline">Manage profile</Button>
+          </Link>
         ) : null}
       </div>
 
       <p className="mt-4 max-w-2xl text-[15px] text-muted">{p.description}</p>
+      {p.xHandle && <Badge tone="blue" className="mt-3">𝕏 connected · @{p.xHandle}</Badge>}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {p.category && (
@@ -71,10 +107,11 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
         ) : null}
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Total sponsored" value={<AnimatedNumber value={p.totalSponsored} prefix="$" useCompact />} accent />
-        <Stat label="Active" value={<AnimatedNumber value={p.activeChallenges} />} />
-        <Stat label="Completed" value={<AnimatedNumber value={p.completedChallenges} />} />
+        <Stat label="Created" value={<AnimatedNumber value={createdCampaigns.length} />} />
+        <Stat label="Active" value={<AnimatedNumber value={activeCampaigns.length} />} />
+        <Stat label="Completed" value={<AnimatedNumber value={completedCampaigns.length} />} />
       </div>
 
       <div className="mt-8 flex gap-1 border-b border-border">
@@ -88,11 +125,11 @@ export function ProjectProfileClient({ p, campaigns }: { p: ProjectProfile; camp
 
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {active.length ? (
-            active.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+          {visibleCampaigns.length ? (
+            visibleCampaigns.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
           ) : (
             <div className="rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted sm:col-span-2 lg:col-span-3">
-              No campaigns yet.
+              {tab === "Created" ? "No campaigns yet." : tab === "Active" ? "No active campaigns yet." : "No completed campaigns yet."}
             </div>
           )}
         </motion.div>

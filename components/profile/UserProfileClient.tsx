@@ -17,12 +17,13 @@ import { XIcon } from "@/components/landing/social";
 
 const rewardWalletChains = ["BNB", "Ethereum/Base", "Solana", "TON"] as const;
 
-const tabs = ["Submissions", "Joined", "Created"] as const;
+const creatorTabs = ["Submissions", "Joined", "Created"] as const;
+const projectTabs = ["Created", "Active", "Completed"] as const;
 const projectCategories = ["Gaming", "DeFi", "Meme", "NFT", "AI", "RWA", "Infrastructure", "Other"] as const;
 
 export function UserProfileClient() {
   const { user, refreshUser } = useAuth();
-  const [tab, setTab] = useState<(typeof tabs)[number]>("Submissions");
+  const [tab, setTab] = useState<(typeof creatorTabs)[number] | (typeof projectTabs)[number]>("Submissions");
   const [copied, setCopied] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [xPending, setXPending] = useState(false);
@@ -44,12 +45,17 @@ export function UserProfileClient() {
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const profile = user;
+  const isProjectAccount = profile?.accountType === "project";
+  const tabs = isProjectAccount ? projectTabs : creatorTabs;
   const joined = profile?.joinedCampaigns ?? [];
   const created = profile?.createdCampaigns ?? [];
+  const activeCreated = created.filter((campaign) => new Date(campaign.endsAt).getTime() >= Date.now());
+  const completedCreated = created.filter((campaign) => new Date(campaign.endsAt).getTime() < Date.now());
   const submissions = profile?.submissions ?? [];
   const sourceXHandle = profile?.xHandle || "";
   const xConnected = !!profile?.xConnected;
   const xProfileUrl = sourceXHandle ? `https://x.com/${sourceXHandle}` : null;
+  const totalSponsored = created.reduce((sum, campaign) => sum + Number(campaign.rewardPool || 0), 0);
 
   async function connectX() {
     setXPending(true);
@@ -87,6 +93,10 @@ export function UserProfileClient() {
       TON: profile.rewardWallets?.find((wallet) => wallet.chain === "TON")?.address || "",
     });
   }, [profile]);
+
+  useEffect(() => {
+    setTab(isProjectAccount ? "Created" : "Submissions");
+  }, [isProjectAccount]);
 
   if (!profile) {
     return (
@@ -134,11 +144,20 @@ export function UserProfileClient() {
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <button onClick={copy} className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong">
-            <Wallet size={15} className="text-gold-bright" />
-            {profile.wallet ? shortAddr(profile.wallet) : "Add reward wallet"}
-            {profile.wallet ? (copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />) : null}
-          </button>
+          {!isProjectAccount && (
+            <button onClick={copy} className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong">
+              <Wallet size={15} className="text-gold-bright" />
+              {profile.wallet ? shortAddr(profile.wallet) : "Add reward wallet"}
+              {profile.wallet ? (copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />) : null}
+            </button>
+          )}
+          {isProjectAccount && profile.wallet && (
+            <button onClick={copy} className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong">
+              <Wallet size={15} className="text-gold-bright" />
+              {shortAddr(profile.wallet)}
+              {copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />}
+            </button>
+          )}
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil size={15} /> Edit profile
           </Button>
@@ -170,10 +189,21 @@ export function UserProfileClient() {
 
       {/* stats */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Wins" value={<AnimatedNumber value={profile.wins} />} icon={<Trophy size={16} className="text-gold-bright" />} />
-        <StatCard label="Rewards earned" value={<AnimatedNumber value={profile.earned} prefix="$" useCompact />} accent />
-        <StatCard label="Campaigns joined" value={<AnimatedNumber value={profile.joined} />} />
-        <StatCard label="Created" value={<AnimatedNumber value={profile.created} />} />
+        {isProjectAccount ? (
+          <>
+            <StatCard label="Total sponsored" value={<AnimatedNumber value={totalSponsored} prefix="$" useCompact />} accent />
+            <StatCard label="Created" value={<AnimatedNumber value={created.length} />} />
+            <StatCard label="Active campaigns" value={<AnimatedNumber value={activeCreated.length} />} />
+            <StatCard label="Completed campaigns" value={<AnimatedNumber value={completedCreated.length} />} />
+          </>
+        ) : (
+          <>
+            <StatCard label="Wins" value={<AnimatedNumber value={profile.wins} />} icon={<Trophy size={16} className="text-gold-bright" />} />
+            <StatCard label="Rewards earned" value={<AnimatedNumber value={profile.earned} prefix="$" useCompact />} accent />
+            <StatCard label="Campaigns joined" value={<AnimatedNumber value={profile.joined} />} />
+            <StatCard label="Created" value={<AnimatedNumber value={profile.created} />} />
+          </>
+        )}
       </div>
 
       {/* tabs */}
@@ -195,7 +225,7 @@ export function UserProfileClient() {
 
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-6">
-          {tab === "Submissions" && (
+          {!isProjectAccount && tab === "Submissions" && (
             <div className="grid gap-2.5">
               {submissions.length ? (
                 submissions.map((s) => <SubmissionRow key={s.id} s={s} />)
@@ -204,7 +234,7 @@ export function UserProfileClient() {
               )}
             </div>
           )}
-          {tab === "Joined" && (
+          {!isProjectAccount && tab === "Joined" && (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {joined.length ? (
                 joined.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
@@ -218,7 +248,25 @@ export function UserProfileClient() {
               {created.length ? (
                 created.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
               ) : (
-                <EmptyState>No campaigns found.</EmptyState>
+                <EmptyState>{isProjectAccount ? "No campaigns yet." : "No campaigns found."}</EmptyState>
+              )}
+            </div>
+          )}
+          {isProjectAccount && tab === "Active" && (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {activeCreated.length ? (
+                activeCreated.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+              ) : (
+                <EmptyState>No active campaigns yet.</EmptyState>
+              )}
+            </div>
+          )}
+          {isProjectAccount && tab === "Completed" && (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {completedCreated.length ? (
+                completedCreated.map((c, i) => <ChallengeCard key={c.id} c={c} index={i} />)
+              ) : (
+                <EmptyState>No completed campaigns yet.</EmptyState>
               )}
             </div>
           )}
@@ -315,25 +363,29 @@ export function UserProfileClient() {
               </div>
             </>
           )}
-          <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
-            <span className="flex items-center gap-2 text-[13px] text-muted">
-              <Wallet size={15} className="text-gold-bright" /> Reward wallet
-            </span>
-            <span className="font-mono text-[13px] text-green">{profile.wallet ? shortAddr(profile.wallet) : "Not added yet"}</span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {rewardWalletChains.map((chain) => (
-              <div key={chain}>
-                <label className="mb-1.5 block text-[13px] font-medium text-muted">{chain}</label>
-                <input
-                  value={rewardWallets[chain]}
-                  onChange={(e) => setRewardWallets((current) => ({ ...current, [chain]: e.target.value }))}
-                  placeholder={chain === "BNB" ? "0x..." : chain === "Solana" ? "Solana address" : "Wallet address"}
-                  className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
-                />
+          {!isProjectAccount && (
+            <>
+              <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
+                <span className="flex items-center gap-2 text-[13px] text-muted">
+                  <Wallet size={15} className="text-gold-bright" /> Reward wallet
+                </span>
+                <span className="font-mono text-[13px] text-green">{profile.wallet ? shortAddr(profile.wallet) : "Not added yet"}</span>
               </div>
-            ))}
-          </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {rewardWalletChains.map((chain) => (
+                  <div key={chain}>
+                    <label className="mb-1.5 block text-[13px] font-medium text-muted">{chain}</label>
+                    <input
+                      value={rewardWallets[chain]}
+                      onChange={(e) => setRewardWallets((current) => ({ ...current, [chain]: e.target.value }))}
+                      placeholder={chain === "BNB" ? "0x..." : chain === "Solana" ? "Solana address" : "Wallet address"}
+                      className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
             <span className="text-[13px] text-muted">𝕏 account</span>
             {xConnected ? (
@@ -367,15 +419,17 @@ export function UserProfileClient() {
                     projectCategory: projectCategory || undefined,
                     telegramUrl,
                   });
-                  await updateRewardWallets(
-                    rewardWalletChains
-                      .map((chain, index) => ({
-                        chain,
-                        address: rewardWallets[chain].trim(),
-                        isPrimary: index === 0,
-                      }))
-                      .filter((wallet) => wallet.address),
-                  );
+                  if (!isProjectAccount) {
+                    await updateRewardWallets(
+                      rewardWalletChains
+                        .map((chain, index) => ({
+                          chain,
+                          address: rewardWallets[chain].trim(),
+                          isPrimary: index === 0,
+                        }))
+                        .filter((wallet) => wallet.address),
+                    );
+                  }
                   setName(updated.user.name);
                   setBio(updated.user.bio);
                   setAvatar(updated.user.avatar);

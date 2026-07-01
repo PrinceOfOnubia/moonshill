@@ -94,7 +94,7 @@ function XFlow() {
     setPending(true);
     setError(null);
     try {
-      const response = await startXConnect("/verify");
+      const response = await startXConnect("/profile");
       window.location.href = response.redirectUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "X connection failed.");
@@ -110,7 +110,7 @@ function XFlow() {
           n={1}
           title="Log in or sign up"
           body="Use email or X to access the creator app first."
-          action={<Button onClick={() => openConnect("/verify", "user")}>Open auth</Button>}
+          action={<Button onClick={() => openConnect("/profile", "user")}>Open auth</Button>}
         />
       </div>
     );

@@ -1074,6 +1074,25 @@ async function getUserByEmail(email, accountType = "user") {
   return existing.rows[0] ? userRow(existing.rows[0]) : null;
 }
 
+async function getUserByEmailAny(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  const existing = await query(
+    "select * from users where lower(email) = lower($1) limit 1",
+    [normalized],
+  );
+  return existing.rows[0] ? userRow(existing.rows[0]) : null;
+}
+
+async function getUserByXUserIdAny(xUserId) {
+  if (!xUserId) return null;
+  const existing = await query(
+    "select * from users where x_user_id = $1 limit 1",
+    [xUserId],
+  );
+  return existing.rows[0] ? userRow(existing.rows[0]) : null;
+}
+
 async function getProjectApplicationById(id) {
   const result = await query("select * from project_applications where id = $1 limit 1", [id]);
   return result.rows[0] ? projectApplicationRow(result.rows[0]) : null;
@@ -1091,6 +1110,77 @@ async function getProjectApplicationByEmail(email) {
   if (!normalized) return null;
   const result = await query("select * from project_applications where lower(email) = lower($1) limit 1", [normalized]);
   return result.rows[0] ? projectApplicationRow(result.rows[0]) : null;
+}
+
+async function getProjectApplicationByXUserId(xUserId) {
+  if (!xUserId) return null;
+  const result = await query("select * from project_applications where x_user_id = $1 limit 1", [xUserId]);
+  return result.rows[0] ? projectApplicationRow(result.rows[0]) : null;
+}
+
+function accountTypeConflictMessage(accountType, identity = "email") {
+  const label = identity === "x" ? "X account" : "email";
+  return accountType === "project"
+    ? `This ${label} is already used for a project account.`
+    : `This ${label} is already used for a creator account.`;
+}
+
+async function assertEmailAvailableForAccountType(email, desiredAccountType, currentUserId = null) {
+  const existingUser = await getUserByEmailAny(email);
+  if (existingUser && existingUser.id !== currentUserId && existingUser.accountType !== desiredAccountType) {
+    throw new Error(accountTypeConflictMessage(existingUser.accountType, "email"));
+  }
+
+  const existingApplication = await getProjectApplicationByEmail(email);
+  if (existingApplication && desiredAccountType === "user") {
+    throw new Error("This email is already used for a project account.");
+  }
+}
+
+async function assertXAvailableForAccountType(xUserId, desiredAccountType) {
+  const existingUser = await getUserByXUserIdAny(xUserId);
+  if (existingUser && existingUser.accountType !== desiredAccountType) {
+    throw new Error(accountTypeConflictMessage(existingUser.accountType, "x"));
+  }
+
+  const existingApplication = await getProjectApplicationByXUserId(xUserId);
+  if (existingApplication && desiredAccountType === "user") {
+    throw new Error("This X account is already used for a project account.");
+  }
+}
+
+async function assertXLinkAvailableForUser(user, xUserId) {
+  const existingUser = await getUserByXUserIdAny(xUserId);
+  if (existingUser && existingUser.id !== user.id) {
+    throw new Error(accountTypeConflictMessage(existingUser.accountType, "x"));
+  }
+
+  const existingApplication = await getProjectApplicationByXUserId(xUserId);
+  if (existingApplication && user.accountType !== "project") {
+    throw new Error("This X account is already used for a project account.");
+  }
+  if (
+    existingApplication
+    && user.accountType === "project"
+    && existingApplication.approvedProjectId !== user.id
+  ) {
+    throw new Error("This X account is already used for a project account.");
+  }
+}
+
+async function assertXAvailableForProjectApplication(applicationId, xUserId) {
+  const existingUser = await getUserByXUserIdAny(xUserId);
+  if (existingUser?.accountType === "user") {
+    throw new Error("This X account is already used for a creator account.");
+  }
+  if (existingUser?.accountType === "project") {
+    throw new Error("This X account is already used for a project account.");
+  }
+
+  const existingApplication = await getProjectApplicationByXUserId(xUserId);
+  if (existingApplication && existingApplication.id !== applicationId) {
+    throw new Error("This X account is already used for a project account.");
+  }
 }
 
 async function createDraftProjectApplication({ address = "", email = "", xConnected = false, xUserId = null, xHandle = null } = {}) {
@@ -1408,6 +1498,7 @@ async function upsertWalletUser(address) {
 
 async function upsertEmailUser(email) {
   const normalized = normalizeEmail(email);
+  await assertEmailAvailableForAccountType(normalized, "user");
   const existing = await getUserByEmail(normalized, "user");
   if (existing) return existing;
   const id = crypto.randomUUID();
@@ -1435,6 +1526,7 @@ async function upsertEmailUser(email) {
 }
 
 async function upsertXUser({ xUserId, xHandle }) {
+  await assertXAvailableForAccountType(xUserId, "user");
   const byX = await query(
     "select * from users where account_type = 'user' and x_user_id = $1 limit 1",
     [xUserId],
@@ -1565,6 +1657,7 @@ async function handleEmailAuthStart(req, res) {
     return json(res, 400, { error: "Enter a valid email address." });
   }
   try {
+    await assertEmailAvailableForAccountType(email, accountType);
     const otp = await createEmailOtp(email, accountType);
     return json(res, 200, {
       ok: true,
@@ -1581,6 +1674,7 @@ async function handleEmailAuthStart(req, res) {
 }
 
 async function completeEmailAuth(res, email, accountType) {
+  await assertEmailAvailableForAccountType(email, accountType);
   if (accountType === "project") {
     const approvedProject = await getUserByEmail(email, "project");
     if (approvedProject?.projectVerificationStatus === "approved") {
@@ -1690,6 +1784,11 @@ async function handleMePatch(req, res) {
     );
     if (emailTaken.rows[0]) {
       return json(res, 409, { error: "That email is already in use." });
+    }
+    try {
+      await assertEmailAvailableForAccountType(nextEmail, user.accountType, user.id);
+    } catch (error) {
+      return json(res, 409, { error: error instanceof Error ? error.message : "That email is already in use." });
     }
   }
 
@@ -2056,6 +2155,12 @@ async function handleXCallback(req, res, url) {
     if (!meRes.ok) throw new Error(`X profile lookup failed with ${meRes.status}`);
     const meJson = await meRes.json();
     const xUser = meJson?.data || {};
+    const targetUserResult = await query("select * from users where id = $1 limit 1", [stateRow.rows[0].user_id]);
+    const targetUser = targetUserResult.rows[0] ? userRow(targetUserResult.rows[0]) : null;
+    if (!targetUser) {
+      throw new Error("User not found.");
+    }
+    await assertXLinkAvailableForUser(targetUser, xUser.id || null);
     await query(
       `
       update users
@@ -2110,6 +2215,7 @@ async function handleXLoginCallback(req, res, url, stateRow) {
     await query("delete from auth_x_oauth_states where state = $1", [state]);
 
     if (stateRow.account_type === "project") {
+      await assertXAvailableForAccountType(xUser.id || null, "project");
       const approved = await query(
         "select * from users where account_type = 'project' and x_user_id = $1 limit 1",
         [xUser.id || null],
@@ -2143,6 +2249,7 @@ async function handleXLoginCallback(req, res, url, stateRow) {
       );
     }
 
+    await assertXAvailableForAccountType(xUser.id || null, "user");
     const creator = await upsertXUser({
       xUserId: xUser.id || null,
       xHandle: xUser.username || null,
@@ -2188,6 +2295,7 @@ async function handleProjectXCallback(req, res, url) {
     if (!meRes.ok) throw new Error(`X profile lookup failed with ${meRes.status}`);
     const meJson = await meRes.json();
     const xUser = meJson?.data || {};
+    await assertXAvailableForProjectApplication(stateRow.rows[0].project_application_id, xUser.id || null);
     const updated = await updateProjectApplication(stateRow.rows[0].project_application_id, {
       xConnected: true,
       xUserId: xUser.id || null,
