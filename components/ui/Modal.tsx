@@ -25,11 +25,27 @@ export function Modal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const scrollY = window.scrollY;
     document.addEventListener("keydown", onKey);
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.touchAction = "none";
     return () => {
       document.removeEventListener("keydown", onKey);
+      document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      document.body.style.touchAction = "";
+      window.scrollTo(0, scrollY);
     };
   }, [open, onClose]);
 
@@ -39,14 +55,14 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[100] flex overscroll-none items-end justify-center p-0 sm:items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
           <motion.div
-            className="glass-strong glow-soft relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[26px] border border-border-strong sm:max-w-lg sm:rounded-[26px]"
+            className="glass-strong glow-soft relative z-10 flex max-h-[92dvh] w-full touch-pan-y flex-col overflow-hidden overscroll-contain rounded-t-[26px] border border-border-strong sm:max-w-lg sm:rounded-[26px]"
             initial={{ y: 40, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0, scale: 0.98 }}
@@ -64,7 +80,7 @@ export function Modal({
 
             <div
               className={
-                "min-h-0 flex-1 overflow-y-auto p-5 " +
+                "min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 " +
                 (footer ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]")
               }
             >

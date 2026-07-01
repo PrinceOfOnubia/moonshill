@@ -75,6 +75,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [refreshUser]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("x") !== "connected") return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const delays = [0, 250, 750, 1500, 3000, 5000, 8000];
+
+      for (const delay of delays) {
+        if (cancelled) return;
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          if (cancelled) return;
+        }
+        const next = await refreshUser();
+        if (next) return;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshUser]);
+
   const openConnect = useCallback((nextPath = "/home", accountType: "user" | "project" = "user") => {
     try {
       localStorage.setItem(STORAGE_POST_AUTH_KEY, nextPath);
@@ -124,7 +150,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.user) {
         setUser(result.user);
         setConnectModalOpen(false);
-        return { nextPath, hasSession: true };
+        const resolvedNextPath = authTarget === "project"
+          && result.user.accountType === "project"
+          && result.user.projectVerificationStatus === "approved"
+          && nextPath.startsWith("/build")
+          ? "/home"
+          : nextPath;
+        return { nextPath: resolvedNextPath, hasSession: true };
       }
       setUser(null);
       setConnectModalOpen(false);

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { BadgeCheck, Check, FileCode2, Globe, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -73,6 +73,7 @@ export function VerifyClient({ mode = "auto" }: { mode?: "auto" | "project" | "c
 }
 
 function XFlow() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user, openConnect, refreshUser } = useAuth();
   const [pending, setPending] = useState(false);
@@ -117,28 +118,39 @@ function XFlow() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="rounded-3xl border border-border bg-surface/55 p-6 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.7)] sm:p-7">
       <StepCard
         n={1}
-        title="Connect your 𝕏 account"
-        body="We check that submitted links come from this account before approval."
+        title={linked ? "Creator verified" : "Connect your 𝕏 account"}
+        body={linked ? "Your creator account is verified and ready for campaign submissions." : "We check that submitted links come from this account before approval."}
         done={linked}
         action={<Button variant={linked ? "glass" : "primary"} disabled={pending} onClick={connectX}>{linked ? <><Check size={16} /> @{user?.xHandle || "connected"}</> : pending ? "Connecting…" : "Connect 𝕏"}</Button>}
       />
       {linked && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 rounded-2xl border border-green/25 bg-green/10 p-4">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-center gap-3 rounded-2xl border border-green/25 bg-green/10 p-4">
           <BadgeCheck className="text-green" />
           <p className="text-sm text-text">You can now submit entries. Links must come from <span className="font-medium">@{user?.xHandle || "your connected X account"}</span>.</p>
         </motion.div>
       )}
       {error && (
-        <p className="rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">{error}</p>
+        <p className="mt-4 rounded-2xl border border-red/25 bg-red/10 p-4 text-sm text-red">{error}</p>
       )}
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+        <Button variant="outline" onClick={() => router.push("/profile")}>
+          Go back to profile
+        </Button>
+        {linked && (
+          <Link href="/home">
+            <Button>Open app</Button>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
 
 function ProjectFlow() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { openConnect, refreshUser, user } = useAuth();
   const [application, setApplication] = useState<ProjectApplication | null>(null);
@@ -282,7 +294,7 @@ function ProjectFlow() {
 
   if (user?.accountType === "project" && user.projectVerificationStatus === "approved") {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-green/25 bg-green/10 p-8 text-center">
+      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-3xl border border-green/25 bg-green/10 p-8 text-center shadow-[0_18px_50px_-30px_rgba(0,0,0,0.7)]">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green/15 text-green">
           <BadgeCheck size={26} />
         </div>
@@ -295,6 +307,7 @@ function ProjectFlow() {
           <Link href="/create">
             <Button variant="outline">Launch campaign</Button>
           </Link>
+          <Button variant="ghost" onClick={() => router.push("/home")}>Go back to home</Button>
         </div>
       </motion.div>
     );
@@ -302,7 +315,7 @@ function ProjectFlow() {
 
   if (verificationStatus === "pending") {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-gold/25 bg-gold/8 p-8 text-center">
+      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-3xl border border-gold/25 bg-gold/8 p-8 text-center shadow-[0_18px_50px_-30px_rgba(0,0,0,0.7)]">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gold/15 text-gold-bright">
           <Loader2 className="animate-spin" size={26} />
         </div>
@@ -315,7 +328,7 @@ function ProjectFlow() {
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border bg-surface/50 p-6">
+    <div className="space-y-4 rounded-3xl border border-border bg-surface/55 p-6 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.7)]">
       <StepCard
         n={1}
         title="Connect your official 𝕏 account"
@@ -370,6 +383,9 @@ function ProjectFlow() {
         >
           {phase === "loading" ? <><Loader2 size={18} className="animate-spin" /> Submitting…</> : verificationStatus === "rejected" ? "Resubmit application" : "Submit application"}
         </Button>
+        <Button variant="ghost" size="lg" onClick={() => router.push(user ? "/profile" : "/home")}>
+          Go back
+        </Button>
       </div>
       <p className="text-[13px] text-faint">
         After submission, the project remains in review until an admin approves it. No dashboard access is granted before approval.
@@ -383,7 +399,7 @@ function ProjectFlow() {
 
 function StepCard({ n, title, body, done, disabled, action }: { n: number; title: string; body: string; done?: boolean; disabled?: boolean; action: React.ReactNode }) {
   return (
-    <div className={cn("flex items-center gap-4 rounded-2xl border border-border bg-surface/50 p-5 transition-opacity", disabled && "opacity-50")}>
+    <div className={cn("flex items-center gap-4 rounded-2xl border border-border bg-bg-2/85 p-5 transition-opacity", disabled && "opacity-50")}>
       <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold", done ? "border-green bg-green/15 text-green" : "border-border-strong text-muted")}>
         {done ? <Check size={16} /> : n}
       </div>

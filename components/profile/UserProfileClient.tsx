@@ -26,6 +26,8 @@ export function UserProfileClient() {
   const [tab, setTab] = useState<(typeof creatorTabs)[number] | (typeof projectTabs)[number]>("Submissions");
   const [copied, setCopied] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [walletSaving, setWalletSaving] = useState(false);
   const [xPending, setXPending] = useState(false);
   const [xError, setXError] = useState<string | null>(null);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -145,10 +147,12 @@ export function UserProfileClient() {
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {!isProjectAccount && (
-            <button onClick={copy} className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong">
+            <button
+              onClick={() => setWalletOpen(true)}
+              className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-mono transition-colors hover:border-border-strong"
+            >
               <Wallet size={15} className="text-gold-bright" />
-              {profile.wallet ? shortAddr(profile.wallet) : "Add reward wallet"}
-              {profile.wallet ? (copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />) : null}
+              {profile.wallet ? "Manage reward wallet" : "Add reward wallet"}
             </button>
           )}
           {isProjectAccount && profile.wallet && (
@@ -365,24 +369,8 @@ export function UserProfileClient() {
           )}
           {!isProjectAccount && (
             <>
-              <div className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-3">
-                <span className="flex items-center gap-2 text-[13px] text-muted">
-                  <Wallet size={15} className="text-gold-bright" /> Reward wallet
-                </span>
-                <span className="font-mono text-[13px] text-green">{profile.wallet ? shortAddr(profile.wallet) : "Not added yet"}</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {rewardWalletChains.map((chain) => (
-                  <div key={chain}>
-                    <label className="mb-1.5 block text-[13px] font-medium text-muted">{chain}</label>
-                    <input
-                      value={rewardWallets[chain]}
-                      onChange={(e) => setRewardWallets((current) => ({ ...current, [chain]: e.target.value }))}
-                      placeholder={chain === "BNB" ? "0x..." : chain === "Solana" ? "Solana address" : "Wallet address"}
-                      className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
-                    />
-                  </div>
-                ))}
+              <div className="rounded-xl border border-border bg-surface px-3.5 py-3 text-[13px] text-muted">
+                Reward wallets are managed separately from profile details.
               </div>
             </>
           )}
@@ -420,15 +408,12 @@ export function UserProfileClient() {
                     telegramUrl,
                   });
                   if (!isProjectAccount) {
-                    await updateRewardWallets(
-                      rewardWalletChains
-                        .map((chain, index) => ({
-                          chain,
-                          address: rewardWallets[chain].trim(),
-                          isPrimary: index === 0,
-                        }))
-                        .filter((wallet) => wallet.address),
-                    );
+                    setRewardWallets({
+                      BNB: updated.user.rewardWallets?.find((wallet) => wallet.chain === "BNB")?.address || rewardWallets.BNB,
+                      "Ethereum/Base": updated.user.rewardWallets?.find((wallet) => wallet.chain === "Ethereum/Base")?.address || rewardWallets["Ethereum/Base"],
+                      Solana: updated.user.rewardWallets?.find((wallet) => wallet.chain === "Solana")?.address || rewardWallets.Solana,
+                      TON: updated.user.rewardWallets?.find((wallet) => wallet.chain === "TON")?.address || rewardWallets.TON,
+                    });
                   }
                   setName(updated.user.name);
                   setBio(updated.user.bio);
@@ -453,6 +438,77 @@ export function UserProfileClient() {
           </div>
         </div>
       </Modal>
+
+      {!isProjectAccount && (
+        <Modal open={walletOpen} onClose={() => setWalletOpen(false)} title="Reward wallets">
+          <div className="space-y-5">
+            <div className="rounded-xl border border-border bg-surface px-3.5 py-3 text-[13px] text-muted">
+              Add payout wallets by chain. Your creator profile can store multiple reward destinations without changing your main profile details.
+            </div>
+            {profile.wallet && (
+              <button
+                onClick={copy}
+                className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-3 text-left text-sm font-mono transition-colors hover:border-border-strong"
+              >
+                <span className="flex items-center gap-2 text-muted">
+                  <Wallet size={15} className="text-gold-bright" /> Primary reward wallet
+                </span>
+                <span className="flex items-center gap-2 text-green">
+                  {shortAddr(profile.wallet)}
+                  {copied ? <Check size={14} className="text-green" /> : <Copy size={14} className="text-faint" />}
+                </span>
+              </button>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {rewardWalletChains.map((chain) => (
+                <div key={chain}>
+                  <label className="mb-1.5 block text-[13px] font-medium text-muted">{chain}</label>
+                  <input
+                    value={rewardWallets[chain]}
+                    onChange={(e) => setRewardWallets((current) => ({ ...current, [chain]: e.target.value }))}
+                    placeholder={chain === "BNB" ? "0x..." : chain === "Solana" ? "Solana address" : "Wallet address"}
+                    className="h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-gold/50"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="ghost" className="flex-1" onClick={() => setWalletOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={walletSaving}
+                onClick={async () => {
+                  try {
+                    setWalletSaving(true);
+                    await updateRewardWallets(
+                      rewardWalletChains
+                        .map((chain, index) => ({
+                          chain,
+                          address: rewardWallets[chain].trim(),
+                          isPrimary: index === 0,
+                        }))
+                        .filter((wallet) => wallet.address),
+                    );
+                    await refreshUser();
+                    setWalletOpen(false);
+                    setProfileMessage("Reward wallets updated.");
+                    setTimeout(() => setProfileMessage(null), 2200);
+                  } catch (error) {
+                    setProfileMessage(error instanceof Error ? error.message : "Could not update reward wallets.");
+                    setTimeout(() => setProfileMessage(null), 2600);
+                  } finally {
+                    setWalletSaving(false);
+                  }
+                }}
+              >
+                {walletSaving ? "Saving..." : "Save wallets"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

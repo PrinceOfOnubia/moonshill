@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       setRecoveringAuth(true);
-      const delays = [0, 250, 750, 1500, 3000, 5000];
+      const delays = [0, 250, 750, 1500, 3000, 5000, 8000, 12000, 16000];
 
       for (const delay of delays) {
         if (cancelled) return;

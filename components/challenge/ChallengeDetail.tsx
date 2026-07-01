@@ -11,6 +11,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge, VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { XIcon } from "@/components/landing/social";
 import { SubmitEntry } from "./SubmitEntry";
 import { ChallengeCard } from "./ChallengeCard";
 import { useTimeLeft } from "@/components/ui/useTimeLeft";
@@ -174,9 +175,11 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                   href={`https://x.com/${c.creator.xHandle}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text"
+                  title={`Open @${c.creator.xHandle} on X`}
+                  aria-label={`Open @${c.creator.xHandle} on X`}
+                  className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-border-strong hover:text-text"
                 >
-                  @{c.creator.xHandle}
+                  <XIcon size={16} />
                 </a>
               )}
               {c.creator.website && (
@@ -184,9 +187,11 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                   href={c.creator.website.startsWith("http") ? c.creator.website : `https://${c.creator.website}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text"
+                  title="Open project website"
+                  aria-label="Open project website"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-border-strong hover:text-text"
                 >
-                  <Globe size={13} className="text-blue" /> Website
+                  <Globe size={15} className="text-blue" />
                 </a>
               )}
               {c.creator.telegramUrl && (
@@ -194,9 +199,11 @@ export function ChallengeDetail({ c }: { c: Challenge }) {
                   href={c.creator.telegramUrl.startsWith("http") ? c.creator.telegramUrl : `https://${c.creator.telegramUrl}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-text"
+                  title="Open Telegram"
+                  aria-label="Open Telegram"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-border-strong hover:text-text"
                 >
-                  <MessageCircleMore size={13} className="text-gold-bright" /> Telegram
+                  <MessageCircleMore size={15} className="text-gold-bright" />
                 </a>
               )}
             </div>

@@ -27,6 +27,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
 export async function apiFetch<T>(path: string, init: RequestInit = {}) {
   const res = await fetch(`${baseUrl()}${path}`, {
     ...init,
+    cache: "no-store",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",

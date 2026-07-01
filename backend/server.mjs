@@ -174,6 +174,18 @@ function withRedirectParam(redirectTo, key, value) {
   return url.toString();
 }
 
+function normalizeApprovedProjectRedirect(redirectTo) {
+  try {
+    const url = new URL(redirectTo);
+    if (url.pathname === "/build") {
+      return resolveClientRedirect("/home", "/home");
+    }
+    return url.toString();
+  } catch {
+    return resolveClientRedirect("/home", "/home");
+  }
+}
+
 function applyCors(req, res) {
   const origin = req.headers.origin;
   const allowedOrigin = origin && allowedCorsOrigins.has(origin) ? origin : DEFAULT_CORS_ORIGIN;
@@ -2222,7 +2234,7 @@ async function handleXLoginCallback(req, res, url, stateRow) {
       );
       if (approved.rows[0] && approved.rows[0].project_verification_status === "approved") {
         const session = await sessionHeadersForUser(userRow(approved.rows[0]));
-        return redirect(res, redirectTo, session.headers);
+        return redirect(res, normalizeApprovedProjectRedirect(redirectTo), session.headers);
       }
       let application = await query(
         "select * from project_applications where x_user_id = $1 limit 1",
