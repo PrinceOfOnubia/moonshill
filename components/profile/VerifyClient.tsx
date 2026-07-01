@@ -294,7 +294,7 @@ function ProjectFlow() {
 
   if (user?.accountType === "project" && user.projectVerificationStatus === "approved") {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-3xl border border-green/25 bg-green/10 p-8 text-center shadow-[0_18px_50px_-30px_rgba(0,0,0,0.7)]">
+      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-3xl border border-border bg-surface/55 p-8 text-center shadow-[0_18px_50px_-30px_rgba(0,0,0,0.7)]">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green/15 text-green">
           <BadgeCheck size={26} />
         </div>

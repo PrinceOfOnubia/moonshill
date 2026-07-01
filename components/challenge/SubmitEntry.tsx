@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import type { Challenge, SubmissionStatus } from "@/lib/types";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { submitCampaign } from "@/lib/api";
+import { getXHandleFromUrl, normalizeXHandle } from "@/lib/utils";
 
 const statusTone: Record<SubmissionStatus, "gold" | "green" | "blue" | "red"> = {
   "Pending Review": "gold",
@@ -36,9 +37,25 @@ export function SubmitEntry({
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"form" | "loading" | "done">("form");
   const submitter = user;
+  const connectedXHandle = normalizeXHandle(submitter?.xHandle);
 
   const cleanLinks = links.map((l) => l.trim()).filter(Boolean);
   const valid = !!submitter && !isCreator && !alreadySubmitted && (isUpload ? !!upload : cleanLinks.some(isLikelyUrl));
+
+  function validateSubmissionLinks() {
+    if (isUpload) return null;
+    if (!connectedXHandle) {
+      return "Connect your X account before submitting.";
+    }
+    const invalidLink = cleanLinks.find((entry) => {
+      const linkHandle = getXHandleFromUrl(entry);
+      return !linkHandle || linkHandle !== connectedXHandle;
+    });
+    if (invalidLink) {
+      return `Submission must come from your connected X account @${submitter?.xHandle || connectedXHandle}.`;
+    }
+    return null;
+  }
 
   async function submit() {
     if (!submitter) {
@@ -55,6 +72,11 @@ export function SubmitEntry({
     }
     if (!isUpload && !cleanLinks.some(isLikelyUrl)) {
       setError("Enter a valid submission link.");
+      return;
+    }
+    const linkValidationError = validateSubmissionLinks();
+    if (linkValidationError) {
+      setError(linkValidationError);
       return;
     }
     setPhase("loading");
@@ -191,7 +213,7 @@ export function SubmitEntry({
                         next[i] = e.target.value;
                         setLinks(next);
                       }}
-                      placeholder="https://x.com/you/status/…"
+                      placeholder={`https://x.com/${submitter?.xHandle || "you"}/status/...`}
                       className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
                     />
                   </div>

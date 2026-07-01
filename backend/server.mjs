@@ -182,6 +182,25 @@ function withRedirectHashParam(redirectTo, key, value) {
   return url.toString();
 }
 
+function normalizeXHandle(handle) {
+  return String(handle || "").trim().replace(/^@+/, "").toLowerCase();
+}
+
+function xHandleFromUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (!["x.com", "twitter.com", "mobile.twitter.com"].includes(host)) return null;
+    const segments = url.pathname.split("/").filter(Boolean);
+    if (!segments.length) return null;
+    const handle = String(segments[0] || "");
+    if (!handle || ["home", "explore", "i", "search", "share", "intent"].includes(handle.toLowerCase())) return null;
+    return normalizeXHandle(handle);
+  } catch {
+    return null;
+  }
+}
+
 function normalizeApprovedProjectRedirect(redirectTo) {
   try {
     const url = new URL(redirectTo);
@@ -2576,6 +2595,20 @@ async function handleSubmitCampaign(req, res, campaignId) {
   const body = await readBody(req);
   const link = String(body.link || body.links?.[0] || body.url || "").trim();
   if (!link) return json(res, 400, { error: "A submission link is required." });
+  const connectedXHandle = normalizeXHandle(user.xHandle);
+  if (!connectedXHandle) {
+    return json(res, 400, { error: "Connect your X account before submitting." });
+  }
+  const allLinks = Array.isArray(body.links)
+    ? body.links.map((entry) => String(entry || "").trim()).filter(Boolean)
+    : [link];
+  const invalidLink = allLinks.find((entry) => {
+    const linkHandle = xHandleFromUrl(entry);
+    return !linkHandle || linkHandle !== connectedXHandle;
+  });
+  if (invalidLink) {
+    return json(res, 400, { error: `Submission must come from your connected X account @${user.xHandle || connectedXHandle}.` });
+  }
   const inserted = await query(
     `
     insert into submissions

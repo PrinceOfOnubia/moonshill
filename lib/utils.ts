@@ -61,3 +61,22 @@ export function pct(part: number, whole: number): number {
   if (whole <= 0) return 0;
   return Math.min(100, Math.round((part / whole) * 100));
 }
+
+export function normalizeXHandle(handle?: string | null): string {
+  return String(handle || "").trim().replace(/^@+/, "").toLowerCase();
+}
+
+export function getXHandleFromUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (!["x.com", "twitter.com", "mobile.twitter.com"].includes(host)) return null;
+    const segments = url.pathname.split("/").filter(Boolean);
+    if (!segments.length) return null;
+    const [handle] = segments;
+    if (!handle || ["home", "explore", "i", "search", "share", "intent"].includes(handle.toLowerCase())) return null;
+    return normalizeXHandle(handle);
+  } catch {
+    return null;
+  }
+}

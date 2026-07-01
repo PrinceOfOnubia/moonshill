@@ -2,7 +2,6 @@
 
 import { Link } from "next-view-transitions";
 import { usePathname, useRouter } from "next/navigation";
-import { formatEther } from "ethers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BadgeCheck, LogOut, Plus, Search, User, Wallet } from "lucide-react";
 import { Logo } from "./Logo";
@@ -11,7 +10,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getCampaigns } from "@/lib/api";
 import type { Challenge } from "@/lib/types";
-import { cn, shortAddr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -22,18 +21,19 @@ const nav = [
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { address, disconnect, user } = useAuth();
+  const { disconnect, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [campaigns, setCampaigns] = useState<Challenge[]>([]);
-  const [balance, setBalance] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLFormElement>(null);
-  const accountName = user?.name || (address ? shortAddr(address) : "Moonshill user");
-  const accountWallet = address || user?.wallet || "";
-  const accountAvatar = user?.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(accountWallet || "moonshill")}&backgroundType=gradientLinear`;
+  const accountName = user?.name || "Moonshill user";
+  const accountMeta = user?.email || (user?.xHandle ? `@${user.xHandle}` : "@moonshill");
+  const accountAvatar = user?.avatar || `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(user?.handle || user?.email || "moonshill")}&backgroundType=gradientLinear`;
   const accountVerified = !!user?.xConnected;
+  const isCreatorAccount = user?.accountType === "user";
+  const pointsBalance = "0 PTS";
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];
@@ -77,31 +77,6 @@ export function TopBar() {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [searchOpen]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadBalance() {
-      if (!address || !window.ethereum) {
-        setBalance(null);
-        return;
-      }
-      try {
-        const raw = (await window.ethereum.request({
-          method: "eth_getBalance",
-          params: [address, "latest"],
-        })) as string;
-        if (cancelled) return;
-        const amount = Number(formatEther(raw));
-        setBalance(`${amount.toLocaleString("en-US", { maximumFractionDigits: 4 })} BNB`);
-      } catch {
-        if (!cancelled) setBalance(null);
-      }
-    }
-    void loadBalance();
-    return () => {
-      cancelled = true;
-    };
-  }, [address]);
 
   function submitSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -202,10 +177,12 @@ export function TopBar() {
               Create
             </Link>
           )}
-          <button className="hidden h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:border-gold/50 sm:flex">
-            <Wallet size={16} className="text-gold-bright" />
-            <span className="font-mono">{balance || "0 BNB"}</span>
-          </button>
+          {isCreatorAccount && (
+            <button className="hidden h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:border-gold/50 sm:flex">
+              <Wallet size={16} className="text-gold-bright" />
+              <span className="font-mono">{pointsBalance}</span>
+            </button>
+          )}
 
           <div ref={menuRef} className="relative">
             <button
@@ -221,11 +198,17 @@ export function TopBar() {
               <div className="absolute right-0 top-12 z-[95] w-60 overflow-hidden rounded-2xl border border-border-strong glass-strong">
                 <div className="border-b border-border px-4 py-3">
                   <p className="text-sm font-semibold text-text">{accountName}</p>
-                  <p className="mt-0.5 font-mono text-[12px] text-faint">
-                    {accountWallet ? shortAddr(accountWallet) : "Not connected"}
+                  <p className="mt-0.5 text-[12px] text-faint">
+                    {accountMeta}
                   </p>
                 </div>
                 <div className="p-1.5">
+                  {isCreatorAccount && (
+                    <div className="mb-1.5 rounded-xl border border-border bg-surface/70 px-3 py-2.5">
+                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-faint">Points</p>
+                      <p className="mt-1 font-mono text-sm text-text">0 POINTS</p>
+                    </div>
+                  )}
                   <Link
                     href="/profile"
                     onClick={() => setMenuOpen(false)}
@@ -248,7 +231,7 @@ export function TopBar() {
                     }}
                     className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] text-rose-400 transition-colors hover:bg-rose-500/10"
                   >
-                    <LogOut size={16} /> Disconnect
+                    <LogOut size={16} /> Sign out
                   </button>
                 </div>
               </div>
